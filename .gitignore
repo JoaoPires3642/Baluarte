@@ -35,6 +35,7 @@ logs/
 
 # Node / Frontend
 node_modules/
+.expo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -68,3 +69,4 @@ playwright-report/
 
 # Docker local overrides
 docker-compose.override.yml
+Baluarte-web/REFATORACAO-ETAPAS.md
