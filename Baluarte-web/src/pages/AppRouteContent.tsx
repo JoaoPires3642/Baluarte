@@ -1,4 +1,5 @@
 import { Image, Pressable, Text, View } from "react-native";
+import type { ImageStyle } from "react-native";
 import { useState, useEffect } from "react";
 
 import { SkeletonCard } from "../components/SkeletonCard";
@@ -19,6 +20,7 @@ import { TeamScreen } from "./storefront/TeamScreen";
 import { ProfileScreen } from "./storefront/ProfileScreen";
 import type { AppState } from "../hooks/useAppState";
 import type { Category, Order, Product } from "../lib/types";
+import { fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import styles from "../App.styles";
 
 type AppRouteContentProps = {
@@ -58,7 +60,15 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     screen
   } = state;
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+  const [isTeamLoading, setIsTeamLoading] = useState(false);
+  const [hierarchyTeams, setHierarchyTeams] = useState(state.teamList);
+  const [hierarchyModels, setHierarchyModels] = useState<Product[]>([]);
+  const selectedTeam =
+    hierarchyTeams.find((team) => route.name === "team" && team.id === route.id) ??
+    (route.name === "team" ? teamList.find((team) => team.id === route.id) : undefined) ??
+    (route.name === "team" ? screen?.team : undefined) ??
+    null;
 
   const getCategoryColor = (categorySlug: string): string => {
     const colorMap: Record<string, string> = {
@@ -69,12 +79,107 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     return colorMap[categorySlug] ?? "#333";
   };
 
+  const isLoading = route.name === "category" ? isCategoryLoading : route.name === "team" ? isTeamLoading : false;
+
   useEffect(() => {
-    // Show loading state briefly when route changes (to simulate loading during navigation)
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, [route.name]);
+    if (route.name !== "category") {
+      setIsCategoryLoading(false);
+      return;
+    }
+
+    const inactiveTeamIds = new Set(["barcelona"]);
+    let active = true;
+    setIsCategoryLoading(true);
+    setHierarchyTeams([]);
+    setHierarchyModels([]);
+
+    fetchPublicTeamsByCategory(route.slug)
+      .then((teamsFromApi) => {
+        if (!active) {
+          return;
+        }
+
+        setHierarchyTeams(
+          teamsFromApi.map((team) => ({
+            id: team.slug,
+            name: team.name,
+            logo: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=300&q=80",
+            category: team.categorySlug,
+            league: team.league
+          }))
+        );
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setHierarchyTeams(teamList.filter((team) => team.category === route.slug && !inactiveTeamIds.has(team.id)));
+      })
+      .finally(() => {
+        if (active) {
+          setIsCategoryLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [route, teamList]);
+
+  useEffect(() => {
+    if (route.name !== "team") {
+      setIsTeamLoading(false);
+      return;
+    }
+
+    let active = true;
+    setIsTeamLoading(true);
+    setHierarchyModels([]);
+
+    if (!selectedTeam) {
+      setIsTeamLoading(false);
+      setHierarchyModels([]);
+      return;
+    }
+
+    fetchPublicModelsByTeam(selectedTeam.id)
+      .then((modelsFromApi) => {
+        if (!active) {
+          return;
+        }
+
+        setHierarchyModels(
+          modelsFromApi.map((model) => ({
+            id: model.slug,
+            name: model.name,
+            description: "Modelo oficial disponivel no catalogo.",
+            price: 0,
+            image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=400&q=80",
+            teamId: selectedTeam.id,
+            team: selectedTeam,
+            sizes: ["P", "M", "G", "GG"],
+            inStock: true
+          }))
+        );
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setHierarchyModels(productList.filter((product) => product.teamId === selectedTeam.id && product.inStock));
+      })
+      .finally(() => {
+        if (active) {
+          setIsTeamLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [route, productList, selectedTeam]);
 
   return (
     <>
@@ -103,7 +208,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
               ))
             ) : (
               // Show actual teams when loaded
-              (screen.teams ?? []).map((team) => (
+              hierarchyTeams.map((team) => (
                 <Pressable 
                   key={team.id} 
                   style={[
@@ -115,29 +220,40 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
                   ]} 
                   onPress={() => setRoute({ name: "team", id: team.id })}
                 >
-                  <Image source={{ uri: team.logo }} style={styles.teamLogo} />
+                  <Image source={{ uri: team.logo }} style={styles.teamLogo as ImageStyle} />
                   <Text style={styles.teamName}>{team.name}</Text>
                   <Text style={styles.teamLeague}>{team.league ?? "Selecao"}</Text>
                 </Pressable>
               ))
             )}
           </View>
+          {!isLoading && hierarchyTeams.length === 0 ? (
+            <Text style={styles.screenDescription}>Nenhum time ativo disponivel para esta categoria no momento.</Text>
+          ) : null}
         </View>
       ) : null}
 
       {route.name === "team" ? (
         <TeamScreen
           isLoading={isLoading}
-          team={screen?.team ?? null}
-          products={(screen?.products as Product[]) ?? []}
-          onBack={() => setRoute({ name: "category", slug: (screen?.team?.category as Category) ?? "nacionais" })}
+          team={selectedTeam}
+          products={hierarchyModels}
+          onBack={() =>
+            setRoute({
+              name: "category",
+              slug:
+                (hierarchyTeams.find((team) => team.id === route.id)?.category as Category) ??
+                (screen?.team?.category as Category) ??
+                "nacionais"
+            })
+          }
           onSelectProduct={(id) => setRoute({ name: "product", id })}
         />
       ) : null}
 
       {route.name === "product" ? (
         <ProductScreen
-          product={(screen?.product as Product | undefined) ?? null}
+          product={(screen?.product as Product | undefined) ?? hierarchyModels.find((item) => item.id === route.id) ?? null}
           onBackToTeam={(teamId) => setRoute({ name: "team", id: teamId })}
           onBackHome={() => setRoute({ name: "home" })}
           onAddToCart={addToCart}

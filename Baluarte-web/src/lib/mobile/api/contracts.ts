@@ -34,3 +34,20 @@ export interface CategoryDto {
   name: string;
   slug: string;
 }
+
+export interface TeamDto {
+  id: string;
+  name: string;
+  slug: string;
+  categorySlug: string;
+  league?: string;
+  displayOrder: number;
+}
+
+export interface CatalogModelDto {
+  id: string;
+  name: string;
+  slug: string;
+  teamSlug: string;
+  displayOrder: number;
+}

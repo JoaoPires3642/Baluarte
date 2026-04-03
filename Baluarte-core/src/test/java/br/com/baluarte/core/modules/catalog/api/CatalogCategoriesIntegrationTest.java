@@ -35,4 +35,54 @@ class CatalogCategoriesIntegrationTest {
             .andExpect(jsonPath("$.error.message").isString())
             .andExpect(jsonPath("$.traceId").isString());
     }
+
+    @Test
+    void shouldReturnOnlyActiveTeamsForCategory() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/categories/internacionais/teams"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].slug").value("real-madrid"));
+    }
+
+    @Test
+    void shouldReturnEmptyTeamsArrayForCategoryWithoutTeams() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/categories/lancamentos/teams"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void shouldReturnOnlyActiveAndAvailableModelsForTeam() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/teams/flamengo/models"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].slug").value("flamengo-i-2024"));
+    }
+
+    @Test
+    void shouldReturnEmptyModelsArrayForTeamWithoutAvailableItems() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/teams/barcelona/models"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    void shouldRejectInvalidCategorySlugWithValidationEnvelope() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/categories/INVALID_SLUG/teams"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.traceId").isString());
+    }
+
+    @Test
+    void shouldRejectInvalidTeamSlugWithValidationEnvelope() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/teams/INVALID_SLUG/models"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.traceId").isString());
+    }
 }

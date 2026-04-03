@@ -25,6 +25,10 @@ export function TeamScreen({ isLoading, team, products, onBack, onSelectProduct 
       <Text style={styles.screenTitle}>{team.name}</Text>
       <Text style={styles.screenDescription}>{team.league ? `${team.league} • Produtos oficiais` : "Produtos oficiais"}</Text>
 
+      {!isLoading && products.length === 0 ? (
+        <Text style={styles.screenDescription}>Nenhum modelo disponivel para este time no momento.</Text>
+      ) : null}
+
       <View style={styles.productGrid}>
         {isLoading ? (
           // Show skeleton loaders during loading
