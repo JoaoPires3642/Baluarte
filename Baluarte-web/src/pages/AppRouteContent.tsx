@@ -27,6 +27,42 @@ type AppRouteContentProps = {
   state: AppState;
 };
 
+type HierarchyModelShape = {
+  slug: string;
+  name: string;
+};
+
+export function mapHierarchyModelToProduct(
+  model: HierarchyModelShape,
+  selectedTeam: Product["team"],
+  teamProducts: Product[]
+): Product {
+  const localMatch = teamProducts.find((product) => product.id === model.slug);
+
+  if (localMatch) {
+    return {
+      ...localMatch,
+      id: model.slug,
+      name: model.name,
+      team: selectedTeam,
+      teamId: selectedTeam.id
+    };
+  }
+
+  return {
+    id: model.slug,
+    name: model.name,
+    description: "Modelo oficial disponivel no catalogo.",
+    price: 0,
+    image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=400&q=80",
+    teamId: selectedTeam.id,
+    team: selectedTeam,
+    sizes: ["P", "M", "G", "GG"],
+    stockBySize: { P: 0, M: 0, G: 0, GG: 0 },
+    inStock: false
+  };
+}
+
 export function AppRouteContent({ state }: AppRouteContentProps) {
   const {
     route,
@@ -149,19 +185,9 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           return;
         }
 
-        setHierarchyModels(
-          modelsFromApi.map((model) => ({
-            id: model.slug,
-            name: model.name,
-            description: "Modelo oficial disponivel no catalogo.",
-            price: 0,
-            image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=400&q=80",
-            teamId: selectedTeam.id,
-            team: selectedTeam,
-            sizes: ["P", "M", "G", "GG"],
-            inStock: true
-          }))
-        );
+        const localProductsByTeam = productList.filter((product) => product.teamId === selectedTeam.id);
+
+        setHierarchyModels(modelsFromApi.map((model) => mapHierarchyModelToProduct(model, selectedTeam, localProductsByTeam)));
       })
       .catch(() => {
         if (!active) {

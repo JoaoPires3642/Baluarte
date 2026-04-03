@@ -1,0 +1,47 @@
+import { mapHierarchyModelToProduct } from "../AppRouteContent";
+import type { Product } from "../../lib/types";
+
+function buildProduct(teamId: string, id: string): Product {
+  return {
+    id,
+    name: `Produto ${id}`,
+    description: "descricao",
+    price: 100,
+    image: "https://example.com/image.png",
+    teamId,
+    team: {
+      id: teamId,
+      name: teamId,
+      logo: "https://example.com/logo.png",
+      category: "nacionais",
+      league: "Serie A"
+    },
+    sizes: ["P", "M", "G", "GG"],
+    stockBySize: { P: 1, M: 2, G: 3, GG: 4 },
+    inStock: true
+  };
+}
+
+describe("mapHierarchyModelToProduct", () => {
+  it("does not bind product from another team when slug collides", () => {
+    const selectedTeam = {
+      id: "team-a",
+      name: "Team A",
+      logo: "https://example.com/a.png",
+      category: "nacionais",
+      league: "Serie A"
+    };
+
+    const otherTeamProduct = buildProduct("team-b", "shared-slug");
+
+    const mapped = mapHierarchyModelToProduct(
+      { slug: "shared-slug", name: "Modelo API" },
+      selectedTeam,
+      [otherTeamProduct].filter((product) => product.teamId === selectedTeam.id)
+    );
+
+    expect(mapped.teamId).toBe("team-a");
+    expect(mapped.inStock).toBe(false);
+    expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
+  });
+});

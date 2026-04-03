@@ -7,7 +7,8 @@ import type { Size } from "../../lib/types";
 import type { ProductScreenProps } from "./types";
 
 export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, onGoCart }: ProductScreenProps) {
-  const [selectedSize, setSelectedSize] = useState<Size>("M");
+  const [selectedSize, setSelectedSize] = useState<Size | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   const sizeStock = useMemo(() => {
     if (!product) {
@@ -15,25 +16,17 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
     }
     return product.sizes.reduce<Record<Size, number>>((acc, size) => {
       const available = product.stockBySize?.[size];
-      acc[size] = Number.isFinite(available) ? Math.max(0, available as number) : (product.inStock ? 999 : 0);
+      acc[size] = Number.isFinite(available) ? Math.max(0, available as number) : 0;
       return acc;
     }, { P: 0, M: 0, G: 0, GG: 0 });
   }, [product]);
 
   useEffect(() => {
-    if (!product) {
-      return;
-    }
-    if (sizeStock[selectedSize] > 0) {
-      return;
-    }
-    const fallback = product.sizes.find((size) => sizeStock[size] > 0);
-    if (fallback) {
-      setSelectedSize(fallback);
-    }
-  }, [product, selectedSize, sizeStock]);
+    setSelectedSize(null);
+    setValidationMessage(null);
+  }, [product?.id]);
 
-  const selectedSizeStock = sizeStock[selectedSize] ?? 0;
+  const selectedSizeStock = selectedSize ? sizeStock[selectedSize] ?? 0 : 0;
 
   if (!product) {
     return (
@@ -76,9 +69,12 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
             ]}
             onPress={() => {
               if (sizeStock[size] <= 0) {
+                setSelectedSize(null);
+                setValidationMessage(`O tamanho ${size} esta indisponivel. Escolha outro tamanho.`);
                 return;
               }
               setSelectedSize(size);
+              setValidationMessage(null);
             }}
           >
             <Text style={[styles.sizeText, selectedSize === size ? styles.sizeTextSelected : null]}>{size}</Text>
@@ -86,16 +82,38 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
         ))}
       </View>
       <Text style={styles.screenDescription}>
-        {selectedSizeStock > 0 ? `Estoque tam ${selectedSize}: ${selectedSizeStock}` : `Tam ${selectedSize} esgotado`}
+        {!selectedSize
+          ? "Selecione um tamanho para ver disponibilidade."
+          : selectedSizeStock > 0
+            ? `Estoque tam ${selectedSize}: ${selectedSizeStock}`
+            : `Tam ${selectedSize} esgotado`}
       </Text>
+      {validationMessage ? <Text style={styles.screenDescription}>{validationMessage}</Text> : null}
 
       <View style={styles.productActions}>
         <Pressable
-          style={[styles.primaryActionButton, selectedSizeStock <= 0 ? styles.primaryActionButtonDisabled : null]}
-          onPress={() => onAddToCart(product, selectedSize)}
-          disabled={selectedSizeStock <= 0}
+          style={[
+            styles.primaryActionButton,
+            !selectedSize || selectedSizeStock <= 0 ? styles.primaryActionButtonDisabled : null
+          ]}
+          onPress={() => {
+            if (!selectedSize) {
+              setValidationMessage("Selecione um tamanho antes de adicionar ao carrinho.");
+              return;
+            }
+
+            if (selectedSizeStock <= 0) {
+              setValidationMessage(`O tamanho ${selectedSize} esta indisponivel. Escolha outro tamanho.`);
+              return;
+            }
+
+            setValidationMessage(null);
+            onAddToCart(product, selectedSize);
+          }}
         >
-          <Text style={styles.primaryActionButtonText}>{selectedSizeStock > 0 ? "Adicionar ao carrinho" : "Tamanho indisponivel"}</Text>
+          <Text style={styles.primaryActionButtonText}>
+            {!selectedSize ? "Selecionar tamanho" : selectedSizeStock > 0 ? "Adicionar ao carrinho" : "Tamanho indisponivel"}
+          </Text>
         </Pressable>
         <Pressable style={styles.secondaryActionButton} onPress={onGoCart}>
           <Text style={styles.secondaryActionButtonText}>Ir para carrinho</Text>

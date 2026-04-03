@@ -24,7 +24,7 @@ export function useCartState() {
     if (product.stockBySize && Number.isFinite(product.stockBySize[size])) {
       return Math.max(0, product.stockBySize[size]);
     }
-    return product.inStock && product.sizes.includes(size) ? 999 : 0;
+    return 0;
   };
 
   const addToCart = (product: Product, size: Size) => {
@@ -54,13 +54,20 @@ export function useCartState() {
     }
 
     setCartItems((prev) =>
-      prev.map((item) => {
+      prev.reduce<CartItem[]>((next, item) => {
         if (item.product.id !== productId || item.size !== size) {
-          return item;
+          next.push(item);
+          return next;
         }
+
         const available = getAvailableBySize(item.product, size);
-        return { ...item, quantity: Math.min(quantity, Math.max(1, available)) };
-      })
+        if (available <= 0) {
+          return next;
+        }
+
+        next.push({ ...item, quantity: Math.min(quantity, available) });
+        return next;
+      }, [])
     );
   };
 
