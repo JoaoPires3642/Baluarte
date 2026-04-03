@@ -1,4 +1,4 @@
-import { mapHierarchyModelToProduct } from "../AppRouteContent";
+import { filterCatalogProducts, mapHierarchyModelToProduct } from "../AppRouteContent";
 import type { Product } from "../../lib/types";
 
 function buildProduct(teamId: string, id: string): Product {
@@ -43,5 +43,46 @@ describe("mapHierarchyModelToProduct", () => {
     expect(mapped.teamId).toBe("team-a");
     expect(mapped.inStock).toBe(false);
     expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
+  });
+});
+
+describe("filterCatalogProducts", () => {
+  const products: Product[] = [
+    {
+      ...buildProduct("flamengo", "fla-1"),
+      name: "Camisa Flamengo I",
+      originalPrice: 349.9,
+      stockBySize: { P: 0, M: 2, G: 0, GG: 0 }
+    },
+    {
+      ...buildProduct("flamengo", "fla-2"),
+      name: "Camisa Treino",
+      stockBySize: { P: 0, M: 0, G: 0, GG: 0 },
+      inStock: false
+    }
+  ];
+
+  it("filters by search text, sale and selected size", () => {
+    const result = filterCatalogProducts(products, {
+      searchQuery: "flamengo",
+      selectedSize: "M",
+      inStockOnly: false,
+      onSaleOnly: true
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("fla-1");
+  });
+
+  it("filters unavailable products when inStockOnly is active", () => {
+    const result = filterCatalogProducts(products, {
+      searchQuery: "",
+      selectedSize: null,
+      inStockOnly: true,
+      onSaleOnly: false
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("fla-1");
   });
 });

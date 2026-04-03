@@ -19,7 +19,7 @@ import { ProductScreen } from "./storefront/ProductScreen";
 import { TeamScreen } from "./storefront/TeamScreen";
 import { ProfileScreen } from "./storefront/ProfileScreen";
 import type { AppState } from "../hooks/useAppState";
-import type { Category, Order, Product } from "../lib/types";
+import type { Category, Order, Product, Size } from "../lib/types";
 import { fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import styles from "../App.styles";
 
@@ -31,6 +31,53 @@ type HierarchyModelShape = {
   slug: string;
   name: string;
 };
+
+type TeamCatalogFilters = {
+  searchQuery: string;
+  selectedSize: Size | null;
+  inStockOnly: boolean;
+  onSaleOnly: boolean;
+};
+
+const DEFAULT_TEAM_FILTERS: TeamCatalogFilters = {
+  searchQuery: "",
+  selectedSize: null,
+  inStockOnly: false,
+  onSaleOnly: false
+};
+
+export function filterCatalogProducts(products: Product[], filters: TeamCatalogFilters): Product[] {
+  const normalizedSearch = filters.searchQuery.trim().toLowerCase();
+
+  return products.filter((product) => {
+    if (normalizedSearch) {
+      const searchable = `${product.name} ${product.team.name}`.toLowerCase();
+      if (!searchable.includes(normalizedSearch)) {
+        return false;
+      }
+    }
+
+    if (filters.inStockOnly) {
+      const totalStock = Object.values(product.stockBySize ?? {}).reduce((sum, units) => sum + Math.max(0, units), 0);
+      if (!product.inStock || totalStock <= 0) {
+        return false;
+      }
+    }
+
+    if (filters.onSaleOnly && !product.originalPrice) {
+      return false;
+    }
+
+    if (filters.selectedSize) {
+      const stockForSize = product.stockBySize?.[filters.selectedSize] ?? 0;
+      if (stockForSize <= 0) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
 
 export function mapHierarchyModelToProduct(
   model: HierarchyModelShape,
@@ -100,11 +147,14 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   const [isTeamLoading, setIsTeamLoading] = useState(false);
   const [hierarchyTeams, setHierarchyTeams] = useState(state.teamList);
   const [hierarchyModels, setHierarchyModels] = useState<Product[]>([]);
+  const [teamFiltersById, setTeamFiltersById] = useState<Record<string, TeamCatalogFilters>>({});
   const selectedTeam =
     hierarchyTeams.find((team) => route.name === "team" && team.id === route.id) ??
     (route.name === "team" ? teamList.find((team) => team.id === route.id) : undefined) ??
     (route.name === "team" ? screen?.team : undefined) ??
     null;
+  const activeTeamFilters = selectedTeam ? teamFiltersById[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS : DEFAULT_TEAM_FILTERS;
+  const visibleTeamModels = filterCatalogProducts(hierarchyModels, activeTeamFilters);
 
   const getCategoryColor = (categorySlug: string): string => {
     const colorMap: Record<string, string> = {
@@ -263,7 +313,77 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
         <TeamScreen
           isLoading={isLoading}
           team={selectedTeam}
-          products={hierarchyModels}
+          products={visibleTeamModels}
+          searchQuery={activeTeamFilters.searchQuery}
+          selectedSize={activeTeamFilters.selectedSize}
+          inStockOnly={activeTeamFilters.inStockOnly}
+          onSaleOnly={activeTeamFilters.onSaleOnly}
+          onChangeSearchQuery={(value) => {
+            if (!selectedTeam) {
+              return;
+            }
+            setTeamFiltersById((prev) => ({
+              ...prev,
+              [selectedTeam.id]: {
+                ...(prev[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS),
+                searchQuery: value
+              }
+            }));
+          }}
+          onToggleSize={(size) => {
+            if (!selectedTeam) {
+              return;
+            }
+            setTeamFiltersById((prev) => {
+              const current = prev[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS;
+              return {
+                ...prev,
+                [selectedTeam.id]: {
+                  ...current,
+                  selectedSize: current.selectedSize === size ? null : size
+                }
+              };
+            });
+          }}
+          onToggleInStockOnly={() => {
+            if (!selectedTeam) {
+              return;
+            }
+            setTeamFiltersById((prev) => {
+              const current = prev[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS;
+              return {
+                ...prev,
+                [selectedTeam.id]: {
+                  ...current,
+                  inStockOnly: !current.inStockOnly
+                }
+              };
+            });
+          }}
+          onToggleOnSaleOnly={() => {
+            if (!selectedTeam) {
+              return;
+            }
+            setTeamFiltersById((prev) => {
+              const current = prev[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS;
+              return {
+                ...prev,
+                [selectedTeam.id]: {
+                  ...current,
+                  onSaleOnly: !current.onSaleOnly
+                }
+              };
+            });
+          }}
+          onClearFilters={() => {
+            if (!selectedTeam) {
+              return;
+            }
+            setTeamFiltersById((prev) => ({
+              ...prev,
+              [selectedTeam.id]: DEFAULT_TEAM_FILTERS
+            }));
+          }}
           onBack={() =>
             setRoute({
               name: "category",

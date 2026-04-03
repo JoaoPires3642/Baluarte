@@ -5,6 +5,15 @@ export type CouponApplyResult = { ok: true } | { ok: false; error: string };
 export type TeamScreenProps = {
   team: Team | null;
   products: Product[];
+  searchQuery: string;
+  selectedSize: Size | null;
+  inStockOnly: boolean;
+  onSaleOnly: boolean;
+  onChangeSearchQuery: (value: string) => void;
+  onToggleSize: (size: Size) => void;
+  onToggleInStockOnly: () => void;
+  onToggleOnSaleOnly: () => void;
+  onClearFilters: () => void;
   onBack: () => void;
   onSelectProduct: (id: string) => void;
 };

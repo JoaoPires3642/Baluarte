@@ -49,4 +49,32 @@ describe("useCartState", () => {
 
     expect(result.current.cartItems).toHaveLength(0);
   });
+
+  it("recalculates subtotal and total when quantity changes and item is removed", () => {
+    const { result } = renderHook(() => useCartState());
+    const product = buildProduct();
+
+    act(() => {
+      result.current.addToCart(product, "M");
+      result.current.setShipping(25);
+    });
+
+    expect(result.current.subtotal).toBeCloseTo(299.9, 2);
+    expect(result.current.total).toBeCloseTo(324.9, 2);
+
+    act(() => {
+      result.current.updateCartQuantity(product.id, "M", 2);
+    });
+
+    expect(result.current.subtotal).toBeCloseTo(599.8, 2);
+    expect(result.current.total).toBeCloseTo(624.8, 2);
+
+    act(() => {
+      result.current.updateCartQuantity(product.id, "M", 0);
+    });
+
+    expect(result.current.cartItems).toHaveLength(0);
+    expect(result.current.subtotal).toBe(0);
+    expect(result.current.total).toBe(25);
+  });
 });

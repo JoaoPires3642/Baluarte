@@ -71,6 +71,9 @@ export function CartScreen({
               </Pressable>
               <Text style={styles.cartLinePrice}>{toBrl(item.product.price * item.quantity)}</Text>
             </View>
+            <Pressable onPress={() => onUpdateQuantity(item.product.id, item.size, 0)}>
+              <Text style={styles.dangerLink}>Remover item</Text>
+            </Pressable>
           </View>
         </View>
       ))}

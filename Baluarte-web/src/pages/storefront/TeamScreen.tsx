@@ -1,11 +1,28 @@
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, TextInput, View } from "react-native";
 
 import { SkeletonCard } from "../../components/SkeletonCard";
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
 import type { TeamScreenProps } from "./types";
 
-export function TeamScreen({ isLoading, team, products, onBack, onSelectProduct }: TeamScreenProps & { isLoading?: boolean }) {
+const SIZE_OPTIONS = ["P", "M", "G", "GG"] as const;
+
+export function TeamScreen({
+  isLoading,
+  team,
+  products,
+  searchQuery,
+  selectedSize,
+  inStockOnly,
+  onSaleOnly,
+  onChangeSearchQuery,
+  onToggleSize,
+  onToggleInStockOnly,
+  onToggleOnSaleOnly,
+  onClearFilters,
+  onBack,
+  onSelectProduct
+}: TeamScreenProps & { isLoading?: boolean }) {
   if (!team) {
     return (
       <View style={styles.stackScreen}>
@@ -25,8 +42,42 @@ export function TeamScreen({ isLoading, team, products, onBack, onSelectProduct 
       <Text style={styles.screenTitle}>{team.name}</Text>
       <Text style={styles.screenDescription}>{team.league ? `${team.league} • Produtos oficiais` : "Produtos oficiais"}</Text>
 
+      <TextInput
+        value={searchQuery}
+        onChangeText={onChangeSearchQuery}
+        placeholder="Buscar por nome do produto"
+        placeholderTextColor="#94a3b8"
+        style={styles.formInput}
+      />
+
+      <View style={styles.chipsRowWrap}>
+        <Pressable style={[styles.filterChip, inStockOnly ? styles.filterChipActive : null]} onPress={onToggleInStockOnly}>
+          <Text style={[styles.filterChipText, inStockOnly ? styles.filterChipTextActive : null]}>Disponiveis</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, onSaleOnly ? styles.filterChipActive : null]} onPress={onToggleOnSaleOnly}>
+          <Text style={[styles.filterChipText, onSaleOnly ? styles.filterChipTextActive : null]}>Com desconto</Text>
+        </Pressable>
+        {SIZE_OPTIONS.map((size) => (
+          <Pressable
+            key={size}
+            style={[styles.filterChip, selectedSize === size ? styles.filterChipActive : null]}
+            onPress={() => onToggleSize(size)}
+          >
+            <Text style={[styles.filterChipText, selectedSize === size ? styles.filterChipTextActive : null]}>Tam {size}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <Pressable onPress={onClearFilters}>
+        <Text style={styles.backLink}>Limpar filtros</Text>
+      </Pressable>
+
       {!isLoading && products.length === 0 ? (
-        <Text style={styles.screenDescription}>Nenhum modelo disponivel para este time no momento.</Text>
+        <Text style={styles.screenDescription}>
+          {searchQuery || selectedSize || inStockOnly || onSaleOnly
+            ? "Nenhum modelo encontrado com os filtros aplicados."
+            : "Nenhum modelo disponivel para este time no momento."}
+        </Text>
       ) : null}
 
       <View style={styles.productGrid}>
