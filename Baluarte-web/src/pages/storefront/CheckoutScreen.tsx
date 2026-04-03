@@ -1,16 +1,57 @@
-import { useState } from "react";
-import { Pressable, Text, View, ScrollView } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, Text, View, ScrollView, TextInput } from "react-native";
 
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
+import type { Address } from "../../lib/types";
 import type { CheckoutScreenProps } from "./types";
 
-export function CheckoutScreen({ user, items, subtotal, shipping, discount, total, onSetShipping, onBackCart, onGoProfile, onRequireAuth, onOrderComplete }: CheckoutScreenProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+const EMPTY_GUEST_ADDRESS: Address = {
+  cep: "",
+  street: "",
+  number: "",
+  neighborhood: "",
+  city: "",
+  state: ""
+};
+
+function isAddressValid(address?: Address | null): boolean {
+  const normalizedCep = address?.cep?.replace(/\D/g, "") ?? "";
+  return Boolean(
+    normalizedCep.length === 8 &&
+      address?.street?.trim() &&
+      address?.number?.trim() &&
+      address?.neighborhood?.trim() &&
+      address?.city?.trim() &&
+      address?.state?.trim()
+  );
+}
+
+export function CheckoutScreen({
+  user,
+  items,
+  subtotal,
+  shipping,
+  discount,
+  total,
+  initialStep = 1,
+  initialSelectedAddressId,
+  guestAddressDraft = null,
+  onCheckoutContextChange,
+  onSetShipping,
+  onBackCart,
+  onGoProfile,
+  onRequireAuth,
+  onOrderComplete
+}: CheckoutScreenProps) {
+  const [step, setStep] = useState<1 | 2 | 3>(initialStep);
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [addressError, setAddressError] = useState("");
-  const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(user?.defaultAddressId);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(
+    initialSelectedAddressId ?? (isAddressValid(guestAddressDraft) ? undefined : user?.defaultAddressId)
+  );
+  const [guestAddress, setGuestAddress] = useState<Address>(guestAddressDraft ?? EMPTY_GUEST_ADDRESS);
 
   const calculateShippingByCep = (cep: string): number => {
     const digits = cep.replace(/\D/g, "");
@@ -24,17 +65,42 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
     return 24.9;
   };
 
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
+
+  useEffect(() => {
+    if (initialSelectedAddressId) {
+      setSelectedAddressId(initialSelectedAddressId);
+      return;
+    }
+    if (isAddressValid(guestAddressDraft)) {
+      setSelectedAddressId(undefined);
+      return;
+    }
+    if (!selectedAddressId && user?.defaultAddressId && !isAddressValid(guestAddressDraft)) {
+      setSelectedAddressId(user.defaultAddressId);
+    }
+  }, [guestAddressDraft, initialSelectedAddressId, selectedAddressId, user?.defaultAddressId]);
+
+  useEffect(() => {
+    if (guestAddressDraft) {
+      setGuestAddress(guestAddressDraft);
+    }
+  }, [guestAddressDraft]);
+
+  useEffect(() => {
+    onCheckoutContextChange?.({
+      step,
+      selectedAddressId,
+      guestAddressDraft: isAddressValid(guestAddress) ? guestAddress : null
+    });
+  }, [guestAddress, onCheckoutContextChange, selectedAddressId, step]);
+
   const addresses = user?.addresses ?? [];
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
-  
-  const hasValidAddress = Boolean(
-    selectedAddress?.cep &&
-      selectedAddress?.street &&
-      selectedAddress?.number &&
-      selectedAddress?.neighborhood &&
-      selectedAddress?.city &&
-      selectedAddress?.state
-  );
+  const effectiveAddress = selectedAddress ?? guestAddress;
+  const hasValidAddress = isAddressValid(effectiveAddress);
 
   if (completed) {
     return (
@@ -45,7 +111,7 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
           style={styles.primaryActionButton}
           onPress={() => {
             setCompleted(false);
-            onOrderComplete();
+            onOrderComplete(effectiveAddress);
           }}
         >
           <Text style={styles.primaryActionButtonText}>Voltar para a loja</Text>
@@ -87,16 +153,58 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
             </>
           ) : (
             <>
-              <Text style={styles.screenDescription}>Voce nao tem enderecos cadastrados. Adicione um no seu perfil.</Text>
-              <Pressable style={styles.secondaryActionButton} onPress={onGoProfile}>
-                <Text style={styles.secondaryActionButtonText}>Ir para perfil</Text>
-              </Pressable>
+              <Text style={styles.screenDescription}>Preencha seu endereco para continuar sem login.</Text>
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.cep}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, cep: value }))}
+                placeholder="CEP"
+                placeholderTextColor="#9ca3af"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.street}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, street: value }))}
+                placeholder="Rua"
+                placeholderTextColor="#9ca3af"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.number}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, number: value }))}
+                placeholder="Numero"
+                placeholderTextColor="#9ca3af"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.neighborhood}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, neighborhood: value }))}
+                placeholder="Bairro"
+                placeholderTextColor="#9ca3af"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.city}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, city: value }))}
+                placeholder="Cidade"
+                placeholderTextColor="#9ca3af"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={guestAddress.state}
+                onChangeText={(value) => setGuestAddress((prev) => ({ ...prev, state: value }))}
+                placeholder="UF"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="characters"
+              />
             </>
           )}
 
-          <Pressable style={styles.secondaryActionButton} onPress={onGoProfile}>
-            <Text style={styles.secondaryActionButtonText}>Gerenciar enderecos</Text>
-          </Pressable>
+          {user ? (
+            <Pressable style={styles.secondaryActionButton} onPress={onGoProfile}>
+              <Text style={styles.secondaryActionButtonText}>Gerenciar enderecos</Text>
+            </Pressable>
+          ) : null}
 
           <Pressable
             style={styles.primaryActionButton}
@@ -105,7 +213,7 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
                 setAddressError("Selecione um endereco valido");
                 return;
               }
-              const cep = selectedAddress?.cep ?? "";
+              const cep = effectiveAddress?.cep ?? "";
               const nextShipping = calculateShippingByCep(cep);
               onSetShipping(nextShipping);
               setAddressError("");
@@ -124,17 +232,17 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
 
           <View style={{ marginVertical: 12, borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingTop: 12 }}>
             <Text style={{ fontWeight: "600", fontSize: 14, marginBottom: 8 }}>Endereco de entrega</Text>
-            {selectedAddress && (
+            {effectiveAddress && (
               <>
-                <Text style={styles.screenDescription}>{selectedAddress.label}</Text>
+                <Text style={styles.screenDescription}>{effectiveAddress.label ?? "Endereco informado"}</Text>
                 <Text style={styles.screenDescription}>
-                  {selectedAddress.street}, {selectedAddress.number}
-                  {selectedAddress.complement ? ` - ${selectedAddress.complement}` : ""}
+                  {effectiveAddress.street}, {effectiveAddress.number}
+                  {effectiveAddress.complement ? ` - ${effectiveAddress.complement}` : ""}
                 </Text>
                 <Text style={styles.screenDescription}>
-                  {selectedAddress.neighborhood}, {selectedAddress.city} - {selectedAddress.state}
+                  {effectiveAddress.neighborhood}, {effectiveAddress.city} - {effectiveAddress.state}
                 </Text>
-                <Text style={styles.screenDescription}>{selectedAddress.cep}</Text>
+                <Text style={styles.screenDescription}>{effectiveAddress.cep}</Text>
               </>
             )}
           </View>
@@ -195,7 +303,7 @@ export function CheckoutScreen({ user, items, subtotal, shipping, discount, tota
               await new Promise((resolve) => setTimeout(resolve, 1200));
               setProcessing(false);
               setCompleted(true);
-              onOrderComplete();
+              onOrderComplete(effectiveAddress);
             }}
           >
             <Text style={styles.primaryActionButtonText}>

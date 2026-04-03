@@ -1,6 +1,6 @@
 import { Image, Pressable, Text, View } from "react-native";
 import type { ImageStyle } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { SkeletonCard } from "../components/SkeletonCard";
 import { AdminCategoriesScreen } from "./admin/AdminCategoriesScreen";
@@ -19,7 +19,7 @@ import { ProductScreen } from "./storefront/ProductScreen";
 import { TeamScreen } from "./storefront/TeamScreen";
 import { ProfileScreen } from "./storefront/ProfileScreen";
 import type { AppState } from "../hooks/useAppState";
-import type { Category, Order, Product, Size } from "../lib/types";
+import type { Address, Category, Order, Product, Size } from "../lib/types";
 import { fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import styles from "../App.styles";
 
@@ -30,6 +30,12 @@ type AppRouteContentProps = {
 type HierarchyModelShape = {
   slug: string;
   name: string;
+};
+
+type CheckoutContext = {
+  step: 1 | 2 | 3;
+  selectedAddressId?: string;
+  guestAddressDraft: Address | null;
 };
 
 type TeamCatalogFilters = {
@@ -45,6 +51,44 @@ const DEFAULT_TEAM_FILTERS: TeamCatalogFilters = {
   inStockOnly: false,
   onSaleOnly: false
 };
+
+const DEFAULT_CHECKOUT_CONTEXT: CheckoutContext = {
+  step: 1,
+  selectedAddressId: undefined,
+  guestAddressDraft: null
+};
+
+export function shouldResetCheckoutContextOnUserChange(
+  previousUser: AppState["user"] | undefined,
+  nextUser: AppState["user"]
+): boolean {
+  if (!previousUser || !nextUser) {
+    return Boolean(previousUser) !== Boolean(nextUser);
+  }
+
+  return previousUser.id !== nextUser.id;
+}
+
+export function resolveCheckoutShippingAddress(
+  user: AppState["user"],
+  checkoutContext: { selectedAddressId?: string; guestAddressDraft: Address | null }
+): Address | undefined {
+  const selectedFromUser = user?.addresses?.find((address) => address.id === checkoutContext.selectedAddressId);
+  if (selectedFromUser) {
+    return selectedFromUser;
+  }
+
+  if (checkoutContext.guestAddressDraft) {
+    return checkoutContext.guestAddressDraft;
+  }
+
+  const defaultFromUser = user?.addresses?.find((address) => address.id === user?.defaultAddressId);
+  if (defaultFromUser) {
+    return defaultFromUser;
+  }
+
+  return user?.defaultAddress;
+}
 
 export function filterCatalogProducts(products: Product[], filters: TeamCatalogFilters): Product[] {
   const normalizedSearch = filters.searchQuery.trim().toLowerCase();
@@ -148,6 +192,8 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   const [hierarchyTeams, setHierarchyTeams] = useState(state.teamList);
   const [hierarchyModels, setHierarchyModels] = useState<Product[]>([]);
   const [teamFiltersById, setTeamFiltersById] = useState<Record<string, TeamCatalogFilters>>({});
+  const [checkoutContext, setCheckoutContext] = useState<CheckoutContext>(DEFAULT_CHECKOUT_CONTEXT);
+  const previousUserRef = useRef(user);
   const selectedTeam =
     hierarchyTeams.find((team) => route.name === "team" && team.id === route.id) ??
     (route.name === "team" ? teamList.find((team) => team.id === route.id) : undefined) ??
@@ -166,6 +212,14 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   };
 
   const isLoading = route.name === "category" ? isCategoryLoading : route.name === "team" ? isTeamLoading : false;
+
+  useEffect(() => {
+    if (shouldResetCheckoutContextOnUserChange(previousUserRef.current, user)) {
+      setCheckoutContext(DEFAULT_CHECKOUT_CONTEXT);
+    }
+
+    previousUserRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     if (route.name !== "category") {
@@ -446,12 +500,16 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           shipping={shipping}
           discount={discount}
           total={total}
+          initialStep={checkoutContext.step}
+          initialSelectedAddressId={checkoutContext.selectedAddressId}
+          guestAddressDraft={checkoutContext.guestAddressDraft}
+          onCheckoutContextChange={setCheckoutContext}
           onSetShipping={setShipping}
           onBackCart={() => setRoute({ name: "cart" })}
           onGoProfile={() => setRoute({ name: "profile" })}
           onRequireAuth={() => setRoute({ name: "login", redirectAfterLogin: "checkout" })}
-          onOrderComplete={() => {
-            const shippingAddress = user?.defaultAddress;
+          onOrderComplete={(shippingAddressFromCheckout) => {
+            const shippingAddress = shippingAddressFromCheckout ?? resolveCheckoutShippingAddress(user, checkoutContext);
             if (!shippingAddress) {
               setRoute({ name: "profile" });
               return;
@@ -467,6 +525,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
             };
             setOrders((prev) => [newOrder, ...prev]);
             clearCart();
+            setCheckoutContext(DEFAULT_CHECKOUT_CONTEXT);
             setRoute({ name: "home" });
           }}
         />

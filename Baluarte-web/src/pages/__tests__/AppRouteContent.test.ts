@@ -1,4 +1,9 @@
-import { filterCatalogProducts, mapHierarchyModelToProduct } from "../AppRouteContent";
+import {
+  filterCatalogProducts,
+  mapHierarchyModelToProduct,
+  resolveCheckoutShippingAddress,
+  shouldResetCheckoutContextOnUserChange
+} from "../AppRouteContent";
 import type { Product } from "../../lib/types";
 
 function buildProduct(teamId: string, id: string): Product {
@@ -84,5 +89,110 @@ describe("filterCatalogProducts", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("fla-1");
+  });
+});
+
+describe("resolveCheckoutShippingAddress", () => {
+  it("uses preserved guest address when no selected user address is provided", () => {
+    const shippingAddress = resolveCheckoutShippingAddress(
+      {
+        id: "u1",
+        name: "Joao",
+        email: "joao@email.com",
+        role: "client",
+        defaultAddressId: "addr-default",
+        addresses: [
+          {
+            id: "addr-default",
+            cep: "22222-000",
+            street: "Rua B",
+            number: "200",
+            neighborhood: "Jardins",
+            city: "Sao Paulo",
+            state: "SP"
+          }
+        ]
+      },
+      {
+        selectedAddressId: undefined,
+        guestAddressDraft: {
+          cep: "01001-000",
+          street: "Rua A",
+          number: "100",
+          neighborhood: "Centro",
+          city: "Sao Paulo",
+          state: "SP"
+        }
+      }
+    );
+
+    expect(shippingAddress).toEqual(
+      expect.objectContaining({
+        street: "Rua A",
+        number: "100"
+      })
+    );
+  });
+
+  it("prioritizes explicitly selected user address over guest draft", () => {
+    const shippingAddress = resolveCheckoutShippingAddress(
+      {
+        id: "u1",
+        name: "Joao",
+        email: "joao@email.com",
+        role: "client",
+        addresses: [
+          {
+            id: "addr-selected",
+            cep: "33333-000",
+            street: "Rua C",
+            number: "300",
+            neighborhood: "Vila",
+            city: "Sao Paulo",
+            state: "SP"
+          }
+        ]
+      },
+      {
+        selectedAddressId: "addr-selected",
+        guestAddressDraft: {
+          cep: "01001-000",
+          street: "Rua A",
+          number: "100",
+          neighborhood: "Centro",
+          city: "Sao Paulo",
+          state: "SP"
+        }
+      }
+    );
+
+    expect(shippingAddress).toEqual(
+      expect.objectContaining({
+        street: "Rua C",
+        number: "300"
+      })
+    );
+  });
+});
+
+describe("shouldResetCheckoutContextOnUserChange", () => {
+  it("resets checkout context after logout", () => {
+    const shouldReset = shouldResetCheckoutContextOnUserChange(
+      {
+        id: "u1",
+        name: "Joao",
+        email: "joao@email.com",
+        role: "client"
+      },
+      null
+    );
+
+    expect(shouldReset).toBe(true);
+  });
+
+  it("does not reset guest checkout context while unauthenticated", () => {
+    const shouldReset = shouldResetCheckoutContextOnUserChange(null, null);
+
+    expect(shouldReset).toBe(false);
   });
 });

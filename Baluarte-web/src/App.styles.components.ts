@@ -533,6 +533,11 @@ export const componentStyles = {
     fontSize: 13,
     fontWeight: "600"
   },
+  stepInactive: {
+    color: theme.colors.slate400,
+    fontSize: 13,
+    fontWeight: "600"
+  },
   adminMenuButton: {
     borderColor: theme.colors.blue300,
     borderWidth: 1,

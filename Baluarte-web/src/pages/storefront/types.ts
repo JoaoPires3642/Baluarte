@@ -49,11 +49,15 @@ export type CheckoutScreenProps = {
   shipping: number;
   discount: number;
   total: number;
+  initialStep?: 1 | 2 | 3;
+  initialSelectedAddressId?: string;
+  guestAddressDraft?: Address | null;
+  onCheckoutContextChange?: (context: { step: 1 | 2 | 3; selectedAddressId?: string; guestAddressDraft: Address | null }) => void;
   onSetShipping: (value: number) => void;
   onBackCart: () => void;
   onGoProfile: () => void;
   onRequireAuth: () => void;
-  onOrderComplete: () => void;
+  onOrderComplete: (shippingAddress?: Address) => void;
 };
 
 export type LoginScreenProps = {
