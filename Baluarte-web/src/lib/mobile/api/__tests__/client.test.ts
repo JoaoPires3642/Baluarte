@@ -1,4 +1,5 @@
 import { ApiClient } from "../client";
+import { resolveInternalRoleFromClerkIdentity } from "../contracts";
 
 const fetchMock = jest.fn();
 global.fetch = fetchMock as unknown as typeof fetch;
@@ -90,5 +91,38 @@ describe("ApiClient", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("maps Clerk identity to internal role and forwards auth headers", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: { ok: true } }),
+      headers: { get: () => null }
+    });
+
+    const client = new ApiClient("http://localhost:8080/api/v1");
+    await client.request("/admin/orders", {
+      method: "GET",
+      authorizationContext: {
+        clerkIdentity: {
+          clerkUserId: "user_123",
+          email: "admin@loja.com"
+        },
+        internalRole: "admin"
+      }
+    });
+
+    expect(resolveInternalRoleFromClerkIdentity({ clerkUserId: "user_123", email: "admin@loja.com" }, ["admin@loja.com"])).toBe("admin");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/admin/orders"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-Clerk-User-Id": "user_123",
+          "X-Clerk-Email": "admin@loja.com",
+          "X-Internal-Role": "admin"
+        })
+      })
+    );
   });
 });

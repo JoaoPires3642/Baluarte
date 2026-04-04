@@ -18,7 +18,7 @@ import { OrdersScreen } from "./storefront/OrdersScreen";
 import { ProductScreen } from "./storefront/ProductScreen";
 import { TeamScreen } from "./storefront/TeamScreen";
 import { ProfileScreen } from "./storefront/ProfileScreen";
-import type { AppState } from "../hooks/useAppState";
+import type { AppState, RouteState } from "../hooks/useAppState";
 import type { Address, Category, Order, Product, Size } from "../lib/types";
 import { fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import styles from "../App.styles";
@@ -45,6 +45,11 @@ type TeamCatalogFilters = {
   onSaleOnly: boolean;
 };
 
+type AdminRouteName = "admin" | "admin-dashboard" | "admin-categories" | "admin-teams" | "admin-products" | "admin-orders" | "admin-coupons";
+
+export type AdminRouteState = Extract<RouteState, { name: AdminRouteName }>;
+export type LoginRouteState = Extract<RouteState, { name: "login" }>;
+
 const DEFAULT_TEAM_FILTERS: TeamCatalogFilters = {
   searchQuery: "",
   selectedSize: null,
@@ -57,6 +62,31 @@ const DEFAULT_CHECKOUT_CONTEXT: CheckoutContext = {
   selectedAddressId: undefined,
   guestAddressDraft: null
 };
+
+export function isAdminRoute(route: RouteState): route is AdminRouteState {
+  return (
+    route.name === "admin" ||
+    route.name === "admin-dashboard" ||
+    route.name === "admin-categories" ||
+    route.name === "admin-teams" ||
+    route.name === "admin-products" ||
+    route.name === "admin-orders" ||
+    route.name === "admin-coupons"
+  );
+}
+
+export function hasAdminRouteAccess(user: AppState["user"], authSession: AppState["authSession"]): boolean {
+  return Boolean(user?.role === "admin" && authSession?.token && authSession.internalRole === "admin");
+}
+
+export function buildAdminRecoveryLoginRoute(blockedAdminRoute: AdminRouteState): LoginRouteState & { blockedAdminRoute: AdminRouteState } {
+  return {
+    name: "login",
+    authMode: "login",
+    blockedAdminRoute,
+    redirectAfterLogin: undefined
+  };
+}
 
 export function shouldResetCheckoutContextOnUserChange(
   previousUser: AppState["user"] | undefined,
@@ -171,6 +201,8 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     setShipping,
     appliedCoupon,
     setAppliedCoupon,
+    authSession,
+    recordSecurityEvent,
     baseSubtotal,
     user,
     orders,
@@ -199,6 +231,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   const [teamFiltersById, setTeamFiltersById] = useState<Record<string, TeamCatalogFilters>>({});
   const [checkoutContext, setCheckoutContext] = useState<CheckoutContext>(DEFAULT_CHECKOUT_CONTEXT);
   const previousUserRef = useRef(user);
+  const lastDeniedAdminRouteRef = useRef<string | null>(null);
   const selectedTeam =
     hierarchyTeams.find((team) => route.name === "team" && team.id === route.id) ??
     (route.name === "team" ? teamList.find((team) => team.id === route.id) : undefined) ??
@@ -218,6 +251,8 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   };
 
   const isLoading = route.name === "category" ? isCategoryLoading : route.name === "team" ? isTeamLoading : false;
+  const isAdminAreaRoute = isAdminRoute(route);
+  const hasAdminAccess = hasAdminRouteAccess(user, authSession);
 
   useEffect(() => {
     if (shouldResetCheckoutContextOnUserChange(previousUserRef.current, user)) {
@@ -295,6 +330,25 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   }, [route, teamList, productList]);
 
   useEffect(() => {
+    if (!isAdminAreaRoute || hasAdminAccess) {
+      lastDeniedAdminRouteRef.current = null;
+      return;
+    }
+
+    if (lastDeniedAdminRouteRef.current === route.name) {
+      return;
+    }
+
+    recordSecurityEvent({
+      type: "admin-access-denied",
+      reason: "missing-admin-role-or-session",
+      email: user?.email,
+      route: route.name
+    });
+    lastDeniedAdminRouteRef.current = route.name;
+  }, [hasAdminAccess, isAdminAreaRoute, recordSecurityEvent, route.name, user?.email]);
+
+  useEffect(() => {
     if (route.name !== "team") {
       setIsTeamLoading(false);
       return;
@@ -350,6 +404,32 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       active = false;
     };
   }, [route, productList, selectedTeam]);
+
+  if (isAdminAreaRoute && !hasAdminAccess) {
+    return (
+      <>
+        <View style={styles.stackScreen}>
+          <Pressable onPress={() => setRoute({ name: "home" })}>
+            <Text style={styles.backLink}>Voltar</Text>
+          </Pressable>
+          <Text style={styles.screenTitle}>Acesso restrito</Text>
+          <Text style={styles.screenDescription}>Somente administradores autenticados podem acessar esta area.</Text>
+          <Text style={styles.errorText}>Acesso negado: permissao insuficiente.</Text>
+          <Pressable
+            style={styles.primaryActionButton}
+            onPress={() => setRoute(buildAdminRecoveryLoginRoute(route))}
+          >
+            <Text style={styles.primaryActionButtonText}>Entrar como admin</Text>
+          </Pressable>
+        </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerBrand}>Baluarte</Text>
+          <Text style={styles.footerText}>A melhor loja de camisas de times do Brasil.</Text>
+          <Text style={styles.footerMeta}>2024 Baluarte Artigos Esportivos. Todos os direitos reservados.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -578,14 +658,23 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       {route.name === "login" ? (
         <LoginScreen
           initialMode={route.authMode ?? "login"}
-          onBack={() => setRoute(route.redirectAfterLogin === "checkout" ? { name: "checkout" } : { name: "home" })}
+          onBack={() => {
+            if (route.blockedAdminRoute) {
+              setRoute(route.blockedAdminRoute);
+              return;
+            }
+
+            setRoute(route.redirectAfterLogin === "checkout" ? { name: "checkout" } : { name: "home" });
+          }}
           onLogin={async (email, password) => {
-            const ok = await handleLogin(email, password);
-            if (!ok) {
+            const result = await handleLogin(email, password);
+            if (!result.ok) {
               return false;
             }
-            const isAdmin = email.trim().toLowerCase() === "admin@loja.com";
-            if (isAdmin) {
+            const isAdmin = result.internalRole === "admin";
+            if (isAdmin && route.blockedAdminRoute) {
+              setRoute(route.blockedAdminRoute);
+            } else if (isAdmin) {
               setRoute({ name: "admin" });
             } else if (route.redirectAfterLogin === "checkout") {
               setRoute({ name: "checkout" });

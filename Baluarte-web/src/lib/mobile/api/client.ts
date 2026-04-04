@@ -1,6 +1,17 @@
 import { DEFAULT_API_TIMEOUT_MS, resolveApiV1BaseUrl } from "../env";
 import { normalizeApiError } from "./errors";
+import { resolveInternalRoleFromClerkIdentity } from "./contracts";
 import type { ApiRequestOptions, ApiSuccessEnvelope, NormalizedApiError } from "./contracts";
+
+function readAdminEmailAllowlistFromEnv(): string[] {
+  const raw = process.env.EXPO_PUBLIC_ADMIN_EMAILS ?? "";
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+const ADMIN_EMAIL_ALLOWLIST = readAdminEmailAllowlistFromEnv();
 
 function parseJsonSafely(value: string): unknown {
   if (!value) {
@@ -36,6 +47,18 @@ export class ApiClient {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          ...(options.authorizationContext
+            ? {
+                "X-Clerk-User-Id": options.authorizationContext.clerkIdentity.clerkUserId,
+                "X-Clerk-Email": options.authorizationContext.clerkIdentity.email,
+                "X-Internal-Role":
+                  options.authorizationContext.internalRole ??
+                  resolveInternalRoleFromClerkIdentity(
+                    options.authorizationContext.clerkIdentity,
+                    ADMIN_EMAIL_ALLOWLIST
+                  )
+              }
+            : {}),
           ...options.headers
         },
         body: options.body,

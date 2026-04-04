@@ -29,3 +29,8 @@ management:
       probes:
         enabled: true
       show-details: never
+app:
+  auth:
+    admin-emails: ${APP_AUTH_ADMIN_EMAILS:}
+    clerk-issuer: ${APP_AUTH_CLERK_ISSUER:}
+    clerk-jwks-uri: ${APP_AUTH_CLERK_JWKS_URI:}

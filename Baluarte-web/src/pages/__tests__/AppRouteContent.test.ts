@@ -1,9 +1,17 @@
+import { createElement } from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+
 import {
+  AppRouteContent,
+  buildAdminRecoveryLoginRoute,
+  hasAdminRouteAccess,
   filterCatalogProducts,
   mapHierarchyModelToProduct,
   resolveCheckoutShippingAddress,
-  shouldResetCheckoutContextOnUserChange
+  shouldResetCheckoutContextOnUserChange,
+  isAdminRoute
 } from "../AppRouteContent";
+import type { AppState } from "../../hooks/useAppState";
 import type { Product } from "../../lib/types";
 
 function buildProduct(teamId: string, id: string): Product {
@@ -27,6 +35,54 @@ function buildProduct(teamId: string, id: string): Product {
   };
 }
 
+function buildAppState(overrides: Partial<AppState>): AppState {
+  return {
+    route: { name: "home" },
+    setRoute: jest.fn(),
+    categories: [],
+    setCategories: jest.fn(),
+    teamList: [],
+    setTeamList: jest.fn(),
+    productList: [],
+    setProductList: jest.fn(),
+    coupons: [],
+    setCoupons: jest.fn(),
+    cartItems: [],
+    shipping: 0,
+    setShipping: jest.fn(),
+    appliedCoupon: null,
+    setAppliedCoupon: jest.fn(),
+    baseSubtotal: 0,
+    user: null,
+    setUser: jest.fn(),
+    authSession: null,
+    setAuthSession: jest.fn(),
+    securityAuditEvents: [],
+    recordSecurityEvent: jest.fn(),
+    orders: [],
+    setOrders: jest.fn(),
+    featuredProducts: [],
+    subtotal: 0,
+    customizationNameCount: 0,
+    customizationSubtotal: 0,
+    customizationNumberDigitCount: 0,
+    customizationNumberSubtotal: 0,
+    discount: 0,
+    total: 0,
+    cartCount: 0,
+    addToCart: jest.fn(),
+    updateCartQuantity: jest.fn(),
+    clearCart: jest.fn(),
+    handleLogin: jest.fn(),
+    handleRegister: jest.fn(),
+    updateUserAddress: jest.fn(),
+    screen: null,
+    inAdminArea: false,
+    accountLabel: "Perfil",
+    ...overrides
+  } as AppState;
+}
+
 describe("mapHierarchyModelToProduct", () => {
   it("does not bind product from another team when slug collides", () => {
     const selectedTeam = {
@@ -48,6 +104,97 @@ describe("mapHierarchyModelToProduct", () => {
     expect(mapped.teamId).toBe("team-a");
     expect(mapped.inStock).toBe(false);
     expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
+  });
+});
+
+describe("admin route authorization", () => {
+  it("identifies admin routes and aligns access with admin sessions", () => {
+    expect(isAdminRoute({ name: "admin-products" })).toBe(true);
+    expect(isAdminRoute({ name: "home" })).toBe(false);
+    expect(
+      hasAdminRouteAccess(
+        { id: "u1", name: "Admin", email: "admin@loja.com", role: "admin" },
+        { token: "sess-admin-1", internalRole: "admin", provider: "demo", issuedAt: new Date().toISOString() }
+      )
+    ).toBe(true);
+    expect(
+      hasAdminRouteAccess(
+        { id: "u1", name: "Admin", email: "admin@loja.com", role: "admin" },
+        { token: "sess-client-1", internalRole: "client", provider: "demo", issuedAt: new Date().toISOString() }
+      )
+    ).toBe(false);
+  });
+
+  it("builds a login recovery route that preserves the blocked admin destination", () => {
+    expect(buildAdminRecoveryLoginRoute({ name: "admin-orders" })).toEqual({
+      name: "login",
+      authMode: "login",
+      blockedAdminRoute: { name: "admin-orders" },
+      redirectAfterLogin: undefined
+    });
+  });
+});
+
+describe("AppRouteContent blocked admin flow", () => {
+  it("records denied access and preserves the blocked admin route when recovery is requested", () => {
+    const setRoute = jest.fn();
+    const recordSecurityEvent = jest.fn();
+
+    render(
+      createElement(AppRouteContent, {
+        state: buildAppState({
+          route: { name: "admin-products" },
+          setRoute,
+          user: {
+            id: "u1",
+            name: "Joao",
+            email: "joao@email.com",
+            role: "client"
+          },
+          authSession: null,
+          recordSecurityEvent
+        })
+      })
+    );
+
+    expect(screen.getByText("Acesso restrito")).toBeTruthy();
+    expect(recordSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "admin-access-denied",
+        route: "admin-products"
+      })
+    );
+
+    fireEvent.press(screen.getByText("Entrar como admin"));
+
+    expect(setRoute).toHaveBeenLastCalledWith({
+      name: "login",
+      authMode: "login",
+      blockedAdminRoute: { name: "admin-products" },
+      redirectAfterLogin: undefined
+    });
+  });
+
+  it("returns to the blocked admin route after admin login succeeds", async () => {
+    const setRoute = jest.fn();
+
+    render(
+      createElement(AppRouteContent, {
+        state: buildAppState({
+          route: { name: "login", authMode: "login", blockedAdminRoute: { name: "admin-orders" } },
+          setRoute,
+          handleLogin: jest.fn().mockResolvedValue({ ok: true, internalRole: "admin" })
+        })
+      })
+    );
+
+    fireEvent.press(screen.getByText("Demo admin"));
+    const enterButtons = screen.getAllByText("Entrar");
+    fireEvent.press(enterButtons[enterButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(setRoute).toHaveBeenLastCalledWith({ name: "admin-orders" });
+    });
   });
 });
 

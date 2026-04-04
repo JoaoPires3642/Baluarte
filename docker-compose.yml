@@ -4,9 +4,9 @@ services:
     container_name: baluarte-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: baluarte
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-baluarte}
     ports:
       - "5432:5432"
     volumes:
@@ -24,10 +24,22 @@ services:
     container_name: baluarte-core
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://db:5432/baluarte
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      DB_URL: ${DB_URL:-jdbc:postgresql://db:5432/baluarte}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      APP_AUTH_ADMIN_EMAILS: ${APP_AUTH_ADMIN_EMAILS:-}
+      APP_AUTH_CLERK_ISSUER: ${APP_AUTH_CLERK_ISSUER:-}
+      APP_AUTH_CLERK_JWKS_URI: ${APP_AUTH_CLERK_JWKS_URI:-}
+      APP_AUTH_CLERK_SECRET_KEY: ${APP_AUTH_CLERK_SECRET_KEY:-}
+      APP_AUTH_CLERK_WEBHOOK_SECRET: ${APP_AUTH_CLERK_WEBHOOK_SECRET:-}
+      APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN: ${APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN:-}
+      APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY: ${APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY:-}
+      APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET: ${APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET:-}
+      APP_SHIPPING_PROVIDER: ${APP_SHIPPING_PROVIDER:-melhor_envio}
+      APP_SHIPPING_BASE_URL: ${APP_SHIPPING_BASE_URL:-}
+      APP_SHIPPING_API_TOKEN: ${APP_SHIPPING_API_TOKEN:-}
+      APP_SHIPPING_WEBHOOK_SECRET: ${APP_SHIPPING_WEBHOOK_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
@@ -40,9 +52,16 @@ services:
     container_name: baluarte-web
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      EXPO_PUBLIC_ENV: ${EXPO_PUBLIC_ENV:-development}
+      EXPO_PUBLIC_USE_MOCK_CATEGORIES: ${EXPO_PUBLIC_USE_MOCK_CATEGORIES:-false}
+      EXPO_PUBLIC_ADMIN_EMAILS: ${EXPO_PUBLIC_ADMIN_EMAILS:-}
+      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+      EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY:-}
+      EXPO_PUBLIC_SHIPPING_PROVIDER: ${EXPO_PUBLIC_SHIPPING_PROVIDER:-melhor_envio}
     depends_on:
       - core
     ports:

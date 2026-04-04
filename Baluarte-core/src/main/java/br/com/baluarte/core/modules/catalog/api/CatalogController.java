@@ -32,7 +32,7 @@ public class CatalogController {
     ) {
         List<CategoryResponse> data = listPublicCategoriesUseCase.execute(limit)
             .stream()
-            .map(CategoryResponse::fromDomain)
+            .map(CategoryResponse::fromApplication)
             .toList();
 
         return ApiSuccessResponse.of(data);
@@ -45,7 +45,7 @@ public class CatalogController {
     ) {
         List<TeamResponse> data = listPublicTeamsByCategoryUseCase.execute(categorySlug, limit)
             .stream()
-            .map(TeamResponse::fromDomain)
+            .map(TeamResponse::fromApplication)
             .toList();
 
         return ApiSuccessResponse.of(data);
@@ -58,7 +58,7 @@ public class CatalogController {
     ) {
         List<CatalogModelResponse> data = listPublicModelsByTeamUseCase.execute(teamSlug, limit)
             .stream()
-            .map(CatalogModelResponse::fromDomain)
+            .map(CatalogModelResponse::fromApplication)
             .toList();
 
         return ApiSuccessResponse.of(data);

@@ -3,7 +3,6 @@ package br.com.baluarte.core.architecture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import br.com.baluarte.core.modules.catalog.api.CatalogController;
-import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
 import java.lang.annotation.Annotation;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -86,6 +85,50 @@ class ArchitectureBoundaryComplianceTest {
         }
     }
 
+    @Test
+    void apiLayerShouldNotDependOnDomainLayerTypes() {
+        Set<Class<?>> apiClasses = discoverClassesInPackage(CATALOG_API_PACKAGE);
+
+        assertThat(apiClasses)
+            .withFailMessage("No API classes were discovered in package %s", CATALOG_API_PACKAGE)
+            .isNotEmpty();
+
+        for (Class<?> apiClass : apiClasses) {
+            for (Field field : apiClass.getDeclaredFields()) {
+                assertTypeIsNotFromPackage(apiClass, "field " + field.getName(), field.getGenericType(), CATALOG_DOMAIN_PACKAGE);
+            }
+
+            for (Constructor<?> constructor : apiClass.getDeclaredConstructors()) {
+                for (Parameter parameter : constructor.getParameters()) {
+                    assertTypeIsNotFromPackage(
+                        apiClass,
+                        "constructor parameter " + parameter.getName(),
+                        parameter.getParameterizedType(),
+                        CATALOG_DOMAIN_PACKAGE
+                    );
+                }
+            }
+
+            for (Method method : apiClass.getDeclaredMethods()) {
+                assertTypeIsNotFromPackage(
+                    apiClass,
+                    "method return " + method.getName(),
+                    method.getGenericReturnType(),
+                    CATALOG_DOMAIN_PACKAGE
+                );
+
+                for (Parameter parameter : method.getParameters()) {
+                    assertTypeIsNotFromPackage(
+                        apiClass,
+                        "method parameter " + parameter.getName() + " of " + method.getName(),
+                        parameter.getParameterizedType(),
+                        CATALOG_DOMAIN_PACKAGE
+                    );
+                }
+            }
+        }
+    }
+
     private static void assertNoSpringAnnotations(Class<?> clazz) {
         assertThat(hasSpringAnnotation(clazz.getDeclaredAnnotations(), new HashSet<>()))
             .withFailMessage("Class %s contains direct or meta Spring annotation", clazz.getName())
@@ -145,14 +188,16 @@ class ArchitectureBoundaryComplianceTest {
             .isFalse();
     }
 
+    private static void assertTypeIsNotFromPackage(Class<?> owner, String member, Type type, String packagePrefix) {
+        assertThat(isTypeInPackage(type, packagePrefix))
+            .withFailMessage("Class %s has forbidden package dependency at %s: %s", owner.getName(), member, type.getTypeName())
+            .isFalse();
+    }
+
     private static boolean isForbiddenControllerType(Type type) {
         if (type instanceof Class<?> clazz) {
-            if (CategoryRepository.class.isAssignableFrom(clazz)) {
-                return true;
-            }
-
             Package pkg = clazz.getPackage();
-            return pkg != null && pkg.getName().contains(INFRASTRUCTURE_PACKAGE_MARKER);
+            return pkg != null && (pkg.getName().contains(INFRASTRUCTURE_PACKAGE_MARKER) || pkg.getName().startsWith(CATALOG_DOMAIN_PACKAGE));
         }
 
         if (type instanceof ParameterizedType parameterizedType) {
@@ -190,6 +235,60 @@ class ArchitectureBoundaryComplianceTest {
 
             for (Type lowerBound : wildcardType.getLowerBounds()) {
                 if (isForbiddenControllerType(lowerBound)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    private static boolean isTypeInPackage(Type type, String packagePrefix) {
+        if (type instanceof Class<?> clazz) {
+            if (clazz.isArray()) {
+                return isTypeInPackage(clazz.getComponentType(), packagePrefix);
+            }
+
+            Package pkg = clazz.getPackage();
+            return pkg != null && pkg.getName().startsWith(packagePrefix);
+        }
+
+        if (type instanceof ParameterizedType parameterizedType) {
+            if (isTypeInPackage(parameterizedType.getRawType(), packagePrefix)) {
+                return true;
+            }
+
+            for (Type actualTypeArgument : parameterizedType.getActualTypeArguments()) {
+                if (isTypeInPackage(actualTypeArgument, packagePrefix)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (type instanceof GenericArrayType genericArrayType) {
+            return isTypeInPackage(genericArrayType.getGenericComponentType(), packagePrefix);
+        }
+
+        if (type instanceof TypeVariable<?> typeVariable) {
+            for (Type bound : typeVariable.getBounds()) {
+                if (isTypeInPackage(bound, packagePrefix)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (type instanceof WildcardType wildcardType) {
+            for (Type upperBound : wildcardType.getUpperBounds()) {
+                if (isTypeInPackage(upperBound, packagePrefix)) {
+                    return true;
+                }
+            }
+
+            for (Type lowerBound : wildcardType.getLowerBounds()) {
+                if (isTypeInPackage(lowerBound, packagePrefix)) {
                     return true;
                 }
             }

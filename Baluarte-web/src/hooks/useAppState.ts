@@ -14,7 +14,19 @@ export type RouteState =
   | { name: "product"; id: string }
   | { name: "cart" }
   | { name: "checkout" }
-  | { name: "login"; redirectAfterLogin?: "home" | "orders" | "checkout" | "profile"; authMode?: "login" | "register" }
+  | {
+      name: "login";
+      redirectAfterLogin?: "home" | "orders" | "checkout" | "profile";
+      authMode?: "login" | "register";
+      blockedAdminRoute?:
+        | { name: "admin" }
+        | { name: "admin-dashboard" }
+        | { name: "admin-categories" }
+        | { name: "admin-teams" }
+        | { name: "admin-products" }
+        | { name: "admin-orders" }
+        | { name: "admin-coupons" };
+    }
   | { name: "profile" }
   | { name: "orders" }
   | { name: "admin" }
@@ -56,7 +68,19 @@ export function useAppState() {
     updateCartQuantity,
     clearCart
   } = useCartState();
-  const { user, setUser, handleLogin, handleRegister, updateUserAddress, accountLabel } = useAuthState();
+  const {
+    user,
+    setUser,
+    authSession,
+    setAuthSession,
+    securityAuditEvents,
+    recordSecurityEvent,
+    handleLogout,
+    handleLogin,
+    handleRegister,
+    updateUserAddress,
+    accountLabel
+  } = useAuthState();
   const { orders, setOrders } = useOrdersState();
 
   const [coupons, setCoupons] = useState<Coupon[]>(mockCoupons);
@@ -141,6 +165,11 @@ export function useAppState() {
     baseSubtotal,
     user,
     setUser,
+    authSession,
+    setAuthSession,
+    securityAuditEvents,
+    recordSecurityEvent,
+    handleLogout,
     orders,
     setOrders,
     featuredProducts,

@@ -4,6 +4,26 @@ import type { Address, User } from "../lib/types";
 
 type DemoUser = User & { password: string };
 
+export type AuthSession = {
+  token: string;
+  internalRole: User["role"];
+  provider: "demo" | "clerk";
+  issuedAt: string;
+};
+
+export type SecurityAuditEvent = {
+  id: string;
+  type: "login-failed" | "admin-access-denied";
+  reason: string;
+  email?: string;
+  route?: string;
+  timestamp: string;
+};
+
+export type LoginResult =
+  | { ok: true; internalRole: User["role"] }
+  | { ok: false };
+
 const DEMO_USERS: DemoUser[] = [
   {
     id: "admin-1",
@@ -55,16 +75,43 @@ const DEMO_USERS: DemoUser[] = [
 export function useAuthState() {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<DemoUser[]>(DEMO_USERS);
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [securityAuditEvents, setSecurityAuditEvents] = useState<SecurityAuditEvent[]>([]);
 
-  const handleLogin = async (email: string, password: string): Promise<boolean> => {
+  const createSessionToken = (role: User["role"]) => {
+    const now = Date.now();
+    return `sess-${role}-${now.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  };
+
+  const recordSecurityEvent = (event: Omit<SecurityAuditEvent, "id" | "timestamp">) => {
+    const nextEvent: SecurityAuditEvent = {
+      ...event,
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date().toISOString()
+    };
+    setSecurityAuditEvents((prev) => [nextEvent, ...prev]);
+  };
+
+  const handleLogin = async (email: string, password: string): Promise<LoginResult> => {
     await new Promise((resolve) => setTimeout(resolve, 250));
     const found = users.find((item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password);
     if (!found) {
-      return false;
+      recordSecurityEvent({
+        type: "login-failed",
+        reason: "invalid-credentials",
+        email: email.trim().toLowerCase()
+      });
+      return { ok: false };
     }
     const { password: _, ...safeUser } = found;
     setUser(safeUser);
-    return true;
+    setAuthSession({
+      token: createSessionToken(safeUser.role),
+      internalRole: safeUser.role,
+      provider: "demo",
+      issuedAt: new Date().toISOString()
+    });
+    return { ok: true, internalRole: safeUser.role };
   };
 
   const handleRegister = async (
@@ -103,7 +150,18 @@ export function useAuthState() {
     setUsers((prev) => [...prev, nextUser]);
     const { password: _, ...safeUser } = nextUser;
     setUser(safeUser);
+    setAuthSession({
+      token: createSessionToken(safeUser.role),
+      internalRole: safeUser.role,
+      provider: "demo",
+      issuedAt: new Date().toISOString()
+    });
     return { ok: true };
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setAuthSession(null);
   };
 
   const accountLabel = !user ? "Perfil" : user.role === "admin" ? "Admin" : "Perfil";
@@ -234,6 +292,11 @@ export function useAuthState() {
   return {
     user,
     setUser,
+    authSession,
+    setAuthSession,
+    securityAuditEvents,
+    recordSecurityEvent,
+    handleLogout,
     handleLogin,
     handleRegister,
     updateUserAddress,

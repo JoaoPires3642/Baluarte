@@ -1,6 +1,6 @@
 package br.com.baluarte.core.modules.catalog.application;
 
-import br.com.baluarte.core.modules.catalog.domain.Team;
+import br.com.baluarte.core.modules.catalog.application.dto.TeamView;
 import br.com.baluarte.core.modules.catalog.domain.TeamRepository;
 import java.util.List;
 import java.util.Locale;
@@ -14,8 +14,11 @@ public class ListPublicTeamsByCategoryUseCase {
 
     private final TeamRepository teamRepository;
 
-    public List<Team> execute(String categorySlug, int limit) {
-        return teamRepository.findPublicTeamsByCategorySlug(normalizeSlug(categorySlug), boundLimit(limit));
+    public List<TeamView> execute(String categorySlug, int limit) {
+        return teamRepository.findPublicTeamsByCategorySlug(normalizeSlug(categorySlug), boundLimit(limit))
+            .stream()
+            .map(CatalogApplicationMapper::toTeamView)
+            .toList();
     }
 
     private int boundLimit(int limit) {

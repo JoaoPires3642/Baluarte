@@ -1,6 +1,6 @@
 package br.com.baluarte.core.modules.catalog.application;
 
-import br.com.baluarte.core.modules.catalog.domain.CatalogModel;
+import br.com.baluarte.core.modules.catalog.application.dto.CatalogModelView;
 import br.com.baluarte.core.modules.catalog.domain.CatalogModelRepository;
 import java.util.List;
 import java.util.Locale;
@@ -14,8 +14,11 @@ public class ListPublicModelsByTeamUseCase {
 
     private final CatalogModelRepository catalogModelRepository;
 
-    public List<CatalogModel> execute(String teamSlug, int limit) {
-        return catalogModelRepository.findPublicModelsByTeamSlug(normalizeSlug(teamSlug), boundLimit(limit));
+    public List<CatalogModelView> execute(String teamSlug, int limit) {
+        return catalogModelRepository.findPublicModelsByTeamSlug(normalizeSlug(teamSlug), boundLimit(limit))
+            .stream()
+            .map(CatalogApplicationMapper::toCatalogModelView)
+            .toList();
     }
 
     private int boundLimit(int limit) {

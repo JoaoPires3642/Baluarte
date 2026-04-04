@@ -12,6 +12,23 @@
 npm install
 ```
 
+## Configure local environment file
+
+Create your local `.env` from template:
+
+```bash
+cp .env.example .env
+```
+
+Set at least:
+
+- `EXPO_PUBLIC_API_BASE_URL`
+- `EXPO_PUBLIC_ADMIN_EMAILS` (must match backend `APP_AUTH_ADMIN_EMAILS`)
+- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY` (public key only)
+
+Never put private secrets in web env (`EXPO_PUBLIC_*` is exposed to client bundles).
+
 ## Configure API base URL
 
 The app resolves the API base URL in this order:

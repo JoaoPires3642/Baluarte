@@ -1,6 +1,6 @@
 package br.com.baluarte.core.modules.catalog.api;
 
-import br.com.baluarte.core.modules.catalog.domain.Team;
+import br.com.baluarte.core.modules.catalog.application.dto.TeamView;
 import java.util.UUID;
 
 public record TeamResponse(
@@ -12,7 +12,7 @@ public record TeamResponse(
     Integer displayOrder
 ) {
 
-    static TeamResponse fromDomain(Team team) {
+    static TeamResponse fromApplication(TeamView team) {
         return new TeamResponse(
             team.id(),
             team.name(),

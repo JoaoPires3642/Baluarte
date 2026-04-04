@@ -5,6 +5,26 @@ This setup runs:
 - Core API service
 - Next.js frontend
 
+## 0) Environment variables (required for external integrations)
+
+Before starting containers, create your local `.env` from template:
+
+```bash
+cp .env.example .env
+```
+
+Then fill the real values for:
+
+- Clerk backend auth (`APP_AUTH_CLERK_ISSUER`, `APP_AUTH_CLERK_JWKS_URI`, `APP_AUTH_CLERK_SECRET_KEY`, `APP_AUTH_CLERK_WEBHOOK_SECRET`)
+- Mercado Pago (`APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN`, `APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET`)
+- Shipping and label provider (`APP_SHIPPING_API_TOKEN`, `APP_SHIPPING_WEBHOOK_SECRET`)
+
+Important:
+
+- Do not commit `.env`.
+- Secret keys must stay only in backend/server environments.
+- Web/Expo should use only public keys (`EXPO_PUBLIC_*`).
+
 ## 1) Start everything
 
 From this folder (`Baluarte/`):
@@ -80,3 +100,4 @@ DB_PASSWORD=<password>
 - Core service is Spring Boot (`Baluarte-core`) with Actuator health endpoint.
 - Frontend is containerized in production mode (`npm run build` + `npm start`).
 - You can evolve the SQL and API without changing the docker base structure.
+- The compose file reads integration credentials directly from root `.env`.

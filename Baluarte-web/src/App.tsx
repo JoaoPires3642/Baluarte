@@ -12,7 +12,7 @@ import styles from "./App.styles";
 export default function App() {
   const insets = useSafeAreaInsets();
   const state = useAppState();
-  const { route, setRoute, user, setUser, inAdminArea, cartCount, accountLabel } = state;
+  const { route, setRoute, user, handleLogout, inAdminArea, cartCount, accountLabel } = state;
   const isAdminUser = user?.role === "admin";
 
   return (
@@ -27,7 +27,7 @@ export default function App() {
             onOpenLogin={() => setRoute({ name: "login", redirectAfterLogin: "orders", authMode: "login" })}
             onOpenRegister={() => setRoute({ name: "login", redirectAfterLogin: "orders", authMode: "register" })}
             onLogout={() => {
-              setUser(null);
+              handleLogout();
               setRoute({ name: "home" });
             }}
           />

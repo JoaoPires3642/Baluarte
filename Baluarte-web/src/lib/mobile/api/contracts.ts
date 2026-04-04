@@ -27,6 +27,28 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>;
   body?: string;
   timeoutMs?: number;
+  authorizationContext?: ApiAuthorizationContext;
+}
+
+export type InternalUserRole = "admin" | "client";
+
+export interface ClerkIdentityDto {
+  clerkUserId: string;
+  email: string;
+}
+
+export interface ApiAuthorizationContext {
+  clerkIdentity: ClerkIdentityDto;
+  internalRole?: InternalUserRole;
+}
+
+export function resolveInternalRoleFromClerkIdentity(
+  identity: ClerkIdentityDto,
+  adminEmailAllowlist: string[] = []
+): InternalUserRole {
+  const normalizedEmail = identity.email.trim().toLowerCase();
+  const normalizedAllowlist = new Set(adminEmailAllowlist.map((email) => email.trim().toLowerCase()));
+  return normalizedAllowlist.has(normalizedEmail) ? "admin" : "client";
 }
 
 export interface CategoryDto {
