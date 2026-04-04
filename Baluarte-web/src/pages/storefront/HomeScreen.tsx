@@ -42,7 +42,6 @@ export function HomeScreen({ isLoading, featuredProducts, onOpenCategory, onOpen
             onPress={() => onOpenCategory(category.slug)}
           >
             <Image source={{ uri: category.image }} style={styles.categoryImage} />
-            <View style={[styles.categoryOverlay, { backgroundColor: category.color + "99" }]} />
             <View style={styles.categoryContent}>
               <Text style={{ fontSize: 28, marginBottom: 4 }}>{category.icon}</Text>
               <Text style={styles.categoryName}>{category.name}</Text>

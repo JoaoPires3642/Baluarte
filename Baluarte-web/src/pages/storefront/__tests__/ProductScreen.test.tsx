@@ -91,4 +91,49 @@ describe("ProductScreen", () => {
     expect(screen.getByText("O tamanho M esta indisponivel. Escolha outro tamanho.")).toBeTruthy();
     expect(onAddToCart).not.toHaveBeenCalled();
   });
+
+  it("shows personalization entry point only when customization is enabled and template exists", () => {
+    const productWithCustomization: Product = {
+      ...buildProduct(),
+      customizationEnabled: true,
+      customizationTemplatePng: "https://example.com/templates/flamengo-home.png"
+    };
+
+    render(
+      <ProductScreen
+        product={productWithCustomization}
+        onBackToTeam={() => undefined}
+        onBackHome={() => undefined}
+        onAddToCart={() => undefined}
+        onGoCart={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Personalizacao disponivel")).toBeTruthy();
+    expect(screen.getByText("Personalizar camisa")).toBeTruthy();
+
+    fireEvent.press(screen.getByText("Personalizar camisa"));
+    expect(screen.getByText("Personalizacao sera liberada na proxima etapa do checkout.")).toBeTruthy();
+  });
+
+  it("hides personalization entry point when customization is disabled", () => {
+    const productWithoutCustomization: Product = {
+      ...buildProduct(),
+      customizationEnabled: false,
+      customizationTemplatePng: "https://example.com/templates/flamengo-home.png"
+    };
+
+    render(
+      <ProductScreen
+        product={productWithoutCustomization}
+        onBackToTeam={() => undefined}
+        onBackHome={() => undefined}
+        onAddToCart={() => undefined}
+        onGoCart={() => undefined}
+      />
+    );
+
+    expect(screen.queryByText("Personalizacao disponivel")).toBeNull();
+    expect(screen.queryByText("Personalizar camisa")).toBeNull();
+  });
 });

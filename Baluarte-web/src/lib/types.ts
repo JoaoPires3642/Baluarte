@@ -24,6 +24,8 @@ export interface Product {
 	originalPrice?: number;
 	image: string;
 	images?: string[];
+	customizationEnabled?: boolean;
+	customizationTemplatePng?: string;
 	teamId: string;
 	team: Team;
 	sizes: Size[];

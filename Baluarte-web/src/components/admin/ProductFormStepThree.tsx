@@ -28,6 +28,34 @@ export function ProductFormStepThree({
 }: ProductFormStepThreeProps) {
   return (
     <>
+      <Text style={styles.summaryKey}>Personalizacao</Text>
+      <View style={styles.inlineActionRow}>
+        <Pressable
+          style={draft.customizationEnabled ? styles.primaryActionButton : styles.secondaryActionButton}
+          onPress={() => setDraft((prev) => ({ ...prev, customizationEnabled: !prev.customizationEnabled }))}
+        >
+          <Text style={draft.customizationEnabled ? styles.primaryActionButtonText : styles.secondaryActionButtonText}>
+            {draft.customizationEnabled ? "Personalizacao habilitada" : "Habilitar personalizacao"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {draft.customizationEnabled ? (
+        <>
+          <Text style={styles.summaryKey}>Template base PNG (URL)</Text>
+          <View style={styles.inlineActionRow}>
+            <TextInput
+              style={[styles.formInput, styles.imageUrlInput]}
+              value={draft.customizationTemplatePng}
+              onChangeText={(value) => setDraft((prev) => ({ ...prev, customizationTemplatePng: value }))}
+              placeholder="https://...template.png"
+              placeholderTextColor="#9ca3af"
+              autoCapitalize="none"
+            />
+          </View>
+        </>
+      ) : null}
+
       <Text style={styles.summaryKey}>Adicionar por URL</Text>
       <View style={styles.inlineActionRow}>
         <TextInput

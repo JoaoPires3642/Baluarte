@@ -39,6 +39,7 @@ export interface TeamDto {
   id: string;
   name: string;
   slug: string;
+  logo?: string;
   categorySlug: string;
   league?: string;
   displayOrder: number;

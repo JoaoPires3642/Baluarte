@@ -7,6 +7,8 @@ export type ProductFormDraft = {
   description: string;
   price: string;
   discountPrice: string;
+  customizationEnabled: boolean;
+  customizationTemplatePng: string;
   category: string;
   teamId: string;
   stockBySize: Record<ValidSize, string>;

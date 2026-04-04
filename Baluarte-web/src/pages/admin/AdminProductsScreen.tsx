@@ -41,6 +41,8 @@ export function AdminProductsScreen(props: AdminProductsScreenProps) {
     description: "",
     price: "299.90",
     discountPrice: "",
+    customizationEnabled: false,
+    customizationTemplatePng: "",
     category: defaultCategory,
     teamId: defaultTeamId,
     stockBySize: defaultStock(),
@@ -140,6 +142,11 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
     return imageExtensions.some((ext) => lowerUrl.includes(ext));
   };
 
+  const isValidPngTemplate = (value: string): boolean => {
+    const lowerValue = value.trim().toLowerCase();
+    return lowerValue.length > 0 && lowerValue.includes(".png");
+  };
+
   const categoryOptions = categories
     .map((item) => ({ value: item.slug, label: item.name }))
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -227,6 +234,8 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
       description: product.description,
       price: (product.originalPrice ?? product.price).toFixed(2),
       discountPrice: product.originalPrice ? product.price.toFixed(2) : "",
+      customizationEnabled: Boolean(product.customizationEnabled),
+      customizationTemplatePng: product.customizationTemplatePng ?? "",
       category: product.team.category,
       teamId: product.teamId,
       stockBySize: SIZE_ORDER.reduce<Record<ValidSize, string>>((acc, size) => {
@@ -288,6 +297,12 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
     if (createDraft.images.length === 0) {
       errors.push("Adicione pelo menos uma imagem na etapa 2");
     }
+    if (createDraft.customizationEnabled && !createDraft.customizationTemplatePng.trim()) {
+      errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
+    }
+    if (createDraft.customizationEnabled && !isValidPngTemplate(createDraft.customizationTemplatePng)) {
+      errors.push("Template de personalizacao deve ser um PNG valido (.png)");
+    }
 
     if (errors.length > 0) {
       setCreateErrors(errors);
@@ -312,7 +327,9 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
       createDraft.images,
       selectedTeam,
       sanitizeStockBySize(createDraft.stockBySize),
-      pricing.originalPrice
+      pricing.originalPrice,
+      createDraft.customizationEnabled,
+      createDraft.customizationTemplatePng.trim() || undefined
     );
 
     onUpdateProducts([next, ...products]);
@@ -368,6 +385,12 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
     if (editDraft.images.length === 0) {
       errors.push("Mantenha ao menos uma imagem do produto");
     }
+    if (editDraft.customizationEnabled && !editDraft.customizationTemplatePng.trim()) {
+      errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
+    }
+    if (editDraft.customizationEnabled && !isValidPngTemplate(editDraft.customizationTemplatePng)) {
+      errors.push("Template de personalizacao deve ser um PNG valido (.png)");
+    }
 
     if (errors.length > 0) {
       setEditErrors(errors);
@@ -402,7 +425,11 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
               stockQuantity,
               inStock: stockQuantity > 0,
               image: editDraft.images[0],
-              images: [...editDraft.images]
+              images: [...editDraft.images],
+              customizationEnabled: editDraft.customizationEnabled,
+              customizationTemplatePng: editDraft.customizationEnabled
+                ? editDraft.customizationTemplatePng.trim() || undefined
+                : undefined
             }
           : item
       )

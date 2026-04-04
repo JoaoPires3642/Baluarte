@@ -27,6 +27,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   }, [product?.id]);
 
   const selectedSizeStock = selectedSize ? sizeStock[selectedSize] ?? 0 : 0;
+  const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
 
   if (!product) {
     return (
@@ -57,6 +58,19 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
         <Text style={styles.detailPrice}>{toBrl(product.price)}</Text>
       )}
       <Text style={styles.screenDescription}>{product.description}</Text>
+
+      {canPersonalize ? (
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Personalizacao disponivel</Text>
+          <Text style={styles.summaryKey}>Template base configurado para esta camisa.</Text>
+          <Pressable
+            style={styles.secondaryActionButton}
+            onPress={() => setValidationMessage("Personalizacao sera liberada na proxima etapa do checkout.")}
+          >
+            <Text style={styles.secondaryActionButtonText}>Personalizar camisa</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.sizesRow}>
         {product.sizes.map((size) => (

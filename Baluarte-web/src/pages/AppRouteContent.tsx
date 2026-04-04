@@ -240,13 +240,17 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
         }
 
         setHierarchyTeams(
-          teamsFromApi.map((team) => ({
-            id: team.slug,
-            name: team.name,
-            logo: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=300&q=80",
-            category: team.categorySlug,
-            league: team.league
-          }))
+          teamsFromApi.map((team) => {
+            const fallbackTeam = teamList.find((item) => item.id === team.slug);
+
+            return {
+              id: team.slug,
+              name: team.name,
+              logo: team.logo ?? fallbackTeam?.logo ?? "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=300&q=80",
+              category: team.categorySlug,
+              league: team.league
+            };
+          })
         );
       })
       .catch(() => {

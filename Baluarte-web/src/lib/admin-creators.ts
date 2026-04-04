@@ -44,7 +44,9 @@ export const createAdminProduct = (
   imageUris: string[],
   selectedTeam: Team,
   stockBySize: Record<Size, number>,
-  originalPrice?: number
+  originalPrice?: number,
+  customizationEnabled: boolean = false,
+  customizationTemplatePng?: string
 ): AdminProductDraft => {
   const idBase = slugifyEntity(name);
   const id = `${idBase}-${Date.now().toString().slice(-5)}`;
@@ -66,6 +68,8 @@ export const createAdminProduct = (
     originalPrice,
     image: images[0],
     images,
+    customizationEnabled,
+    customizationTemplatePng: customizationEnabled ? customizationTemplatePng : undefined,
     teamId: selectedTeam.id,
     team: selectedTeam,
     sizes: ["P", "M", "G", "GG"],

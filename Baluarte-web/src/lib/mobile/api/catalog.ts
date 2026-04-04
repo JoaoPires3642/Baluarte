@@ -31,6 +31,7 @@ export async function fetchPublicTeamsByCategory(
         id: team.id,
         name: team.name,
         slug: team.id,
+        logo: team.logo,
         categorySlug: team.category,
         league: team.league,
         displayOrder: index + 1
