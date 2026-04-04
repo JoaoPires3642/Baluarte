@@ -1,14 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, TextInput, View } from "react-native";
+import type { ImageStyle, StyleProp } from "react-native";
 
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
 import type { Size } from "../../lib/types";
 import type { ProductScreenProps } from "./types";
 
+const MAX_CUSTOM_NAME_LENGTH = 14;
+const CUSTOM_NAME_PRICE_BRL = 25;
+const CUSTOM_NUMBER_DIGIT_PRICE_BRL = 20;
+const JERSEY_NUMBER_PATTERN = /^\d{1,2}$/;
+
+const getPreviewNameFontSize = (value: string): number => {
+  const normalizedLength = value.replace(/\s+/g, "").length;
+
+  if (normalizedLength <= 8) {
+    return 30;
+  }
+  if (normalizedLength <= 12) {
+    return 26;
+  }
+  if (normalizedLength <= 16) {
+    return 22;
+  }
+  if (normalizedLength <= 20) {
+    return 19;
+  }
+  return 17;
+};
+
+const getPreviewNameLetterSpacing = (value: string): number => {
+  const normalizedLength = value.replace(/\s+/g, "").length;
+
+  if (normalizedLength <= 10) {
+    return 1.5;
+  }
+  if (normalizedLength <= 16) {
+    return 1.1;
+  }
+  return 0.6;
+};
+
 export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, onGoCart }: ProductScreenProps) {
   const [selectedSize, setSelectedSize] = useState<Size | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false);
+  const [customNameInput, setCustomNameInput] = useState("");
+  const [customNames, setCustomNames] = useState<string[]>([]);
+  const [customNumberInput, setCustomNumberInput] = useState("");
+  const [customNumber, setCustomNumber] = useState<string | null>(null);
 
   const sizeStock = useMemo(() => {
     if (!product) {
@@ -24,10 +65,16 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   useEffect(() => {
     setSelectedSize(null);
     setValidationMessage(null);
+    setIsPersonalizationOpen(false);
+    setCustomNameInput("");
+    setCustomNames([]);
+    setCustomNumberInput("");
+    setCustomNumber(null);
   }, [product?.id]);
 
   const selectedSizeStock = selectedSize ? sizeStock[selectedSize] ?? 0 : 0;
   const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
+  const previewName = customNames.join(" ").trim();
 
   if (!product) {
     return (
@@ -46,7 +93,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
         <Text style={styles.backLink}>Voltar para {product.team.name}</Text>
       </Pressable>
 
-      <Image source={{ uri: product.image }} style={styles.detailImage} />
+      <Image source={{ uri: product.image }} style={styles.detailImage as StyleProp<ImageStyle>} />
       <Text style={styles.productTeam}>{product.team.name}</Text>
       <Text style={styles.screenTitle}>{product.name}</Text>
       {product.originalPrice ? (
@@ -65,10 +112,156 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
           <Text style={styles.summaryKey}>Template base configurado para esta camisa.</Text>
           <Pressable
             style={styles.secondaryActionButton}
-            onPress={() => setValidationMessage("Personalizacao sera liberada na proxima etapa do checkout.")}
+            onPress={() => setIsPersonalizationOpen((prev) => !prev)}
           >
-            <Text style={styles.secondaryActionButtonText}>Personalizar camisa</Text>
+            <Text style={styles.secondaryActionButtonText}>
+              {isPersonalizationOpen ? "Ocultar personalizacao" : "Personalizar camisa"}
+            </Text>
           </Pressable>
+
+          {isPersonalizationOpen ? (
+            <>
+              <Text style={styles.summaryKey}>Adicionar nome personalizado (ate {MAX_CUSTOM_NAME_LENGTH} caracteres)</Text>
+              <View style={styles.inlineActionRow}>
+                <TextInput
+                  style={[styles.formInput, { flex: 1 }]}
+                  value={customNameInput}
+                  onChangeText={setCustomNameInput}
+                  placeholder="Ex: JOAO"
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="characters"
+                />
+                <Pressable
+                  style={styles.secondaryActionButton}
+                  onPress={() => {
+                    const nextName = customNameInput.trim();
+
+                    if (!nextName) {
+                      setValidationMessage("Informe um nome valido para personalizacao.");
+                      return;
+                    }
+
+                    if (nextName.length > MAX_CUSTOM_NAME_LENGTH) {
+                      setValidationMessage(`Nome personalizado deve ter no maximo ${MAX_CUSTOM_NAME_LENGTH} caracteres.`);
+                      return;
+                    }
+
+                    if (customNames.some((name) => name.toLowerCase() === nextName.toLowerCase())) {
+                      setValidationMessage("Este nome ja foi adicionado.");
+                      return;
+                    }
+
+                    setCustomNames((prev) => [...prev, nextName]);
+                    setCustomNameInput("");
+                    setValidationMessage(null);
+                  }}
+                >
+                  <Text style={styles.secondaryActionButtonText}>Adicionar nome</Text>
+                </Pressable>
+              </View>
+
+              {customNames.length > 0 ? (
+                <View style={styles.chipsRowWrap}>
+                  {customNames.map((name) => (
+                    <Pressable
+                      key={name}
+                      style={styles.filterChip}
+                      onPress={() => setCustomNames((prev) => prev.filter((item) => item !== name))}
+                    >
+                      <Text style={styles.filterChipText}>{name} x</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.screenDescription}>Adicione ao menos um nome para aplicar personalizacao.</Text>
+              )}
+
+              <Text style={styles.summaryKey}>
+                Nomes personalizados: {customNames.length} | Acrescimo: {toBrl(customNames.length * CUSTOM_NAME_PRICE_BRL)}
+              </Text>
+
+              <Text style={styles.summaryKey}>Adicionar numero personalizado (1 ou 2 digitos)</Text>
+              <View style={styles.inlineActionRow}>
+                <TextInput
+                  style={[styles.formInput, { flex: 1 }]}
+                  value={customNumberInput}
+                  onChangeText={setCustomNumberInput}
+                  placeholder="Ex: 08"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Pressable
+                  style={styles.secondaryActionButton}
+                  onPress={() => {
+                    const nextNumber = customNumberInput.trim();
+
+                    if (!JERSEY_NUMBER_PATTERN.test(nextNumber)) {
+                      setValidationMessage("Numero personalizado deve conter apenas digitos (0-9) com 1 ou 2 caracteres.");
+                      return;
+                    }
+
+                    setCustomNumber(nextNumber);
+                    setCustomNumberInput("");
+                    setValidationMessage(null);
+                  }}
+                >
+                  <Text style={styles.secondaryActionButtonText}>Adicionar numero</Text>
+                </Pressable>
+              </View>
+
+              {customNumber ? (
+                <>
+                  <Text style={styles.summaryKey}>Numero personalizado: {customNumber}</Text>
+                  <Text
+                    style={{
+                      color: "#0f172a",
+                      fontSize: 36,
+                      fontWeight: "900",
+                      letterSpacing: 4,
+                      textAlign: "center"
+                    }}
+                  >
+                    {customNumber}
+                  </Text>
+                  <Text style={styles.summaryKey}>
+                    Acrescimo numero: {toBrl(customNumber.length * CUSTOM_NUMBER_DIGIT_PRICE_BRL)}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.screenDescription}>Adicione um numero para aplicar a tipografia de camisa.</Text>
+              )}
+
+              <Text style={styles.summaryTitle}>Preview da personalizacao</Text>
+              {previewName || customNumber ? (
+                <View style={styles.personalizationPreviewCard}>
+                  <Image
+                    testID="personalization-preview-template"
+                    source={{ uri: product.customizationTemplatePng as string }}
+                    style={styles.personalizationPreviewImage as StyleProp<ImageStyle>}
+                  />
+                  <View style={styles.personalizationPreviewOverlay}>
+                    {previewName ? (
+                      <Text
+                        style={[
+                          styles.personalizationPreviewName,
+                          {
+                            fontSize: getPreviewNameFontSize(previewName),
+                            letterSpacing: getPreviewNameLetterSpacing(previewName)
+                          }
+                        ]}
+                      >
+                        {previewName}
+                      </Text>
+                    ) : null}
+                    {customNumber ? <Text style={styles.personalizationPreviewNumber}>{customNumber}</Text> : null}
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.screenDescription}>Adicione nome ou numero para gerar o preview.</Text>
+              )}
+            </>
+          ) : null}
         </View>
       ) : null}
 
@@ -122,7 +315,12 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
             }
 
             setValidationMessage(null);
-            onAddToCart(product, selectedSize);
+            onAddToCart(
+              product,
+              selectedSize,
+              canPersonalize && isPersonalizationOpen ? customNames : undefined,
+              canPersonalize && isPersonalizationOpen ? customNumber ?? undefined : undefined
+            );
           }}
         >
           <Text style={styles.primaryActionButtonText}>

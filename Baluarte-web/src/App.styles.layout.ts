@@ -161,6 +161,22 @@ export const layoutStyles = {
     padding: 12,
     gap: 10
   },
+  personalizationPreviewCard: {
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceMuted,
+    minHeight: 220,
+    position: "relative"
+  },
+  personalizationPreviewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 24,
+    paddingBottom: 18
+  },
   chipsRowWrap: {
     flexDirection: "row",
     flexWrap: "wrap",

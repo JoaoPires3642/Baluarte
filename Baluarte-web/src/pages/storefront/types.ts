@@ -22,13 +22,17 @@ export type ProductScreenProps = {
   product: Product | null;
   onBackToTeam: (teamId: string) => void;
   onBackHome: () => void;
-  onAddToCart: (product: Product, size: Size) => void;
+  onAddToCart: (product: Product, size: Size, customNames?: string[], customNumber?: string) => void;
   onGoCart: () => void;
 };
 
 export type CartScreenProps = {
   items: CartItem[];
   subtotal: number;
+  customizationNameCount: number;
+  customizationSubtotal: number;
+  customizationNumberDigitCount: number;
+  customizationNumberSubtotal: number;
   shipping: number;
   discount: number;
   total: number;
@@ -36,7 +40,7 @@ export type CartScreenProps = {
   onApplyCoupon: (code: string) => CouponApplyResult;
   onRemoveCoupon: () => void;
   onSetShipping: (value: number) => void;
-  onUpdateQuantity: (productId: string, size: Size, quantity: number) => void;
+  onUpdateQuantity: (productId: string, size: Size, quantity: number, customNames?: string[], customNumber?: string) => void;
   onClearCart: () => void;
   onBackHome: () => void;
   onCheckout: () => void;

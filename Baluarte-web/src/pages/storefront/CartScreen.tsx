@@ -8,6 +8,10 @@ import type { CartScreenProps } from "./types";
 export function CartScreen({
   items,
   subtotal,
+  customizationNameCount,
+  customizationSubtotal,
+  customizationNumberDigitCount,
+  customizationNumberSubtotal,
   shipping,
   discount,
   total,
@@ -54,29 +58,60 @@ export function CartScreen({
       </Pressable>
       <Text style={styles.screenTitle}>Carrinho de Compras</Text>
 
-      {items.map((item) => (
-        <View key={`${item.product.id}-${item.size}`} style={styles.cartItemCard}>
-          <Image source={{ uri: item.product.image }} style={styles.cartItemImage} />
-          <View style={styles.cartItemContent}>
-            <Text style={styles.productTeam}>{item.product.team.name}</Text>
-            <Text style={styles.cartItemName}>{item.product.name}</Text>
-            <Text style={styles.cartItemMeta}>Tam: {item.size}</Text>
-            <View style={styles.qtyRow}>
-              <Pressable style={styles.qtyButton} onPress={() => onUpdateQuantity(item.product.id, item.size, item.quantity - 1)}>
-                <Text style={styles.qtyButtonText}>-</Text>
+      {items.map((item) => {
+        const variantKey = `${item.product.id}-${item.size}-${(item.customNames ?? []).join("|")}-${item.customNumber ?? ""}`;
+        const baseLineTotal = item.product.price * item.quantity;
+        const namesLineTotal = (item.customNames?.length ?? 0) * 25 * item.quantity;
+        const numberLineTotal = (item.customNumber?.length ?? 0) * 20 * item.quantity;
+        const lineTotal = baseLineTotal + namesLineTotal + numberLineTotal;
+
+        return (
+          <View key={variantKey} style={styles.cartItemCard}>
+            <Image source={{ uri: item.product.image }} style={styles.cartItemImage} />
+            <View style={styles.cartItemContent}>
+              <Text style={styles.productTeam}>{item.product.team.name}</Text>
+              <Text style={styles.cartItemName}>{item.product.name}</Text>
+              <Text style={styles.cartItemMeta}>Tam: {item.size}</Text>
+              {item.customNames && item.customNames.length > 0 ? (
+                <>
+                  <Text style={styles.cartItemMeta}>Nomes: {item.customNames.join(", ")}</Text>
+                  <Text style={styles.cartItemMeta}>
+                    Personalizacao: {item.customNames.length} nome(s) x {item.quantity} item(ns)
+                  </Text>
+                </>
+              ) : null}
+              {item.customNumber ? <Text style={styles.cartItemMeta}>Numero: {item.customNumber}</Text> : null}
+              <Text style={styles.cartItemBreakdownLine}>Base ({item.quantity}x): {toBrl(baseLineTotal)}</Text>
+              {namesLineTotal > 0 ? (
+                <Text style={styles.cartItemBreakdownLine}>Ajuste nomes: {toBrl(namesLineTotal)}</Text>
+              ) : null}
+              {numberLineTotal > 0 ? (
+                <Text style={styles.cartItemBreakdownLine}>Ajuste numero: {toBrl(numberLineTotal)}</Text>
+              ) : null}
+              <Text style={styles.cartItemMeta}>Total do item: {toBrl(lineTotal)}</Text>
+              <View style={styles.qtyRow}>
+                <Pressable
+                  style={styles.qtyButton}
+                  onPress={() => onUpdateQuantity(item.product.id, item.size, item.quantity - 1, item.customNames, item.customNumber)}
+                >
+                  <Text style={styles.qtyButtonText}>-</Text>
+                </Pressable>
+                <Text style={styles.qtyText}>{item.quantity}</Text>
+                <Pressable
+                  style={styles.qtyButton}
+                  onPress={() => onUpdateQuantity(item.product.id, item.size, item.quantity + 1, item.customNames, item.customNumber)}
+                >
+                  <Text style={styles.qtyButtonText}>+</Text>
+                </Pressable>
+                <Text style={styles.cartLinePrice}>{toBrl(lineTotal)}</Text>
+              </View>
+              <Pressable onPress={() => onUpdateQuantity(item.product.id, item.size, 0, item.customNames, item.customNumber)}>
+                <Text style={styles.dangerLink}>Remover item</Text>
               </Pressable>
-              <Text style={styles.qtyText}>{item.quantity}</Text>
-              <Pressable style={styles.qtyButton} onPress={() => onUpdateQuantity(item.product.id, item.size, item.quantity + 1)}>
-                <Text style={styles.qtyButtonText}>+</Text>
-              </Pressable>
-              <Text style={styles.cartLinePrice}>{toBrl(item.product.price * item.quantity)}</Text>
             </View>
-            <Pressable onPress={() => onUpdateQuantity(item.product.id, item.size, 0)}>
-              <Text style={styles.dangerLink}>Remover item</Text>
-            </Pressable>
           </View>
-        </View>
-      ))}
+        );
+      })}
 
       <Pressable onPress={onClearCart}>
         <Text style={styles.dangerLink}>Limpar carrinho</Text>
@@ -136,6 +171,18 @@ export function CartScreen({
         </View>
 
         <View style={styles.summaryLine}><Text style={styles.summaryKey}>Subtotal</Text><Text style={styles.summaryValue}>{toBrl(subtotal)}</Text></View>
+        {customizationNameCount > 0 ? (
+          <View style={styles.summaryLine}>
+            <Text style={styles.summaryKey}>Nomes personalizados ({customizationNameCount})</Text>
+            <Text style={styles.summaryValue}>{toBrl(customizationSubtotal)}</Text>
+          </View>
+        ) : null}
+        {customizationNumberDigitCount > 0 ? (
+          <View style={styles.summaryLine}>
+            <Text style={styles.summaryKey}>Numero personalizado ({customizationNumberDigitCount} digitos)</Text>
+            <Text style={styles.summaryValue}>{toBrl(customizationNumberSubtotal)}</Text>
+          </View>
+        ) : null}
         <View style={styles.summaryLine}><Text style={styles.summaryKey}>Desconto</Text><Text style={styles.summaryValue}>-{toBrl(discount)}</Text></View>
         <View style={styles.summaryLine}><Text style={styles.summaryKey}>Frete</Text><Text style={styles.summaryValue}>{shipping > 0 ? toBrl(shipping) : "Calcule acima"}</Text></View>
         <View style={styles.summaryLineTotal}><Text style={styles.summaryTotalKey}>Total</Text><Text style={styles.summaryTotalValue}>{toBrl(total)}</Text></View>

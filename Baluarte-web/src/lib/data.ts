@@ -41,6 +41,8 @@ export const products: Product[] = [
     price: 299.90,
     originalPrice: 349.90,
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
+    customizationEnabled: true,
+    customizationTemplatePng: "https://flamengo.vtexassets.com/arquivos/ids/177009-800-450?v=638853314009100000&width=800&height=450&aspect=true",
     teamId: "flamengo",
     team: teams.find(t => t.id === "flamengo")!,
     sizes: ["P", "M", "G", "GG"],

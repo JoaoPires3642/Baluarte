@@ -27,5 +27,12 @@ export const homeCategories: HomeCategory[] = [
     image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=600&q=80",
     color: "#ffd700",
     icon: "⭐"
+  },
+  {
+    name: "Personalizado",
+    slug: "personalizado",
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
+    color: "#0f766e",
+    icon: "✍️"
   }
 ];

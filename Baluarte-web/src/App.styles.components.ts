@@ -245,6 +245,31 @@ export const componentStyles = {
     borderRadius: 14,
     marginTop: 6
   },
+  personalizationPreviewImage: {
+    width: "100%",
+    height: 240
+  },
+  personalizationPreviewName: {
+    color: theme.colors.white,
+    fontWeight: "900",
+    fontStyle: "italic",
+    textTransform: "uppercase",
+    textShadowColor: "rgba(15,23,42,0.9)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+    maxWidth: "80%",
+    textAlign: "center",
+    lineHeight: 32
+  },
+  personalizationPreviewNumber: {
+    color: theme.colors.white,
+    fontSize: 56,
+    fontWeight: "900",
+    letterSpacing: 6,
+    textShadowColor: "rgba(15,23,42,0.95)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6
+  },
   detailPrice: {
     color: theme.colors.blue700,
     fontSize: 24,
@@ -321,6 +346,10 @@ export const componentStyles = {
   },
   cartItemMeta: {
     color: theme.colors.slate500,
+    fontSize: 12
+  },
+  cartItemBreakdownLine: {
+    color: theme.colors.slate600,
     fontSize: 12
   },
   qtyButton: {

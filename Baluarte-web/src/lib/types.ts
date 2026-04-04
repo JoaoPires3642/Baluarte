@@ -34,10 +34,19 @@ export interface Product {
 	featured?: boolean;
 }
 
+export interface CartCustomizationSnapshot {
+	templatePng: string;
+	names: string[];
+	number?: string;
+}
+
 export interface CartItem {
 	product: Product;
 	size: Size;
 	quantity: number;
+	customNames?: string[];
+	customNumber?: string;
+	customizationSnapshot?: CartCustomizationSnapshot;
 }
 
 export interface User {

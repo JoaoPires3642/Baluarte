@@ -43,7 +43,12 @@ export function useAppState() {
     setShipping,
     appliedCoupon,
     setAppliedCoupon,
+    baseSubtotal,
     subtotal,
+    customizationNameCount,
+    customizationSubtotal,
+    customizationNumberDigitCount,
+    customizationNumberSubtotal,
     discount,
     total,
     cartCount,
@@ -55,23 +60,39 @@ export function useAppState() {
   const { orders, setOrders } = useOrdersState();
 
   const [coupons, setCoupons] = useState<Coupon[]>(mockCoupons);
+  const customizableTeamIds = useMemo(() => {
+    return new Set(
+      productList
+        .filter((product) => product.customizationEnabled && product.customizationTemplatePng)
+        .map((product) => product.teamId)
+    );
+  }, [productList]);
 
   const screen = useMemo<ScreenState>(() => {
     if (route.name === "category") {
+      const categoryTeams =
+        route.slug === "personalizado"
+          ? teamList.filter((team) => customizableTeamIds.has(team.id))
+          : teamList.filter((team) => team.category === route.slug);
+
       return {
         title:
           route.slug === "nacionais"
             ? "Times Nacionais"
             : route.slug === "internacionais"
               ? "Times Internacionais"
-              : "Selecoes",
+              : route.slug === "selecoes"
+                ? "Selecoes"
+                : "Personalizado",
         description:
           route.slug === "nacionais"
             ? "Os maiores times do futebol brasileiro"
             : route.slug === "internacionais"
               ? "Os gigantes do futebol mundial"
-              : "As maiores selecoes do planeta",
-        teams: teamList.filter((team) => team.category === route.slug)
+              : route.slug === "selecoes"
+                ? "As maiores selecoes do planeta"
+                : "Escolha um time e personalize sua camisa.",
+        teams: categoryTeams
       };
     }
 
@@ -90,7 +111,7 @@ export function useAppState() {
     }
 
     return null;
-  }, [route, teamList, productList]);
+  }, [route, teamList, productList, customizableTeamIds]);
 
   const inAdminArea =
     route.name === "admin" ||
@@ -117,12 +138,17 @@ export function useAppState() {
     setShipping,
     appliedCoupon,
     setAppliedCoupon,
+    baseSubtotal,
     user,
     setUser,
     orders,
     setOrders,
     featuredProducts,
     subtotal,
+    customizationNameCount,
+    customizationSubtotal,
+    customizationNumberDigitCount,
+    customizationNumberSubtotal,
     discount,
     total,
     cartCount,

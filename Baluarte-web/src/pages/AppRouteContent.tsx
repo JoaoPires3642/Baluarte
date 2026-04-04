@@ -171,11 +171,16 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     setShipping,
     appliedCoupon,
     setAppliedCoupon,
+    baseSubtotal,
     user,
     orders,
     setOrders,
     featuredProducts,
     subtotal,
+    customizationNameCount,
+    customizationSubtotal,
+    customizationNumberDigitCount,
+    customizationNumberSubtotal,
     discount,
     total,
     addToCart,
@@ -206,7 +211,8 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     const colorMap: Record<string, string> = {
       nacionais: "#1e3c72",
       internacionais: "#c41e3a",
-      selecoes: "#ffd700"
+      selecoes: "#ffd700",
+      personalizado: "#0f766e"
     };
     return colorMap[categorySlug] ?? "#333";
   };
@@ -223,6 +229,23 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
   useEffect(() => {
     if (route.name !== "category") {
+      setIsCategoryLoading(false);
+      return;
+    }
+
+    if (route.slug === "personalizado") {
+      const customizableTeamIds = new Set(
+        productList
+          .filter((product) => product.customizationEnabled && product.customizationTemplatePng)
+          .map((product) => product.teamId)
+      );
+
+      setHierarchyTeams(
+        teamList
+          .filter((team) => customizableTeamIds.has(team.id))
+          .map((team) => ({ ...team, category: "personalizado" }))
+      );
+      setHierarchyModels([]);
       setIsCategoryLoading(false);
       return;
     }
@@ -269,7 +292,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     return () => {
       active = false;
     };
-  }, [route, teamList]);
+  }, [route, teamList, productList]);
 
   useEffect(() => {
     if (route.name !== "team") {
@@ -284,6 +307,19 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     if (!selectedTeam) {
       setIsTeamLoading(false);
       setHierarchyModels([]);
+      return;
+    }
+
+    if (selectedTeam.category === "personalizado") {
+      setHierarchyModels(
+        productList.filter(
+          (product) =>
+            product.teamId === selectedTeam.id &&
+            product.inStock &&
+            Boolean(product.customizationEnabled && product.customizationTemplatePng)
+        )
+      );
+      setIsTeamLoading(false);
       return;
     }
 
@@ -468,7 +504,11 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       {route.name === "cart" ? (
         <CartScreen
           items={cartItems}
-          subtotal={subtotal}
+          subtotal={baseSubtotal}
+          customizationNameCount={customizationNameCount}
+          customizationSubtotal={customizationSubtotal}
+          customizationNumberDigitCount={customizationNumberDigitCount}
+          customizationNumberSubtotal={customizationNumberSubtotal}
           shipping={shipping}
           discount={discount}
           total={total}
