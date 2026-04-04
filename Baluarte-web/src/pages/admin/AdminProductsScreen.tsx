@@ -7,6 +7,8 @@ import * as ImagePicker from "expo-image-picker";
 import styles from "../../App.styles";
 import { createAdminProduct } from "../../lib/admin-creators";
 import { toBrl } from "../../lib/format";
+import { createAdminProductApi, resolveTeamBySlug } from "../../lib/mobile/api/admin-products";
+import type { NormalizedApiError, ApiAuthorizationContext } from "../../lib/mobile/api/contracts";
 import { ProductFormModal } from "../../components/admin/ProductFormModal";
 import { RestockActionSheet } from "../../components/admin/RestockActionSheet";
 import { ProductFormStepOne } from "../../components/admin/ProductFormStepOne";
@@ -56,7 +58,7 @@ export function AdminProductsScreen(props: AdminProductsScreenProps) {
   );
 }
 
-function AdminProductsScreenContent({ user, categories, teams, products, onBack, onUpdateProducts, initialDraft }: AdminProductsScreenContentProps) {
+function AdminProductsScreenContent({ user, authSession, categories, teams, products, onBack, onUpdateProducts, initialDraft }: AdminProductsScreenContentProps) {
   const { height: windowHeight } = useWindowDimensions();
 
   const { state: formState, dispatch } = useProductFormContext();
@@ -145,6 +147,39 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
   const isValidPngTemplate = (value: string): boolean => {
     const lowerValue = value.trim().toLowerCase();
     return lowerValue.length > 0 && lowerValue.includes(".png");
+  };
+
+  const isNormalizedApiError = (value: unknown): value is NormalizedApiError => {
+    return Boolean(
+      value &&
+        typeof value === "object" &&
+        "code" in value &&
+        "message" in value &&
+        typeof (value as Record<string, unknown>).code === "string" &&
+        typeof (value as Record<string, unknown>).message === "string"
+    );
+  };
+
+  const extractFieldLevelErrors = (error: NormalizedApiError): string[] => {
+    if (Array.isArray(error.details)) {
+      return error.details.filter((item): item is string => typeof item === "string");
+    }
+
+    return [error.message];
+  };
+
+  const buildAuthorizationContext = (): ApiAuthorizationContext | undefined => {
+    if (!user || !authSession) {
+      return undefined;
+    }
+
+    return {
+      clerkIdentity: {
+        clerkUserId: user.id,
+        email: user.email
+      },
+      internalRole: authSession.internalRole
+    };
   };
 
   const categoryOptions = categories
@@ -254,7 +289,7 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
     });
   };
 
-  const createProduct = () => {
+  const createProduct = async () => {
     const errors: string[] = [];
     const selectedTeam = teams.find((team) => team.id === createDraft.teamId);
     const basePrice = parseMoney(createDraft.price);
@@ -316,26 +351,69 @@ function AdminProductsScreenContent({ user, categories, teams, products, onBack,
       return;
     }
 
+    if (!authSession?.token) {
+      setCreateErrors(["Sessao admin expirada. Faca login novamente para criar produtos."]);
+      return;
+    }
+
     const pricing = buildPricing(basePrice, optionalDiscount);
+    const stockBySize = sanitizeStockBySize(createDraft.stockBySize);
     setCreateSubmitting(true);
     setCreateErrors([]);
 
-    const next = createAdminProduct(
-      createDraft.name,
-      createDraft.description,
-      pricing.finalPrice,
-      createDraft.images,
-      selectedTeam,
-      sanitizeStockBySize(createDraft.stockBySize),
-      pricing.originalPrice,
-      createDraft.customizationEnabled,
-      createDraft.customizationTemplatePng.trim() || undefined
-    );
+    try {
+      const created = await createAdminProductApi(
+        {
+          categorySlug: createDraft.category,
+          teamSlug: selectedTeam.id,
+          modelName: createDraft.name.trim(),
+          description: createDraft.description.trim(),
+          price: pricing.finalPrice,
+          originalPrice: pricing.originalPrice,
+          imageUrl: createDraft.images[0],
+          customizationEnabled: createDraft.customizationEnabled,
+          customizationTemplatePng: createDraft.customizationEnabled
+            ? createDraft.customizationTemplatePng.trim() || undefined
+            : undefined,
+          variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: stockBySize[size] }))
+        },
+        {
+          authorizationContext: buildAuthorizationContext(),
+          bearerToken: authSession.token
+        }
+      );
 
-    onUpdateProducts([next, ...products]);
-    setCreateSubmitting(false);
-    dispatch({ type: "CLOSE_CREATE" });
-    showToast("✅ Produto cadastrado com sucesso!", "success", 3000);
+      const teamFromResponse = resolveTeamBySlug(created.teamSlug, teams) ?? selectedTeam;
+      const stockBySizeFromResponse = SIZE_ORDER.reduce<Record<ValidSize, number>>((acc, size) => {
+        const variant = created.variants.find((item) => item.size === size);
+        acc[size] = variant?.stockQuantity ?? 0;
+        return acc;
+      }, { P: 0, M: 0, G: 0, GG: 0 });
+
+      const next = createAdminProduct(
+        created.modelName,
+        created.description,
+        created.price,
+        [created.imageUrl],
+        teamFromResponse,
+        stockBySizeFromResponse,
+        created.originalPrice,
+        created.customizationEnabled,
+        created.customizationTemplatePng
+      );
+
+      onUpdateProducts([{ ...next, id: created.id }, ...products]);
+      dispatch({ type: "CLOSE_CREATE" });
+      showToast("✅ Produto cadastrado com sucesso!", "success", 3000);
+    } catch (error) {
+      if (isNormalizedApiError(error)) {
+        setCreateErrors(extractFieldLevelErrors(error));
+      } else {
+        setCreateErrors(["Nao foi possivel criar o produto no backend."]);
+      }
+    } finally {
+      setCreateSubmitting(false);
+    }
   };
 
   const saveEdit = () => {

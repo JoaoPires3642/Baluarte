@@ -791,6 +791,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       {route.name === "admin-products" ? (
         <AdminProductsScreen
           user={user}
+          authSession={authSession}
           categories={categories}
           teams={teamList}
           products={productList}

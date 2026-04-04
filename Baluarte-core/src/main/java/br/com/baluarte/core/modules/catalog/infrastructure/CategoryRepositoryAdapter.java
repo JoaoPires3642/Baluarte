@@ -3,6 +3,7 @@ package br.com.baluarte.core.modules.catalog.infrastructure;
 import br.com.baluarte.core.modules.catalog.domain.Category;
 import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,5 +23,11 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
             .stream()
             .map(entity -> new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder()))
             .toList();
+    }
+
+    @Override
+    public Optional<Category> findPublicCategoryBySlug(String slug) {
+        return jpaRepository.findBySlugAndActiveTrue(slug)
+            .map(entity -> new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder()));
     }
 }

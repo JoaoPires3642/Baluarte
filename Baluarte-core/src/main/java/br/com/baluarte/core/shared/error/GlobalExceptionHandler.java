@@ -1,5 +1,6 @@
 package br.com.baluarte.core.shared.error;
 
+import br.com.baluarte.core.modules.adminproduct.application.AdminProductValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
@@ -34,13 +35,46 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MethodArgumentNotValidException.class})
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
+        MethodArgumentNotValidException exception,
+        HttpServletRequest request
+    ) {
+        List<String> details = exception.getBindingResult().getFieldErrors()
+            .stream()
+            .map(fieldError -> fieldError.getField() + " " + fieldError.getDefaultMessage())
+            .toList();
+
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Request validation failed",
+            details,
+            request
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorResponse> handleTypeMismatch(Exception exception, HttpServletRequest request) {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             "BAD_REQUEST",
             "Malformed request",
             List.of(exception.getMessage()),
+            request
+        );
+    }
+
+    @ExceptionHandler(AdminProductValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAdminProductValidation(
+        AdminProductValidationException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Request validation failed",
+            exception.getFieldErrors(),
             request
         );
     }

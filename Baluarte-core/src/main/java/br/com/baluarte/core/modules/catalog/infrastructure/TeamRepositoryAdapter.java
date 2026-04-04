@@ -3,6 +3,7 @@ package br.com.baluarte.core.modules.catalog.infrastructure;
 import br.com.baluarte.core.modules.catalog.domain.Team;
 import br.com.baluarte.core.modules.catalog.domain.TeamRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,5 +30,18 @@ public class TeamRepositoryAdapter implements TeamRepository {
                 entity.getDisplayOrder()
             ))
             .toList();
+    }
+
+    @Override
+    public Optional<Team> findPublicTeamByCategorySlugAndSlug(String categorySlug, String slug) {
+        return jpaRepository.findBySlugAndCategorySlugAndCategoryActiveTrueAndActiveTrue(slug, categorySlug)
+            .map(entity -> new Team(
+                entity.getId(),
+                entity.getName(),
+                entity.getSlug(),
+                entity.getCategory().getSlug(),
+                entity.getLeague(),
+                entity.getDisplayOrder()
+            ));
     }
 }

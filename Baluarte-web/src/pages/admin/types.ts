@@ -1,4 +1,5 @@
 import type { AdminCategory, Category, Coupon, Order, Product, Team, User } from "../../lib/types";
+import type { AuthSession } from "../../hooks/useAuthState";
 
 export type ValidSize = "P" | "M" | "G" | "GG";
 
@@ -45,6 +46,7 @@ export type AdminTeamsScreenProps = {
 
 export type AdminProductsScreenProps = {
   user: User | null;
+  authSession: AuthSession | null;
   categories: AdminCategory[];
   teams: Team[];
   products: AdminProduct[];
