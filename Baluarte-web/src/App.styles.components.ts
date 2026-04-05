@@ -244,34 +244,67 @@ export const componentStyles = {
     textTransform: "uppercase"
   },
   authSocialButtonsWrap: {
-    marginTop: 2,
-    gap: 8
+    marginTop: 4,
+    gap: 10
+  },
+  authSocialDivider: {
+    color: theme.colors.slate500,
+    fontSize: 11,
+    textAlign: "center",
+    letterSpacing: 0.3,
+    textTransform: "uppercase"
+  },
+  authSocialButtonBase: {
+    borderRadius: 20,
+    borderWidth: 2,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 4
+  },
+  authSocialIconWrap: {
+    width: 20,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  authSocialIconText: {
+    fontSize: 18,
+    lineHeight: 18,
+    marginBottom: 1,
+    fontWeight: "700"
+  },
+  authSocialIconApple: {
+    color: theme.colors.white
+  },
+  authSocialIconGoogle: {
+    color: "#2f2f2f"
+  },
+  authSocialButtonTextBase: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    fontFamily: "Lucida Sans, Lucida Sans Regular, Lucida Grande, Lucida Sans Unicode, Geneva, Verdana, sans-serif"
   },
   authSocialButtonApple: {
-    borderRadius: 999,
-    backgroundColor: "#111111",
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    alignItems: "center"
+    borderColor: "#000000",
+    backgroundColor: "#000000"
   },
   authSocialButtonAppleText: {
-    color: theme.colors.white,
-    fontSize: 12,
-    fontWeight: "800"
+    color: theme.colors.white
   },
   authSocialButtonGoogle: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.white,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    alignItems: "center"
+    borderColor: "#747474",
+    backgroundColor: theme.colors.white
   },
   authSocialButtonGoogleText: {
-    color: theme.colors.slate800,
-    fontSize: 12,
-    fontWeight: "800"
+    color: theme.colors.slate800
   },
   authSwitchLabel: {
     color: theme.colors.slate500,

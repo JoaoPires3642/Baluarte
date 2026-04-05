@@ -69,6 +69,8 @@ export type LoginScreenProps = {
   onBack: () => void;
   onStartEmailLogin: (email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   onVerifyEmailOtp: (code: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onStartEmailRegister: (firstName: string, lastName: string, email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onVerifyRegisterOtp: (code: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   onLoginWithSocial: (provider: "google" | "apple") => Promise<{ ok: true } | { ok: false; error: string }>;
   onRegister: (firstName: string, lastName: string, email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 };

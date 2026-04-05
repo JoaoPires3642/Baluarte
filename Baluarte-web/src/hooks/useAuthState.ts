@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { Address, User } from "../lib/types";
 import {
+  beginEmailCodeSignUp,
   beginEmailCodeLogin,
   getActiveClerkIdentity,
   isClerkConfigured,
@@ -9,6 +10,7 @@ import {
   resolveBackendSessionRole,
   signOutClerk,
   subscribeToClerkSessionChanges,
+  verifyEmailCodeSignUp,
   verifyEmailCodeLogin
 } from "../lib/clerkClient";
 
@@ -88,6 +90,7 @@ export function useAuthState() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [securityAuditEvents, setSecurityAuditEvents] = useState<SecurityAuditEvent[]>([]);
   const [pendingClerkEmail, setPendingClerkEmail] = useState<string | null>(null);
+  const [pendingClerkSignUpEmail, setPendingClerkSignUpEmail] = useState<string | null>(null);
 
   const createSessionToken = (role: User["role"]) => {
     const now = Date.now();
@@ -236,6 +239,40 @@ export function useAuthState() {
     return { ok: true, internalRole: role };
   };
 
+  const startEmailOtpRegister = async (
+    firstName: string,
+    lastName: string,
+    email: string
+  ): Promise<{ ok: true } | { ok: false; error: string }> => {
+    const response = await beginEmailCodeSignUp(firstName, lastName, email);
+    if (!response.ok) {
+      return response;
+    }
+
+    setPendingClerkSignUpEmail(email.trim().toLowerCase());
+    return { ok: true };
+  };
+
+  const verifyEmailOtpRegister = async (code: string): Promise<LoginResult> => {
+    if (!pendingClerkSignUpEmail) {
+      return { ok: false, error: "Inicie o cadastro antes de validar o codigo." };
+    }
+
+    const result = await verifyEmailCodeSignUp(code);
+    if (!result.ok) {
+      recordSecurityEvent({
+        type: "login-failed",
+        reason: "invalid-register-otp",
+        email: pendingClerkSignUpEmail
+      });
+      return { ok: false, error: result.error };
+    }
+
+    const role = await syncClerkIdentityWithBackend(result.identity);
+    setPendingClerkSignUpEmail(null);
+    return { ok: true, internalRole: role };
+  };
+
   const loginWithClerkOAuth = async (provider: "google" | "apple"): Promise<LoginResult> => {
     const oauth = await loginWithOAuth(provider);
     if (!oauth.ok) {
@@ -322,6 +359,7 @@ export function useAuthState() {
     setUser(null);
     setAuthSession(null);
     setPendingClerkEmail(null);
+    setPendingClerkSignUpEmail(null);
   };
 
   const accountLabel = !user ? "Perfil" : user.role === "admin" ? "Admin" : "Perfil";
@@ -460,6 +498,8 @@ export function useAuthState() {
     handleLogin,
     startEmailOtpLogin,
     verifyEmailOtpLogin,
+    startEmailOtpRegister,
+    verifyEmailOtpRegister,
     loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,

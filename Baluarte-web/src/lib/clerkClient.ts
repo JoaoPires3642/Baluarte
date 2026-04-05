@@ -43,6 +43,116 @@ function parseJsonSafely(value: string): unknown {
   }
 }
 
+function resolveClerkErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object") {
+    const maybeError = error as {
+      message?: string;
+      errors?: { message?: string; longMessage?: string; code?: string }[];
+    };
+
+    if (Array.isArray(maybeError.errors) && maybeError.errors.length > 0) {
+      const message = maybeError.errors
+        .map((entry) => entry.longMessage || entry.message || entry.code)
+        .filter((value): value is string => Boolean(value && value.trim()))
+        .join(" | ");
+      if (message) {
+        return message;
+      }
+    }
+
+    if (typeof maybeError.message === "string" && maybeError.message.trim()) {
+      return maybeError.message;
+    }
+  }
+
+  return fallback;
+}
+
+function resolveClerkErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") {
+    return undefined;
+  }
+
+  const maybeError = error as {
+    code?: string;
+    errors?: { code?: string }[];
+  };
+
+  if (typeof maybeError.code === "string" && maybeError.code.trim()) {
+    return maybeError.code.trim();
+  }
+
+  const nestedCode = maybeError.errors?.find((entry) => typeof entry.code === "string" && entry.code.trim())?.code;
+  if (typeof nestedCode === "string" && nestedCode.trim()) {
+    return nestedCode.trim();
+  }
+
+  return undefined;
+}
+
+function resolveClerkErrorDebugDetails(error: unknown): string {
+  if ((process.env.NODE_ENV ?? "").toLowerCase() === "production") {
+    return "";
+  }
+
+  const code = resolveClerkErrorCode(error);
+  const message = resolveClerkErrorMessage(error, "");
+  const details: string[] = [];
+
+  if (code) {
+    details.push(`code=${code}`);
+  }
+
+  if (message) {
+    details.push(`message=${message}`);
+  }
+
+  if (details.length === 0) {
+    return "";
+  }
+
+  return ` [debug: ${details.join(" | ")}]`;
+}
+
+function isCaptchaRelatedError(error: unknown): boolean {
+  const code = resolveClerkErrorCode(error)?.toLowerCase();
+  const message = resolveClerkErrorMessage(error, "").toLowerCase();
+
+  return Boolean(
+    code?.includes("captcha") ||
+    code?.includes("challenge") ||
+    message.includes("captcha") ||
+    message.includes("challenge") ||
+    message.includes("bot")
+  );
+}
+
+function isReusableSignUpAttempt(signUp: any, normalizedEmail: string): boolean {
+  const signUpId = String(signUp?.id ?? "").trim();
+  if (!signUpId) {
+    return false;
+  }
+
+  const candidateEmails = [
+    signUp?.emailAddress,
+    signUp?.identifier,
+    signUp?.emailAddressData?.emailAddress,
+    signUp?.emailAddressData?.verification?.identifier,
+    signUp?.unsafeMetadata?.emailAddress
+  ];
+
+  const signUpEmail = candidateEmails
+    .map((value) => String(value ?? "").trim().toLowerCase())
+    .find((value) => Boolean(value));
+
+  if (!signUpEmail) {
+    // Reuse any pending sign-up attempt if we cannot resolve email fields reliably.
+    return String(signUp?.status ?? "").trim().toLowerCase() !== "complete";
+  }
+
+  return signUpEmail === normalizedEmail;
+}
+
 function resolveBackendRole(internalRole: string | undefined): BackendInternalRole {
   return String(internalRole ?? "").trim().toUpperCase() === "ADMIN" ? "admin" : "client";
 }
@@ -218,8 +328,96 @@ export async function beginEmailCodeLogin(email: string): Promise<{ ok: true } |
 
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Nao foi possivel enviar o codigo OTP.";
+    const message = resolveClerkErrorMessage(error, "Nao foi possivel enviar o codigo OTP.");
     return { ok: false, error: message };
+  }
+}
+
+export async function beginEmailCodeSignUp(
+  firstName: string,
+  lastName: string,
+  email: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const clerk = await getClerkInstance();
+  if (!clerk) {
+    return { ok: false, error: "Clerk nao configurado no frontend." };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedFirstName = firstName.trim();
+  const normalizedLastName = lastName.trim();
+  if (!normalizedFirstName || !normalizedLastName) {
+    return { ok: false, error: "Informe nome e sobrenome." };
+  }
+  if (!normalizedEmail || !normalizedEmail.includes("@")) {
+    return { ok: false, error: "Informe um email valido." };
+  }
+
+  try {
+    const existingSignUp = clerk.client.signUp;
+    const signUp = isReusableSignUpAttempt(existingSignUp, normalizedEmail)
+      ? existingSignUp
+      : await clerk.client.signUp.create({
+        emailAddress: normalizedEmail,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName
+      });
+
+    if (signUp?.status === "complete" && signUp.createdSessionId) {
+      await clerk.setActive({ session: signUp.createdSessionId });
+      return { ok: true };
+    }
+
+    await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+    return { ok: true };
+  } catch (error) {
+    if (isCaptchaRelatedError(error)) {
+      return { ok: false, error: `Conclua o captcha e tente novamente.${resolveClerkErrorDebugDetails(error)}` };
+    }
+
+    const message = resolveClerkErrorMessage(error, "Nao foi possivel iniciar o cadastro.");
+    return { ok: false, error: `${message}${resolveClerkErrorDebugDetails(error)}` };
+  }
+}
+
+export async function verifyEmailCodeSignUp(
+  code: string
+): Promise<{ ok: true; identity: ClerkIdentitySnapshot } | { ok: false; error: string }> {
+  const clerk = await getClerkInstance();
+  if (!clerk) {
+    return { ok: false, error: "Clerk nao configurado no frontend." };
+  }
+
+  const normalizedCode = code.trim();
+  if (normalizedCode.length < 4) {
+    return { ok: false, error: "Informe o codigo OTP recebido por email." };
+  }
+
+  try {
+    const currentSignUp = clerk.client.signUp;
+    if (!currentSignUp || !currentSignUp.id) {
+      return { ok: false, error: "Inicie o cadastro antes de validar o codigo." };
+    }
+
+    const result = await currentSignUp.attemptEmailAddressVerification({
+      code: normalizedCode
+    });
+
+    if (result?.status !== "complete" || !result.createdSessionId) {
+      return { ok: false, error: "Codigo invalido ou expirado." };
+    }
+
+    await clerk.setActive({ session: result.createdSessionId });
+
+    const identity = await getActiveClerkIdentity();
+    if (!identity) {
+      return { ok: false, error: "Sessao Clerk nao encontrada apos cadastro." };
+    }
+
+    return { ok: true, identity };
+  } catch (error) {
+    const message = resolveClerkErrorMessage(error, "Nao foi possivel validar o cadastro.");
+    return { ok: false, error: `${message}${resolveClerkErrorDebugDetails(error)}` };
   }
 }
 
@@ -253,7 +451,7 @@ export async function verifyEmailCodeLogin(code: string): Promise<{ ok: true; id
 
     return { ok: true, identity };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Nao foi possivel validar o OTP.";
+    const message = resolveClerkErrorMessage(error, "Nao foi possivel validar o OTP.");
     return { ok: false, error: message };
   }
 }
@@ -284,7 +482,7 @@ export async function loginWithOAuth(provider: ClerkOAuthProvider): Promise<{ ok
 
     return { ok: true, redirected: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Nao foi possivel iniciar login social.";
+    const message = resolveClerkErrorMessage(error, "Nao foi possivel iniciar login social.");
     return { ok: false, error: message };
   }
 }

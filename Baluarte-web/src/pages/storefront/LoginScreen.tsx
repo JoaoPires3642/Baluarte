@@ -9,6 +9,8 @@ export function LoginScreen({
   onBack,
   onStartEmailLogin,
   onVerifyEmailOtp,
+  onStartEmailRegister,
+  onVerifyRegisterOtp,
   onLoginWithSocial,
   onRegister
 }: LoginScreenProps) {
@@ -21,6 +23,8 @@ export function LoginScreen({
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registerOtpSent, setRegisterOtpSent] = useState(false);
+  const [registerOtpCode, setRegisterOtpCode] = useState("");
 
   useEffect(() => {
     setMode(initialMode);
@@ -28,6 +32,8 @@ export function LoginScreen({
     setInfo("");
     setOtpSent(false);
     setOtpCode("");
+    setRegisterOtpSent(false);
+    setRegisterOtpCode("");
   }, [initialMode]);
 
   const isRegister = mode === "register";
@@ -38,9 +44,15 @@ export function LoginScreen({
     setInfo("");
     setOtpSent(false);
     setOtpCode("");
+    setRegisterOtpSent(false);
+    setRegisterOtpCode("");
   };
 
   const handleSubmit = async () => {
+    if (loading) {
+      return;
+    }
+
     setError("");
     setInfo("");
 
@@ -59,10 +71,29 @@ export function LoginScreen({
         return;
       }
 
-      const result = await onRegister(firstName, lastName, sanitizedEmail);
+      if (!registerOtpSent) {
+        const result = await onStartEmailRegister(firstName, lastName, sanitizedEmail);
+        setLoading(false);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+
+        setRegisterOtpSent(true);
+        setInfo("Cadastro iniciado. Digite o codigo enviado para finalizar.");
+        return;
+      }
+
+      if (!registerOtpCode.trim()) {
+        setLoading(false);
+        setError("Digite o codigo recebido para concluir o cadastro");
+        return;
+      }
+
+      const verify = await onVerifyRegisterOtp(registerOtpCode.trim());
       setLoading(false);
-      if (!result.ok) {
-        setError(result.error);
+      if (!verify.ok) {
+        setError(verify.error);
       }
       return;
     }
@@ -165,6 +196,9 @@ export function LoginScreen({
               if (!isRegister) {
                 setOtpSent(false);
                 setOtpCode("");
+              } else {
+                setRegisterOtpSent(false);
+                setRegisterOtpCode("");
               }
             }}
             placeholder="Email"
@@ -185,6 +219,17 @@ export function LoginScreen({
             />
           ) : null}
 
+          {isRegister && registerOtpSent ? (
+            <TextInput
+              style={styles.authInput}
+              value={registerOtpCode}
+              onChangeText={setRegisterOtpCode}
+              placeholder="Codigo de verificacao"
+              placeholderTextColor="#9ca3af"
+              autoCapitalize="none"
+              keyboardType="number-pad"
+            />
+          ) : null}
 
           {info ? <Text style={styles.authInfo}>{info}</Text> : null}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -194,20 +239,29 @@ export function LoginScreen({
               {loading
                 ? "Processando..."
                 : isRegister
-                  ? "Criar conta"
+                  ? registerOtpSent
+                    ? "Confirmar cadastro"
+                    : "Criar conta"
                   : otpSent
                     ? "Validar codigo"
                     : "Enviar codigo"}
             </Text>
           </Pressable>
 
-          {!isRegister ? (
+          {!otpSent && !registerOtpSent ? (
             <View style={styles.authSocialButtonsWrap}>
-              <Pressable style={styles.authSocialButtonApple} onPress={() => void handleSocialLogin("apple")} disabled={loading}>
-                <Text style={styles.authSocialButtonAppleText}>Entrar com Apple</Text>
+              <Text style={styles.authSocialDivider}>ou continue com</Text>
+              <Pressable style={[styles.authSocialButtonBase, styles.authSocialButtonApple]} onPress={() => void handleSocialLogin("apple")} disabled={loading}>
+                <View style={styles.authSocialIconWrap}>
+                  <Text style={[styles.authSocialIconText, styles.authSocialIconApple]}></Text>
+                </View>
+                <Text style={[styles.authSocialButtonTextBase, styles.authSocialButtonAppleText]}>{isRegister ? "Continuar com Apple" : "Entrar com Apple"}</Text>
               </Pressable>
-              <Pressable style={styles.authSocialButtonGoogle} onPress={() => void handleSocialLogin("google")} disabled={loading}>
-                <Text style={styles.authSocialButtonGoogleText}>Entrar com Google</Text>
+              <Pressable style={[styles.authSocialButtonBase, styles.authSocialButtonGoogle]} onPress={() => void handleSocialLogin("google")} disabled={loading}>
+                <View style={styles.authSocialIconWrap}>
+                  <Text style={[styles.authSocialIconText, styles.authSocialIconGoogle]}>G</Text>
+                </View>
+                <Text style={[styles.authSocialButtonTextBase, styles.authSocialButtonGoogleText]}>{isRegister ? "Continuar com Google" : "Entrar com Google"}</Text>
               </Pressable>
             </View>
           ) : null}

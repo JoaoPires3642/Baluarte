@@ -220,6 +220,8 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     clearCart,
     startEmailOtpLogin,
     verifyEmailOtpLogin,
+    startEmailOtpRegister,
+    verifyEmailOtpRegister,
     loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
@@ -707,6 +709,32 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           }}
           onVerifyEmailOtp={async (code) => {
             const result = await verifyEmailOtpLogin(code);
+            if (!result.ok) {
+              return { ok: false, error: result.error ?? "Codigo OTP invalido." };
+            }
+
+            const isAdmin = result.internalRole === "admin";
+            if (isAdmin && route.blockedAdminRoute) {
+              setRoute(route.blockedAdminRoute);
+            } else if (isAdmin) {
+              setRoute({ name: "admin" });
+            } else if (route.redirectAfterLogin === "checkout") {
+              setRoute({ name: "checkout" });
+            } else if (route.redirectAfterLogin === "profile") {
+              setRoute({ name: "profile" });
+            } else if (route.redirectAfterLogin === "orders") {
+              setRoute({ name: "orders" });
+            } else {
+              setRoute({ name: "profile" });
+            }
+
+            return { ok: true };
+          }}
+          onStartEmailRegister={async (firstName, lastName, email) => {
+            return startEmailOtpRegister(firstName, lastName, email);
+          }}
+          onVerifyRegisterOtp={async (code) => {
+            const result = await verifyEmailOtpRegister(code);
             if (!result.ok) {
               return { ok: false, error: result.error ?? "Codigo OTP invalido." };
             }
