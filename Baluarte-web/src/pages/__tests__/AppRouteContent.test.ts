@@ -177,24 +177,31 @@ describe("AppRouteContent blocked admin flow", () => {
 
   it("returns to the blocked admin route after admin login succeeds", async () => {
     const setRoute = jest.fn();
+    const startEmailOtpLogin = jest.fn().mockResolvedValue({ ok: true });
+    const verifyEmailOtpLogin = jest.fn().mockResolvedValue({ ok: true, internalRole: "admin" });
 
     render(
       createElement(AppRouteContent, {
         state: buildAppState({
           route: { name: "login", authMode: "login", blockedAdminRoute: { name: "admin-orders" } },
           setRoute,
-          handleLogin: jest.fn().mockResolvedValue({ ok: true, internalRole: "admin" })
+          startEmailOtpLogin,
+          verifyEmailOtpLogin
         })
       })
     );
 
-    fireEvent.press(screen.getByText("Demo admin"));
-    const enterButtons = screen.getAllByText("Entrar");
-    fireEvent.press(enterButtons[enterButtons.length - 1]);
+    fireEvent.changeText(screen.getByPlaceholderText("Email"), "admin@baluarte.com");
+    fireEvent.press(screen.getByText("Enviar codigo"));
+    fireEvent.changeText(await screen.findByPlaceholderText("Codigo de verificacao"), "123456");
+    fireEvent.press(screen.getByText("Validar codigo"));
 
     await waitFor(() => {
       expect(setRoute).toHaveBeenLastCalledWith({ name: "admin-orders" });
     });
+
+    expect(startEmailOtpLogin).toHaveBeenCalledWith("admin@baluarte.com");
+    expect(verifyEmailOtpLogin).toHaveBeenCalledWith("123456");
   });
 });
 

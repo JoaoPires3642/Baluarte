@@ -6,6 +6,8 @@ import br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataCategoryJpaRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataTeamJpaRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.TeamJpaEntity;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +28,22 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
         TeamJpaEntity team = teamJpaRepository.findById(product.teamId())
             .orElseThrow(() -> new IllegalStateException("Time nao encontrado para persistencia"));
 
-        AdminProductJpaEntity saved = productJpaRepository.save(AdminProductJpaEntity.fromDomain(product, category, team));
+        AdminProductJpaEntity saved = productJpaRepository.findById(product.id())
+            .map(existing -> {
+                existing.updateFromDomain(product, category, team);
+                existing.getVariants().clear();
+                productJpaRepository.flush();
+                existing.replaceVariantsFromDomain(product);
+                return productJpaRepository.save(existing);
+            })
+            .orElseGet(() -> productJpaRepository.save(AdminProductJpaEntity.fromDomain(product, category, team)));
         return toDomain(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AdminProduct> findById(UUID id) {
+        return productJpaRepository.findById(id).map(this::toDomain);
     }
 
     private AdminProduct toDomain(AdminProductJpaEntity entity) {

@@ -1,6 +1,16 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Address, User } from "../lib/types";
+import {
+  beginEmailCodeLogin,
+  getActiveClerkIdentity,
+  isClerkConfigured,
+  loginWithOAuth,
+  resolveBackendSessionRole,
+  signOutClerk,
+  subscribeToClerkSessionChanges,
+  verifyEmailCodeLogin
+} from "../lib/clerkClient";
 
 type DemoUser = User & { password: string };
 
@@ -22,7 +32,7 @@ export type SecurityAuditEvent = {
 
 export type LoginResult =
   | { ok: true; internalRole: User["role"] }
-  | { ok: false };
+  | { ok: false; error?: string };
 
 const DEMO_USERS: DemoUser[] = [
   {
@@ -77,6 +87,7 @@ export function useAuthState() {
   const [users, setUsers] = useState<DemoUser[]>(DEMO_USERS);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [securityAuditEvents, setSecurityAuditEvents] = useState<SecurityAuditEvent[]>([]);
+  const [pendingClerkEmail, setPendingClerkEmail] = useState<string | null>(null);
 
   const createSessionToken = (role: User["role"]) => {
     const now = Date.now();
@@ -92,8 +103,155 @@ export function useAuthState() {
     setSecurityAuditEvents((prev) => [nextEvent, ...prev]);
   };
 
+  const createUserFromClerkIdentity = useCallback((identity: {
+    userId: string;
+    email: string;
+    fullName?: string;
+  }, role: User["role"]): User => {
+    const normalizedEmail = identity.email.trim().toLowerCase();
+    const existing = users.find((item) => item.email.toLowerCase() === normalizedEmail);
+
+    if (existing) {
+      return {
+        ...existing,
+        id: identity.userId,
+        role
+      };
+    }
+
+    return {
+      id: identity.userId,
+      name: identity.fullName || normalizedEmail.split("@")[0],
+      email: normalizedEmail,
+      role
+    };
+  }, [users]);
+
+  const applyClerkIdentityToSession = useCallback((identity: {
+    userId: string;
+    email: string;
+    fullName?: string;
+    sessionToken?: string;
+  }, role: User["role"]): User["role"] => {
+    const nextUser = createUserFromClerkIdentity(identity, role);
+
+    setUser(nextUser);
+    setAuthSession({
+      token: identity.sessionToken || createSessionToken(role),
+      internalRole: role,
+      provider: "clerk",
+      issuedAt: new Date().toISOString()
+    });
+
+    return role;
+  }, [createUserFromClerkIdentity]);
+
+  const syncClerkIdentityWithBackend = useCallback(async (identity: {
+    userId: string;
+    email: string;
+    fullName?: string;
+    sessionToken?: string;
+  }): Promise<User["role"]> => {
+    const backendSession = await resolveBackendSessionRole(identity);
+    return applyClerkIdentityToSession(identity, backendSession.role);
+  }, [applyClerkIdentityToSession]);
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
+
+    if (!isClerkConfigured()) {
+      return () => {
+        active = false;
+      };
+    }
+
+    getActiveClerkIdentity()
+      .then((identity) => {
+        if (!active || !identity) {
+          return;
+        }
+
+        void syncClerkIdentityWithBackend(identity);
+      })
+      .catch(() => {
+        // Ignore hydration failure and keep app usable with local auth flow.
+      });
+
+    void subscribeToClerkSessionChanges((identity) => {
+      if (!active) {
+        return;
+      }
+
+      if (!identity) {
+        setUser(null);
+        setAuthSession(null);
+        return;
+      }
+
+      void syncClerkIdentityWithBackend(identity);
+    })
+      .then((cleanup) => {
+        unsubscribe = cleanup;
+      })
+      .catch(() => {
+        // Ignore listener initialization failure and keep app usable.
+      });
+
+    return () => {
+      active = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [syncClerkIdentityWithBackend]);
+
+  const startEmailOtpLogin = async (email: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+    const response = await beginEmailCodeLogin(email);
+    if (!response.ok) {
+      return response;
+    }
+
+    setPendingClerkEmail(email.trim().toLowerCase());
+    return { ok: true };
+  };
+
+  const verifyEmailOtpLogin = async (code: string): Promise<LoginResult> => {
+    if (!pendingClerkEmail) {
+      return { ok: false, error: "Solicite o codigo OTP antes de validar." };
+    }
+
+    const result = await verifyEmailCodeLogin(code);
+    if (!result.ok) {
+      recordSecurityEvent({
+        type: "login-failed",
+        reason: "invalid-otp",
+        email: pendingClerkEmail
+      });
+      return { ok: false, error: result.error };
+    }
+
+    const role = await syncClerkIdentityWithBackend(result.identity);
+    setPendingClerkEmail(null);
+    return { ok: true, internalRole: role };
+  };
+
+  const loginWithClerkOAuth = async (provider: "google" | "apple"): Promise<LoginResult> => {
+    const oauth = await loginWithOAuth(provider);
+    if (!oauth.ok) {
+      recordSecurityEvent({
+        type: "login-failed",
+        reason: `oauth-${provider}-failed`
+      });
+      return { ok: false, error: oauth.error };
+    }
+
+    return { ok: false, error: "Redirecionando para autenticacao do Clerk..." };
+  };
+
   const handleLogin = async (email: string, password: string): Promise<LoginResult> => {
     await new Promise((resolve) => setTimeout(resolve, 250));
+
     const found = users.find((item) => item.email.toLowerCase() === email.toLowerCase() && item.password === password);
     if (!found) {
       recordSecurityEvent({
@@ -160,8 +318,10 @@ export function useAuthState() {
   };
 
   const handleLogout = () => {
+    void signOutClerk();
     setUser(null);
     setAuthSession(null);
+    setPendingClerkEmail(null);
   };
 
   const accountLabel = !user ? "Perfil" : user.role === "admin" ? "Admin" : "Perfil";
@@ -298,6 +458,9 @@ export function useAuthState() {
     recordSecurityEvent,
     handleLogout,
     handleLogin,
+    startEmailOtpLogin,
+    verifyEmailOtpLogin,
+    loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
     updateUserAddresses,

@@ -23,6 +23,8 @@ export type CreateAdminProductPayload = {
   variants: CreateAdminProductVariantPayload[];
 };
 
+export type UpdateAdminProductPayload = CreateAdminProductPayload;
+
 type AdminProductVariantDto = {
   size: "P" | "M" | "G" | "GG";
   stockQuantity: number;
@@ -52,6 +54,9 @@ export type CreateAdminProductApiOptions = {
   client?: ApiClient;
 };
 
+export type UpdateAdminProductApiOptions = CreateAdminProductApiOptions;
+export type DeleteAdminProductApiOptions = CreateAdminProductApiOptions;
+
 export async function createAdminProductApi(
   payload: CreateAdminProductPayload,
   options: CreateAdminProductApiOptions = {}
@@ -61,6 +66,46 @@ export async function createAdminProductApi(
   const response = await client.request<AdminProductDto>("/admin/products", {
     method: "POST",
     body: JSON.stringify(payload),
+    authorizationContext: options.authorizationContext,
+    headers: options.bearerToken
+      ? {
+          Authorization: `Bearer ${options.bearerToken}`
+        }
+      : undefined
+  });
+
+  return response.data;
+}
+
+export async function updateAdminProductApi(
+  productId: string,
+  payload: UpdateAdminProductPayload,
+  options: UpdateAdminProductApiOptions = {}
+): Promise<AdminProductDto> {
+  const client = options.client ?? defaultClient;
+
+  const response = await client.request<AdminProductDto>(`/admin/products/${encodeURIComponent(productId)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    authorizationContext: options.authorizationContext,
+    headers: options.bearerToken
+      ? {
+          Authorization: `Bearer ${options.bearerToken}`
+        }
+      : undefined
+  });
+
+  return response.data;
+}
+
+export async function deleteAdminProductApi(
+  productId: string,
+  options: DeleteAdminProductApiOptions = {}
+): Promise<AdminProductDto> {
+  const client = options.client ?? defaultClient;
+
+  const response = await client.request<AdminProductDto>(`/admin/products/${encodeURIComponent(productId)}`, {
+    method: "DELETE",
     authorizationContext: options.authorizationContext,
     headers: options.bearerToken
       ? {

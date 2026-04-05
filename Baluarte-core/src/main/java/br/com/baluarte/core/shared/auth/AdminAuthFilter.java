@@ -31,6 +31,7 @@ public class AdminAuthFilter extends OncePerRequestFilter {
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String CLERK_USER_ID_HEADER = "X-Clerk-User-Id";
     public static final String CLERK_EMAIL_HEADER = "X-Clerk-Email";
+    public static final String DEV_BYPASS_KEY_HEADER = "X-Admin-Bypass-Key";
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAuthFilter.class);
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
@@ -38,15 +39,18 @@ public class AdminAuthFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private final InternalRoleResolver internalRoleResolver;
     private final ClerkJwtVerifier clerkJwtVerifier;
+    private final AdminAuthorizationProperties authorizationProperties;
 
     public AdminAuthFilter(
         ObjectMapper objectMapper,
         InternalRoleResolver internalRoleResolver,
-        ClerkJwtVerifier clerkJwtVerifier
+        ClerkJwtVerifier clerkJwtVerifier,
+        AdminAuthorizationProperties authorizationProperties
     ) {
         this.objectMapper = objectMapper;
         this.internalRoleResolver = internalRoleResolver;
         this.clerkJwtVerifier = clerkJwtVerifier;
+        this.authorizationProperties = authorizationProperties;
     }
 
     @Override
@@ -64,6 +68,11 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
         String clerkUserId = request.getHeader(CLERK_USER_ID_HEADER);
         String clerkEmail = request.getHeader(CLERK_EMAIL_HEADER);
+
+        if (tryAuthorizeWithDevBypass(request, clerkUserId, clerkEmail)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = extractBearerToken(authorizationHeader);
         Jwt jwt = clerkJwtVerifier.verify(token);
@@ -87,12 +96,13 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         String normalizedHeaderEmail = normalize(clerkEmail);
         String normalizedTokenUserId = normalize(jwt.getSubject());
         String normalizedTokenEmail = normalize(extractJwtEmail(jwt));
+        boolean hasTokenEmail = !normalizedTokenEmail.isBlank();
+        String resolvedIdentityEmail = hasTokenEmail ? normalizedTokenEmail : normalizedHeaderEmail;
 
         if (
             normalizedTokenUserId.isBlank() ||
-            normalizedTokenEmail.isBlank() ||
             !normalizedTokenUserId.equals(normalizedHeaderUserId) ||
-            !normalizedTokenEmail.equals(normalizedHeaderEmail)
+            (hasTokenEmail && !normalizedTokenEmail.equals(normalizedHeaderEmail))
         ) {
             logger.warn(
                 "security.audit event=ADMIN_ROUTE_UNAUTHORIZED reason=clerk-identity-mismatch path={} headerUserId={} tokenUserId={} headerEmail={} tokenEmail={}",
@@ -106,20 +116,52 @@ public class AdminAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        InternalRole role = internalRoleResolver.resolveFromEmail(normalizedTokenEmail);
+        InternalRole role = internalRoleResolver.resolveFromIdentity(normalizedTokenUserId, resolvedIdentityEmail);
         if (role != InternalRole.ADMIN) {
             logger.warn(
                 "security.audit event=ADMIN_ROUTE_DENIED path={} userId={} email={}",
                 request.getRequestURI(),
                 normalizedTokenUserId,
-                normalizedTokenEmail
+                resolvedIdentityEmail
             );
             writeForbidden(response, request, "Admin privileges required");
             return;
         }
 
-        request.setAttribute(AUTH_CONTEXT_REQUEST_ATTRIBUTE, new AuthContext(normalizedTokenUserId, normalizedTokenEmail, role));
+        request.setAttribute(AUTH_CONTEXT_REQUEST_ATTRIBUTE, new AuthContext(normalizedTokenUserId, resolvedIdentityEmail, role));
         filterChain.doFilter(request, response);
+    }
+
+    private boolean tryAuthorizeWithDevBypass(HttpServletRequest request, String clerkUserId, String clerkEmail) {
+        if (!authorizationProperties.isDevBypassEnabled()) {
+            return false;
+        }
+
+        String expectedBypassKey = authorizationProperties.getDevBypassKey();
+        String requestBypassKey = request.getHeader(DEV_BYPASS_KEY_HEADER);
+        if (isBlank(expectedBypassKey) || !expectedBypassKey.equals(requestBypassKey)) {
+            return false;
+        }
+
+        if (isBlank(clerkUserId) || isBlank(clerkEmail) || !EMAIL_PATTERN.matcher(clerkEmail).matches()) {
+            return false;
+        }
+
+        String normalizedUserId = normalize(clerkUserId);
+        String normalizedEmail = normalize(clerkEmail);
+        InternalRole role = internalRoleResolver.resolveFromIdentity(normalizedUserId, normalizedEmail);
+        if (role != InternalRole.ADMIN) {
+            return false;
+        }
+
+        logger.warn(
+            "security.audit event=ADMIN_DEV_BYPASS_GRANTED path={} userId={} email={}",
+            request.getRequestURI(),
+            normalizedUserId,
+            normalizedEmail
+        );
+        request.setAttribute(AUTH_CONTEXT_REQUEST_ATTRIBUTE, new AuthContext(normalizedUserId, normalizedEmail, role));
+        return true;
     }
 
     private String extractBearerToken(String authorizationHeader) {

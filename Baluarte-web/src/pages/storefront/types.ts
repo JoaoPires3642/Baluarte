@@ -67,8 +67,10 @@ export type CheckoutScreenProps = {
 export type LoginScreenProps = {
   initialMode?: "login" | "register";
   onBack: () => void;
-  onLogin: (email: string, password: string) => Promise<boolean>;
-  onRegister: (name: string, email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onStartEmailLogin: (email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onVerifyEmailOtp: (code: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  onLoginWithSocial: (provider: "google" | "apple") => Promise<{ ok: true } | { ok: false; error: string }>;
+  onRegister: (firstName: string, lastName: string, email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 };
 
 export type OrdersScreenProps = {

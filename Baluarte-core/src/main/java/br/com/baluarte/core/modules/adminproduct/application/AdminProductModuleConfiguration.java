@@ -17,4 +17,18 @@ public class AdminProductModuleConfiguration {
     ) {
         return new CreateAdminProductUseCase(categoryRepository, teamRepository, adminProductRepository);
     }
+
+    @Bean
+    UpdateAdminProductUseCase updateAdminProductUseCase(
+        CategoryRepository categoryRepository,
+        TeamRepository teamRepository,
+        AdminProductRepository adminProductRepository
+    ) {
+        return new UpdateAdminProductUseCase(categoryRepository, teamRepository, adminProductRepository);
+    }
+
+    @Bean
+    DeactivateAdminProductUseCase deactivateAdminProductUseCase(AdminProductRepository adminProductRepository) {
+        return new DeactivateAdminProductUseCase(adminProductRepository);
+    }
 }

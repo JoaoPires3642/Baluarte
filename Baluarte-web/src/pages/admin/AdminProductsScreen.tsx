@@ -5,9 +5,13 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 
 import styles from "../../App.styles";
-import { createAdminProduct } from "../../lib/admin-creators";
 import { toBrl } from "../../lib/format";
-import { createAdminProductApi, resolveTeamBySlug } from "../../lib/mobile/api/admin-products";
+import {
+  createAdminProductApi,
+  deleteAdminProductApi,
+  resolveTeamBySlug,
+  updateAdminProductApi
+} from "../../lib/mobile/api/admin-products";
 import type { NormalizedApiError, ApiAuthorizationContext } from "../../lib/mobile/api/contracts";
 import { ProductFormModal } from "../../components/admin/ProductFormModal";
 import { RestockActionSheet } from "../../components/admin/RestockActionSheet";
@@ -19,7 +23,7 @@ import { ProductFormProvider, useProductFormContext } from "../../context/Produc
 import type { ProductFormAction } from "../../context/productFormReducer";
 import { useToast } from "../../hooks/useToast";
 import { AdminBlockedScreen } from "./AdminBlockedScreen";
-import type { AdminProductsScreenProps, ValidSize } from "./types";
+import type { AdminProduct, AdminProductsScreenProps, ValidSize } from "./types";
 
 const SIZE_ORDER: ValidSize[] = ["P", "M", "G", "GG"];
 
@@ -179,6 +183,49 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
         email: user.email
       },
       internalRole: authSession.internalRole
+    };
+  };
+
+  const toAdminProductFromApi = (
+    dto: {
+      id: string;
+      teamSlug: string;
+      modelName: string;
+      description: string;
+      price: number;
+      originalPrice?: number;
+      imageUrl: string;
+      customizationEnabled: boolean;
+      customizationTemplatePng?: string;
+      active: boolean;
+      stockQuantity: number;
+      variants: { size: ValidSize; stockQuantity: number }[];
+    },
+    fallbackTeam: (typeof teams)[number]
+  ): AdminProduct => {
+    const resolvedTeam = resolveTeamBySlug(dto.teamSlug, teams) ?? fallbackTeam;
+    const stockBySize = SIZE_ORDER.reduce<Record<ValidSize, number>>((acc, size) => {
+      const variant = dto.variants.find((item) => item.size === size);
+      acc[size] = variant?.stockQuantity ?? 0;
+      return acc;
+    }, { P: 0, M: 0, G: 0, GG: 0 });
+
+    return {
+      id: dto.id,
+      name: dto.modelName,
+      description: dto.description,
+      teamId: resolvedTeam.id,
+      team: resolvedTeam,
+      sizes: SIZE_ORDER,
+      price: dto.price,
+      originalPrice: dto.originalPrice,
+      stockBySize,
+      stockQuantity: dto.stockQuantity,
+      inStock: dto.active && dto.stockQuantity > 0,
+      image: dto.imageUrl,
+      images: [dto.imageUrl],
+      customizationEnabled: dto.customizationEnabled,
+      customizationTemplatePng: dto.customizationTemplatePng
     };
   };
 
@@ -383,26 +430,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
         }
       );
 
-      const teamFromResponse = resolveTeamBySlug(created.teamSlug, teams) ?? selectedTeam;
-      const stockBySizeFromResponse = SIZE_ORDER.reduce<Record<ValidSize, number>>((acc, size) => {
-        const variant = created.variants.find((item) => item.size === size);
-        acc[size] = variant?.stockQuantity ?? 0;
-        return acc;
-      }, { P: 0, M: 0, G: 0, GG: 0 });
-
-      const next = createAdminProduct(
-        created.modelName,
-        created.description,
-        created.price,
-        [created.imageUrl],
-        teamFromResponse,
-        stockBySizeFromResponse,
-        created.originalPrice,
-        created.customizationEnabled,
-        created.customizationTemplatePng
-      );
-
-      onUpdateProducts([{ ...next, id: created.id }, ...products]);
+      const next = toAdminProductFromApi(created, selectedTeam);
+      onUpdateProducts([next, ...products]);
       dispatch({ type: "CLOSE_CREATE" });
       showToast("✅ Produto cadastrado com sucesso!", "success", 3000);
     } catch (error) {
@@ -416,7 +445,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     }
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingProductId || !editDraft) {
       return;
     }
@@ -482,70 +511,58 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       return;
     }
 
+    if (!authSession?.token) {
+      setEditErrors(["Sessao admin expirada. Faca login novamente para editar produtos."]);
+      return;
+    }
+
     const pricing = buildPricing(basePrice, optionalDiscount);
     const nextStockBySize = sanitizeStockBySize(editDraft.stockBySize);
-    const stockQuantity = Object.values(nextStockBySize).reduce((sum, value) => sum + value, 0);
     setEditErrors([]);
 
-    onUpdateProducts(
-      products.map((item) =>
-        item.id === editingProductId
-          ? {
-              ...item,
-              name: editDraft.name.trim(),
-              description: editDraft.description.trim(),
-              teamId: selectedTeam.id,
-              team: selectedTeam,
-              sizes: SIZE_ORDER,
-              price: pricing.finalPrice,
-              originalPrice: pricing.originalPrice,
-              stockBySize: nextStockBySize,
-              stockQuantity,
-              inStock: stockQuantity > 0,
-              image: editDraft.images[0],
-              images: [...editDraft.images],
-              customizationEnabled: editDraft.customizationEnabled,
-              customizationTemplatePng: editDraft.customizationEnabled
-                ? editDraft.customizationTemplatePng.trim() || undefined
-                : undefined
-            }
-          : item
-      )
-    );
-
-    dispatch({ type: "CLOSE_EDIT" });
-    dispatch({ type: "SET_EDITING_PRODUCT_ID", payload: null });
-    setEditDraft(null);
-    showToast("✅ Produto atualizado com sucesso!", "success", 3000);
-  };
-
-  const restockProduct = (productId: string, delta: number, targetSize: ValidSize | "ALL"): number => {
-    let addedUnits = 0;
-    onUpdateProducts(
-      products.map((product) => {
-        if (product.id !== productId) {
-          return product;
+    try {
+      const updated = await updateAdminProductApi(
+        editingProductId,
+        {
+          categorySlug: editDraft.category,
+          teamSlug: selectedTeam.id,
+          modelName: editDraft.name.trim(),
+          description: editDraft.description.trim(),
+          price: pricing.finalPrice,
+          originalPrice: pricing.originalPrice,
+          imageUrl: editDraft.images[0],
+          customizationEnabled: editDraft.customizationEnabled,
+          customizationTemplatePng: editDraft.customizationEnabled
+            ? editDraft.customizationTemplatePng.trim() || undefined
+            : undefined,
+          variants: SIZE_ORDER.map((size) => ({
+            size,
+            stockQuantity: nextStockBySize[size]
+          }))
+        },
+        {
+          authorizationContext: buildAuthorizationContext(),
+          bearerToken: authSession.token
         }
-        const nextStockBySize = { ...product.stockBySize };
-        if (targetSize === "ALL") {
-          SIZE_ORDER.forEach((size) => {
-            nextStockBySize[size] = Math.max(0, (nextStockBySize[size] ?? 0) + delta);
-            addedUnits += delta;
-          });
-        } else {
-          nextStockBySize[targetSize] = Math.max(0, (nextStockBySize[targetSize] ?? 0) + delta);
-          addedUnits += delta;
-        }
-        const stockQuantity = Object.values(nextStockBySize).reduce((sum, value) => sum + value, 0);
-        return {
-          ...product,
-          stockBySize: nextStockBySize,
-          stockQuantity,
-          inStock: stockQuantity > 0
-        };
-      })
-    );
-    return addedUnits;
+      );
+
+      onUpdateProducts(
+        products.map((item) =>
+          item.id === editingProductId ? toAdminProductFromApi(updated, selectedTeam) : item
+        )
+      );
+
+      dispatch({ type: "CLOSE_EDIT" });
+      dispatch({ type: "SET_EDITING_PRODUCT_ID", payload: null });
+      setEditDraft(null);
+      showToast("✅ Produto atualizado com sucesso!", "success", 3000);
+    } catch (error) {
+      if (isNormalizedApiError(error)) {
+        setEditErrors(extractFieldLevelErrors(error));
+      } else {
+        setEditErrors(["Nao foi possivel atualizar o produto no backend."]);
+      }
+    }
   };
 
   const activeRestockProduct = restockProductId ? products.find((item) => item.id === restockProductId) ?? null : null;
@@ -564,10 +581,64 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       { text: "Cancelar", style: "cancel" },
       {
         text: "Confirmar",
-        onPress: () => {
-          const addedUnits = restockProduct(activeRestockProduct.id, delta, restockSize);
-          showToast(`✅ Estoque atualizado: +${addedUnits} item(ns)`, "success", 2500);
-          setRestockProductId(null);
+        onPress: async () => {
+          if (!authSession?.token) {
+            showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+            return;
+          }
+
+          const product = products.find((item) => item.id === activeRestockProduct.id);
+          if (!product) {
+            showToast("Produto nao encontrado para reposicao.", "error", 3000);
+            return;
+          }
+
+          const nextStockBySize = { ...product.stockBySize };
+          if (restockSize === "ALL") {
+            SIZE_ORDER.forEach((size) => {
+              nextStockBySize[size] = Math.max(0, (nextStockBySize[size] ?? 0) + delta);
+            });
+          } else {
+            nextStockBySize[restockSize] = Math.max(0, (nextStockBySize[restockSize] ?? 0) + delta);
+          }
+
+          const updatePayload = {
+            categorySlug: product.team.category,
+            teamSlug: product.teamId,
+            modelName: product.name,
+            description: product.description,
+            price: product.price,
+            originalPrice: product.originalPrice,
+            imageUrl: product.image,
+            customizationEnabled: Boolean(product.customizationEnabled),
+            customizationTemplatePng: product.customizationTemplatePng,
+            variants: SIZE_ORDER.map((size) => ({
+              size,
+              stockQuantity: nextStockBySize[size] ?? 0
+            }))
+          };
+
+          try {
+            const updated = await updateAdminProductApi(product.id, updatePayload, {
+              authorizationContext: buildAuthorizationContext(),
+              bearerToken: authSession.token
+            });
+
+            const addedUnits = restockSize === "ALL" ? delta * SIZE_ORDER.length : delta;
+            onUpdateProducts(
+              products.map((item) =>
+                item.id === product.id ? toAdminProductFromApi(updated, item.team) : item
+              )
+            );
+            showToast(`✅ Estoque atualizado: +${addedUnits} item(ns)`, "success", 2500);
+            setRestockProductId(null);
+          } catch (error) {
+            if (isNormalizedApiError(error)) {
+              showToast(error.message, "error", 3000);
+            } else {
+              showToast("Nao foi possivel atualizar o estoque no backend.", "error", 3000);
+            }
+          }
         }
       }
     ]);
@@ -703,12 +774,32 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
               onPress={() => {
                 Alert.alert(
                   "Confirmar exclusão",
-                  "Tem certeza que quer excluir este produto? Esta ação não pode ser desfeita.",
+                  "Tem certeza que quer excluir este produto? Esta ação desativa o produto no catalogo.",
                   [
                     { text: "Cancelar", onPress: () => {}, style: "cancel" },
                     {
                       text: "Excluir",
-                      onPress: () => onUpdateProducts(products.filter((item) => item.id !== product.id)),
+                      onPress: async () => {
+                        if (!authSession?.token) {
+                          showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+                          return;
+                        }
+
+                        try {
+                          await deleteAdminProductApi(product.id, {
+                            authorizationContext: buildAuthorizationContext(),
+                            bearerToken: authSession.token
+                          });
+                          onUpdateProducts(products.filter((item) => item.id !== product.id));
+                          showToast("✅ Produto removido com sucesso!", "success", 2500);
+                        } catch (error) {
+                          if (isNormalizedApiError(error)) {
+                            showToast(error.message, "error", 3000);
+                          } else {
+                            showToast("Nao foi possivel excluir o produto no backend.", "error", 3000);
+                          }
+                        }
+                      },
                       style: "destructive"
                     }
                   ]

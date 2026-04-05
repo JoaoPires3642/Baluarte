@@ -25,6 +25,32 @@ Important:
 - Secret keys must stay only in backend/server environments.
 - Web/Expo should use only public keys (`EXPO_PUBLIC_*`).
 
+### Optional local-only admin bypass (without real Clerk token)
+
+For manual local testing of admin flows, you can bypass Clerk JWT verification using a shared dev key.
+
+Add in `.env`:
+
+```env
+APP_AUTH_ADMIN_EMAILS=admin@loja.com
+APP_AUTH_DEV_BYPASS_ENABLED=true
+APP_AUTH_DEV_BYPASS_KEY=dev-admin-bypass-123
+EXPO_PUBLIC_ADMIN_EMAILS=admin@loja.com
+EXPO_PUBLIC_ADMIN_BYPASS_KEY=dev-admin-bypass-123
+```
+
+Then restart containers:
+
+```bash
+docker compose up -d --build
+```
+
+Notes:
+
+- This bypass is for local development only.
+- Keep `APP_AUTH_DEV_BYPASS_ENABLED=false` in shared/production environments.
+- Access is still restricted to emails listed in `APP_AUTH_ADMIN_EMAILS`.
+
 ## 1) Start everything
 
 From this folder (`Baluarte/`):

@@ -218,7 +218,9 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     addToCart,
     updateCartQuantity,
     clearCart,
-    handleLogin,
+    startEmailOtpLogin,
+    verifyEmailOtpLogin,
+    loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
     screen
@@ -404,6 +406,40 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       active = false;
     };
   }, [route, productList, selectedTeam]);
+
+  useEffect(() => {
+    if (route.name !== "login" || !user || !authSession?.token) {
+      return;
+    }
+
+    const isAdmin = user.role === "admin" && authSession.internalRole === "admin";
+    if (isAdmin && route.blockedAdminRoute) {
+      setRoute(route.blockedAdminRoute);
+      return;
+    }
+
+    if (isAdmin) {
+      setRoute({ name: "admin" });
+      return;
+    }
+
+    if (route.redirectAfterLogin === "checkout") {
+      setRoute({ name: "checkout" });
+      return;
+    }
+
+    if (route.redirectAfterLogin === "orders") {
+      setRoute({ name: "orders" });
+      return;
+    }
+
+    if (route.redirectAfterLogin === "profile") {
+      setRoute({ name: "profile" });
+      return;
+    }
+
+    setRoute({ name: "profile" });
+  }, [authSession, route, setRoute, user]);
 
   if (isAdminAreaRoute && !hasAdminAccess) {
     return (
@@ -666,11 +702,15 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
             setRoute(route.redirectAfterLogin === "checkout" ? { name: "checkout" } : { name: "home" });
           }}
-          onLogin={async (email, password) => {
-            const result = await handleLogin(email, password);
+          onStartEmailLogin={async (email) => {
+            return startEmailOtpLogin(email);
+          }}
+          onVerifyEmailOtp={async (code) => {
+            const result = await verifyEmailOtpLogin(code);
             if (!result.ok) {
-              return false;
+              return { ok: false, error: result.error ?? "Codigo OTP invalido." };
             }
+
             const isAdmin = result.internalRole === "admin";
             if (isAdmin && route.blockedAdminRoute) {
               setRoute(route.blockedAdminRoute);
@@ -685,10 +725,21 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
             } else {
               setRoute({ name: "profile" });
             }
-            return true;
+
+            return { ok: true };
           }}
-          onRegister={async (name, email, password) => {
-            const result = await handleRegister(name, email, password);
+          onLoginWithSocial={async (provider) => {
+            const result = await loginWithClerkOAuth(provider);
+            if (!result.ok) {
+              return { ok: false, error: result.error ?? "Falha ao iniciar login social." };
+            }
+
+            return { ok: true };
+          }}
+          onRegister={async (firstName, lastName, email) => {
+            const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+            const generatedPassword = `Baluarte#${Date.now()}`;
+            const result = await handleRegister(fullName, email, generatedPassword);
             if (!result.ok) {
               return result;
             }

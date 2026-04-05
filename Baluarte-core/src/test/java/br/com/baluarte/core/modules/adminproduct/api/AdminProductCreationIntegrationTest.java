@@ -3,7 +3,9 @@ package br.com.baluarte.core.modules.adminproduct.api;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +14,7 @@ import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminP
 import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -150,6 +153,120 @@ class AdminProductCreationIntegrationTest {
             .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
             .andExpect(jsonPath("$.error.details[0]").value(org.hamcrest.Matchers.containsString("categorySlug categoria nao encontrada")))
             .andExpect(jsonPath("$.traceId").isString());
+    }
+
+    @Test
+    void shouldUpdateAdminProductAndReclassifyTeam() throws Exception {
+        String createPayload = """
+            {
+              "categorySlug": "nacionais",
+              "teamSlug": "flamengo",
+              "modelName": "Camisa Flamengo Atualizavel",
+              "description": "Produto para teste de edicao",
+              "price": 229.9,
+              "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-atualizavel.png",
+              "customizationEnabled": false,
+              "variants": [
+                {"size": "P", "stockQuantity": 1},
+                {"size": "M", "stockQuantity": 2}
+              ]
+            }
+            """;
+
+        String productId = createProductAndExtractId(createPayload);
+
+        mockMvc.perform(
+            put("/api/v1/admin/products/{productId}", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "categorySlug": "nacionais",
+                      "teamSlug": "palmeiras",
+                      "modelName": "Camisa Palmeiras Reclassificada",
+                      "description": "Produto atualizado pelo admin",
+                      "price": 279.9,
+                      "originalPrice": 319.9,
+                      "imageUrl": "https://cdn.baluarte.com/produtos/palmeiras-reclassificada.png",
+                      "customizationEnabled": true,
+                      "customizationTemplatePng": "https://cdn.baluarte.com/templates/palmeiras.png",
+                      "variants": [
+                        {"size": "P", "stockQuantity": 3},
+                        {"size": "M", "stockQuantity": 0},
+                        {"size": "G", "stockQuantity": 5}
+                      ]
+                    }
+                    """)
+                .header("Authorization", "Bearer token_admin")
+                .header("X-Clerk-User-Id", "user_789")
+                .header("X-Clerk-Email", "admin@baluarte.com")
+        )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(productId))
+            .andExpect(jsonPath("$.data.teamSlug").value("palmeiras"))
+            .andExpect(jsonPath("$.data.modelName").value("Camisa Palmeiras Reclassificada"))
+            .andExpect(jsonPath("$.data.available").value(true))
+            .andExpect(jsonPath("$.data.stockQuantity").value(8))
+            .andExpect(jsonPath("$.data.variants.length()").value(3));
+
+        org.assertj.core.api.Assertions.assertThat(productRepository.count()).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(variantRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void shouldSoftDeleteAdminProductKeepingRecordForHistory() throws Exception {
+        String createPayload = """
+            {
+              "categorySlug": "nacionais",
+              "teamSlug": "flamengo",
+              "modelName": "Camisa Flamengo Removivel",
+              "description": "Produto para teste de remocao logica",
+              "price": 199.9,
+              "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-removivel.png",
+              "customizationEnabled": false,
+              "variants": [
+                {"size": "P", "stockQuantity": 4},
+                {"size": "M", "stockQuantity": 1}
+              ]
+            }
+            """;
+
+        String productId = createProductAndExtractId(createPayload);
+
+        mockMvc.perform(
+            delete("/api/v1/admin/products/{productId}", productId)
+                .header("Authorization", "Bearer token_admin")
+                .header("X-Clerk-User-Id", "user_789")
+                .header("X-Clerk-Email", "admin@baluarte.com")
+        )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(productId))
+            .andExpect(jsonPath("$.data.active").value(false))
+            .andExpect(jsonPath("$.data.available").value(false))
+            .andExpect(jsonPath("$.data.stockQuantity").value(0));
+
+        org.assertj.core.api.Assertions.assertThat(productRepository.count()).isEqualTo(1);
+        UUID parsedId = UUID.fromString(productId);
+        var persisted = productRepository.findById(parsedId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(persisted.getActive()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(persisted.getAvailable()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(persisted.getStockQuantity()).isEqualTo(0);
+    }
+
+    private String createProductAndExtractId(String payload) throws Exception {
+        String responseBody = mockMvc.perform(
+            post("/api/v1/admin/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload)
+                .header("Authorization", "Bearer token_admin")
+                .header("X-Clerk-User-Id", "user_789")
+                .header("X-Clerk-Email", "admin@baluarte.com")
+        )
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        return com.jayway.jsonpath.JsonPath.read(responseBody, "$.data.id");
     }
 
     private Jwt jwtWithIdentity(String userId, String email) {

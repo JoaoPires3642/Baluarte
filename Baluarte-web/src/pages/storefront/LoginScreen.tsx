@@ -4,38 +4,62 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import styles from "../../App.styles";
 import type { LoginScreenProps } from "./types";
 
-export function LoginScreen({ initialMode = "login", onBack, onLogin, onRegister }: LoginScreenProps) {
+export function LoginScreen({
+  initialMode = "login",
+  onBack,
+  onStartEmailLogin,
+  onVerifyEmailOtp,
+  onLoginWithSocial,
+  onRegister
+}: LoginScreenProps) {
   const [mode, setMode] = useState<"login" | "register">(initialMode);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("joao@email.com");
-  const [password, setPassword] = useState("123456");
-  const [confirmPassword, setConfirmPassword] = useState("123456");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
     setError("");
+    setInfo("");
+    setOtpSent(false);
+    setOtpCode("");
   }, [initialMode]);
 
   const isRegister = mode === "register";
 
+  const switchMode = (nextMode: "login" | "register") => {
+    setMode(nextMode);
+    setError("");
+    setInfo("");
+    setOtpSent(false);
+    setOtpCode("");
+  };
+
   const handleSubmit = async () => {
     setError("");
+    setInfo("");
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!sanitizedEmail || !sanitizedEmail.includes("@")) {
+      setError("Informe um email valido");
+      return;
+    }
+
     setLoading(true);
 
-    // Sanitize email: trim + lowercase
-    const sanitizedEmail = email.trim().toLowerCase();
-
     if (isRegister) {
-      if (password !== confirmPassword) {
+      if (!firstName.trim() || !lastName.trim()) {
         setLoading(false);
-        setError("As senhas nao conferem");
+        setError("Informe nome e sobrenome");
         return;
       }
-      const result = await onRegister(name, sanitizedEmail, password);
+
+      const result = await onRegister(firstName, lastName, sanitizedEmail);
       setLoading(false);
       if (!result.ok) {
         setError(result.error);
@@ -43,104 +67,156 @@ export function LoginScreen({ initialMode = "login", onBack, onLogin, onRegister
       return;
     }
 
-    const ok = await onLogin(sanitizedEmail, password);
+    if (!otpSent) {
+      const start = await onStartEmailLogin(sanitizedEmail);
+      setLoading(false);
+      if (!start.ok) {
+        setError(start.error);
+        return;
+      }
+
+      setOtpSent(true);
+      setInfo("Codigo enviado no seu email. Digite abaixo para entrar.");
+      return;
+    }
+
+    if (!otpCode.trim()) {
+      setLoading(false);
+      setError("Digite o codigo recebido");
+      return;
+    }
+
+    const verify = await onVerifyEmailOtp(otpCode.trim());
     setLoading(false);
-    if (!ok) {
-      setError("Email ou senha invalidos");
+    if (!verify.ok) {
+      setError(verify.error);
     }
   };
 
+  const handleSocialLogin = async (provider: "google" | "apple") => {
+    setError("");
+    setInfo("");
+    setLoading(true);
+
+    const result = await onLoginWithSocial(provider);
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setInfo(`Abrindo ${provider === "google" ? "Google" : "Apple"}...`);
+  };
+
   return (
-    <View style={styles.stackScreen}>
+    <View style={styles.authScreen}>
       <Pressable onPress={onBack}>
         <Text style={styles.backLink}>Voltar</Text>
       </Pressable>
-      <Text style={styles.screenTitle}>{isRegister ? "Criar conta" : "Entrar"}</Text>
-      <Text style={styles.screenDescription}>Voce pode navegar e adicionar ao carrinho sem conta. O login e exigido so na finalizacao.</Text>
 
-      <View style={styles.couponSuggestions}>
-        <Pressable onPress={() => { setMode("login"); setError(""); }}>
-          <Text style={styles.backLink}>Entrar</Text>
-        </Pressable>
-        <Pressable onPress={() => { setMode("register"); setError(""); setEmail(""); setPassword(""); setConfirmPassword(""); }}>
-          <Text style={styles.backLink}>Cadastrar</Text>
-        </Pressable>
-      </View>
+      <View style={styles.authCard}>
+        <Text style={styles.authTitle}>{isRegister ? "Criar conta" : "Welcome back"}</Text>
+        <Text style={styles.authSubtitle}>
+          {isRegister ? "Cadastro rapido: nome, sobrenome e email." : "Entre com email e confirme o codigo enviado."}
+        </Text>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>{isRegister ? "Dados do cadastro" : "Acesse sua conta"}</Text>
+        <View style={styles.authTabRow}>
+          <Pressable
+            onPress={() => switchMode("login")}
+            style={[styles.authTabButton, mode === "login" ? styles.authTabButtonActive : null]}
+          >
+            <Text style={[styles.authTabButtonText, mode === "login" ? styles.authTabButtonTextActive : null]}>Entrar</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => switchMode("register")}
+            style={[styles.authTabButton, mode === "register" ? styles.authTabButtonActive : null]}
+          >
+            <Text style={[styles.authTabButtonText, mode === "register" ? styles.authTabButtonTextActive : null]}>Cadastrar</Text>
+          </Pressable>
+        </View>
 
-        {!isRegister ? (
-          <View style={styles.couponSuggestions}>
-            <Pressable onPress={() => { setEmail("joao@email.com"); setPassword("123456"); }}>
-              <Text style={styles.backLink}>Demo cliente</Text>
-            </Pressable>
-            <Pressable onPress={() => { setEmail("admin@loja.com"); setPassword("admin123"); }}>
-              <Text style={styles.backLink}>Demo admin</Text>
-            </Pressable>
-          </View>
-        ) : null}
+        <View style={styles.authForm}>
+          {isRegister ? (
+            <>
+              <TextInput
+                style={styles.authInput}
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Nome"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="words"
+              />
+              <TextInput
+                style={styles.authInput}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Sobrenome"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="words"
+              />
+            </>
+          ) : null}
 
-        {isRegister ? (
           <TextInput
-            style={styles.formInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Nome completo"
+            style={styles.authInput}
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              if (!isRegister) {
+                setOtpSent(false);
+                setOtpCode("");
+              }
+            }}
+            placeholder="Email"
             placeholderTextColor="#9ca3af"
-            autoCapitalize="words"
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-        ) : null}
 
-        <TextInput
-          style={styles.formInput}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor="#9ca3af"
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          style={styles.formInput}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Senha"
-          placeholderTextColor="#9ca3af"
-          secureTextEntry={!showPassword}
-          autoCapitalize="none"
-        />
-        <Pressable onPress={() => setShowPassword(!showPassword)} style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 12, color: "#2563eb", fontWeight: "600" }}>
-            {showPassword ? "👁️ Ocultar senha" : "👁️ Mostrar senha"}
-          </Text>
-        </Pressable>
-
-        {isRegister ? (
-          <>
+          {!isRegister && otpSent ? (
             <TextInput
-              style={styles.formInput}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Confirmar senha"
+              style={styles.authInput}
+              value={otpCode}
+              onChangeText={setOtpCode}
+              placeholder="Codigo de verificacao"
               placeholderTextColor="#9ca3af"
-              secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
+              keyboardType="number-pad"
             />
-            <Pressable onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 12, color: "#2563eb", fontWeight: "600" }}>
-                {showConfirmPassword ? "👁️ Ocultar senha" : "👁️ Mostrar senha"}
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
+          ) : null}
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Pressable style={styles.primaryActionButton} onPress={handleSubmit} disabled={loading}>
-          <Text style={styles.primaryActionButtonText}>
-            {loading ? "Processando..." : isRegister ? "Criar conta" : "Entrar"}
+          {info ? <Text style={styles.authInfo}>{info}</Text> : null}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <Pressable style={styles.authSubmitButton} onPress={handleSubmit} disabled={loading}>
+            <Text style={styles.authSubmitButtonText}>
+              {loading
+                ? "Processando..."
+                : isRegister
+                  ? "Criar conta"
+                  : otpSent
+                    ? "Validar codigo"
+                    : "Enviar codigo"}
+            </Text>
+          </Pressable>
+
+          {!isRegister ? (
+            <View style={styles.authSocialButtonsWrap}>
+              <Pressable style={styles.authSocialButtonApple} onPress={() => void handleSocialLogin("apple")} disabled={loading}>
+                <Text style={styles.authSocialButtonAppleText}>Entrar com Apple</Text>
+              </Pressable>
+              <Pressable style={styles.authSocialButtonGoogle} onPress={() => void handleSocialLogin("google")} disabled={loading}>
+                <Text style={styles.authSocialButtonGoogleText}>Entrar com Google</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        <Pressable onPress={() => switchMode(isRegister ? "login" : "register")}>
+          <Text style={styles.authSwitchLabel}>
+            {isRegister ? "Ja tem conta? " : "Nao tem conta? "}
+            <Text style={styles.authSwitchLink}>{isRegister ? "Entrar" : "Cadastrar"}</Text>
           </Text>
         </Pressable>
       </View>

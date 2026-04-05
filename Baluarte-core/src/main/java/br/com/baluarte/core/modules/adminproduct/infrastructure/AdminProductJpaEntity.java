@@ -95,4 +95,31 @@ public class AdminProductJpaEntity {
             .toList());
         return entity;
     }
+
+    void updateFromDomain(
+        br.com.baluarte.core.modules.adminproduct.domain.AdminProduct product,
+        br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity category,
+        br.com.baluarte.core.modules.catalog.infrastructure.TeamJpaEntity team
+    ) {
+        this.category = category;
+        this.team = team;
+        this.modelName = product.modelName();
+        this.description = product.description();
+        this.price = product.price();
+        this.originalPrice = product.originalPrice();
+        this.imageUrl = product.imageUrl();
+        this.customizationEnabled = product.customizationEnabled();
+        this.customizationTemplatePng = product.customizationTemplatePng();
+        this.active = product.active();
+        this.available = product.available();
+        this.stockQuantity = product.stockQuantity();
+        this.createdAt = product.createdAt();
+    }
+
+    void replaceVariantsFromDomain(br.com.baluarte.core.modules.adminproduct.domain.AdminProduct product) {
+        this.variants.clear();
+        this.variants.addAll(product.variants().stream()
+            .map(variant -> AdminProductVariantJpaEntity.fromDomain(variant, this))
+            .toList());
+    }
 }

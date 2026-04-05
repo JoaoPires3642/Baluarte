@@ -12,6 +12,7 @@ function readAdminEmailAllowlistFromEnv(): string[] {
 }
 
 const ADMIN_EMAIL_ALLOWLIST = readAdminEmailAllowlistFromEnv();
+const ADMIN_BYPASS_KEY = process.env.EXPO_PUBLIC_ADMIN_BYPASS_KEY?.trim() || "";
 
 function parseJsonSafely(value: string): unknown {
   if (!value) {
@@ -56,7 +57,12 @@ export class ApiClient {
                   resolveInternalRoleFromClerkIdentity(
                     options.authorizationContext.clerkIdentity,
                     ADMIN_EMAIL_ALLOWLIST
-                  )
+                  ),
+                ...(ADMIN_BYPASS_KEY
+                  ? {
+                      "X-Admin-Bypass-Key": ADMIN_BYPASS_KEY
+                    }
+                  : {})
               }
             : {}),
           ...options.headers

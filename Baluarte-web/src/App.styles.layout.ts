@@ -111,6 +111,36 @@ export const layoutStyles = {
     paddingTop: 18,
     gap: 10
   },
+  authScreen: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 24,
+    justifyContent: "center",
+    gap: 10
+  },
+  authCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.slate900,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6
+  },
+  authTabRow: {
+    flexDirection: "row",
+    gap: 8
+  },
+  authForm: {
+    gap: 10
+  },
   teamGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

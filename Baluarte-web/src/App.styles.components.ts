@@ -177,6 +177,112 @@ export const componentStyles = {
     fontSize: 14,
     lineHeight: 20
   },
+  authTitle: {
+    color: theme.colors.slate900,
+    fontSize: 30,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  authSubtitle: {
+    color: theme.colors.slate600,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center"
+  },
+  authTabButton: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: "center"
+  },
+  authTabButtonActive: {
+    backgroundColor: theme.colors.blue700,
+    borderColor: theme.colors.blue700
+  },
+  authTabButtonText: {
+    color: theme.colors.slate800,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  authTabButtonTextActive: {
+    color: theme.colors.white
+  },
+  authInput: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    color: theme.colors.slate800,
+    paddingHorizontal: 16,
+    paddingVertical: 12
+  },
+  authHint: {
+    color: theme.colors.slate500,
+    fontSize: 11,
+    textAlign: "right",
+    textDecorationLine: "underline"
+  },
+  authInfo: {
+    color: theme.colors.blue700,
+    fontSize: 12
+  },
+  authSubmitButton: {
+    borderRadius: 999,
+    backgroundColor: theme.colors.blue700,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    alignItems: "center"
+  },
+  authSubmitButtonText: {
+    color: theme.colors.white,
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase"
+  },
+  authSocialButtonsWrap: {
+    marginTop: 2,
+    gap: 8
+  },
+  authSocialButtonApple: {
+    borderRadius: 999,
+    backgroundColor: "#111111",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    alignItems: "center"
+  },
+  authSocialButtonAppleText: {
+    color: theme.colors.white,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  authSocialButtonGoogle: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    alignItems: "center"
+  },
+  authSocialButtonGoogleText: {
+    color: theme.colors.slate800,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  authSwitchLabel: {
+    color: theme.colors.slate500,
+    fontSize: 12,
+    textAlign: "center"
+  },
+  authSwitchLink: {
+    color: theme.colors.blue700,
+    fontWeight: "800",
+    textDecorationLine: "underline"
+  },
   teamCard: {
     width: "48.5%",
     backgroundColor: theme.colors.white,
