@@ -6,6 +6,7 @@ import br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataCategoryJpaRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataTeamJpaRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.TeamJpaEntity;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -37,13 +38,32 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
                 return productJpaRepository.save(existing);
             })
             .orElseGet(() -> productJpaRepository.save(AdminProductJpaEntity.fromDomain(product, category, team)));
+        
         return toDomain(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminProduct> findAll() {
+        return productJpaRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
+            .stream()
+            .map(this::toDomain)
+            .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<AdminProduct> findById(UUID id) {
         return productJpaRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminProduct> findActiveAvailableByTeamId(UUID teamId) {
+        return productJpaRepository.findByTeamIdAndActiveTrueAndAvailableTrue(teamId)
+            .stream()
+            .map(this::toDomain)
+            .toList();
     }
 
     private AdminProduct toDomain(AdminProductJpaEntity entity) {

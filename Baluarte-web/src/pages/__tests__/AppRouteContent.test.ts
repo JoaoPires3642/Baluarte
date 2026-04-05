@@ -7,6 +7,7 @@ import {
   hasAdminRouteAccess,
   filterCatalogProducts,
   mapHierarchyModelToProduct,
+  mergeHierarchyModelsWithLocalProducts,
   resolveCheckoutShippingAddress,
   shouldResetCheckoutContextOnUserChange,
   isAdminRoute
@@ -109,6 +110,31 @@ describe("mapHierarchyModelToProduct", () => {
     expect(mapped.teamId).toBe("team-a");
     expect(mapped.inStock).toBe(false);
     expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
+  });
+});
+
+describe("mergeHierarchyModelsWithLocalProducts", () => {
+  it("keeps api models and appends local team products missing from the public catalog", () => {
+    const selectedTeam = {
+      id: "team-a",
+      name: "Team A",
+      logo: "https://example.com/a.png",
+      category: "nacionais",
+      league: "Serie A"
+    };
+
+    const localOnlyProduct = buildProduct("team-a", "local-only-1");
+
+    const result = mergeHierarchyModelsWithLocalProducts(
+      [{ slug: "public-model-1", name: "Modelo API" }],
+      selectedTeam,
+      [localOnlyProduct]
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe("public-model-1");
+    expect(result[1].id).toBe("local-only-1");
+    expect(result[1].teamId).toBe("team-a");
   });
 });
 

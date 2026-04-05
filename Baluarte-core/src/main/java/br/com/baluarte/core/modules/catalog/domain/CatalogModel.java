@@ -7,6 +7,8 @@ public record CatalogModel(
     String name,
     String slug,
     String teamSlug,
-    Integer displayOrder
+    String imageUrl,
+    Integer displayOrder,
+    Integer stockQuantity
 ) {
 }

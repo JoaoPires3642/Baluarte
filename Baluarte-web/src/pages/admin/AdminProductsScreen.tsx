@@ -12,6 +12,8 @@ import {
   resolveTeamBySlug,
   updateAdminProductApi
 } from "../../lib/mobile/api/admin-products";
+import { convertLocalImagesToDataUris } from "../../lib/mobile/image-utils";
+import { getActiveClerkIdentity } from "../../lib/clerkClient";
 import type { NormalizedApiError, ApiAuthorizationContext } from "../../lib/mobile/api/contracts";
 import { ProductFormModal } from "../../components/admin/ProductFormModal";
 import { RestockActionSheet } from "../../components/admin/RestockActionSheet";
@@ -142,15 +144,56 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     }, { P: 0, M: 0, G: 0, GG: 0 });
   };
 
+  const resolvePathWithoutQuery = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+      return decodeURIComponent(parsed.pathname).toLowerCase();
+    } catch {
+      return decodeURIComponent(trimmed.split("?")[0].split("#")[0]).toLowerCase();
+    }
+  };
+
+  const isLocalImageUri = (value: string): boolean => {
+    const normalized = value.trim().toLowerCase();
+    return normalized.startsWith("file://") || normalized.startsWith("content://") || normalized.startsWith("blob:");
+  };
+
+  const isDataImageUri = (value: string): boolean => {
+    return value.trim().toLowerCase().startsWith("data:image/");
+  };
+
   const isValidImageUrl = (url: string): boolean => {
+    const normalized = url.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (isLocalImageUri(normalized) || isDataImageUri(normalized)) {
+      return true;
+    }
+
     const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
-    const lowerUrl = url.toLowerCase();
-    return imageExtensions.some((ext) => lowerUrl.includes(ext));
+    const normalizedPath = resolvePathWithoutQuery(normalized);
+    return imageExtensions.some((ext) => normalizedPath.endsWith(ext));
   };
 
   const isValidPngTemplate = (value: string): boolean => {
-    const lowerValue = value.trim().toLowerCase();
-    return lowerValue.length > 0 && lowerValue.includes(".png");
+    const normalized = value.trim();
+    if (!normalized) {
+      return false;
+    }
+
+    if (normalized.toLowerCase().startsWith("data:image/png")) {
+      return true;
+    }
+
+    const normalizedPath = resolvePathWithoutQuery(normalized);
+    return normalizedPath.endsWith(".png");
   };
 
   const isNormalizedApiError = (value: unknown): value is NormalizedApiError => {
@@ -172,15 +215,26 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     return [error.message];
   };
 
-  const buildAuthorizationContext = (): ApiAuthorizationContext | undefined => {
-    if (!user || !authSession) {
+  const buildAuthorizationContext = async (): Promise<ApiAuthorizationContext | undefined> => {
+    if (!user || !authSession || user.role !== "admin" || authSession.internalRole !== "admin") {
       return undefined;
+    }
+
+    const clerkIdentity = await getActiveClerkIdentity();
+    if (!clerkIdentity?.sessionToken) {
+      return {
+        clerkIdentity: {
+          clerkUserId: user.id,
+          email: user.email
+        },
+        internalRole: authSession.internalRole
+      };
     }
 
     return {
       clerkIdentity: {
-        clerkUserId: user.id,
-        email: user.email
+        clerkUserId: clerkIdentity.userId,
+        email: clerkIdentity.email
       },
       internalRole: authSession.internalRole
     };
@@ -189,6 +243,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
   const toAdminProductFromApi = (
     dto: {
       id: string;
+      categorySlug: string;
       teamSlug: string;
       modelName: string;
       description: string;
@@ -203,7 +258,10 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     },
     fallbackTeam: (typeof teams)[number]
   ): AdminProduct => {
-    const resolvedTeam = resolveTeamBySlug(dto.teamSlug, teams) ?? fallbackTeam;
+    const resolvedTeam = resolveTeamBySlug(dto.teamSlug, teams) ?? {
+      ...fallbackTeam,
+      category: dto.categorySlug
+    };
     const stockBySize = SIZE_ORDER.reduce<Record<ValidSize, number>>((acc, size) => {
       const variant = dto.variants.find((item) => item.size === size);
       acc[size] = variant?.stockQuantity ?? 0;
@@ -379,10 +437,11 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     if (createDraft.images.length === 0) {
       errors.push("Adicione pelo menos uma imagem na etapa 2");
     }
-    if (createDraft.customizationEnabled && !createDraft.customizationTemplatePng.trim()) {
+    const createTemplate = createDraft.customizationTemplatePng.trim();
+    if (createDraft.customizationEnabled && !createTemplate) {
       errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
     }
-    if (createDraft.customizationEnabled && !isValidPngTemplate(createDraft.customizationTemplatePng)) {
+    if (createDraft.customizationEnabled && createTemplate && !isValidPngTemplate(createTemplate)) {
       errors.push("Template de personalizacao deve ser um PNG valido (.png)");
     }
 
@@ -409,6 +468,17 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     setCreateErrors([]);
 
     try {
+      const authorizationContext = await buildAuthorizationContext();
+      if (!authorizationContext) {
+        setCreateErrors(["Sessao admin expirada. Faca login novamente para criar produtos."]);
+        return;
+      }
+
+      const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
+      
+      // Convert local images to data URIs
+      const convertedImages = await convertLocalImagesToDataUris(createDraft.images);
+      
       const created = await createAdminProductApi(
         {
           categorySlug: createDraft.category,
@@ -417,7 +487,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           description: createDraft.description.trim(),
           price: pricing.finalPrice,
           originalPrice: pricing.originalPrice,
-          imageUrl: createDraft.images[0],
+          imageUrl: convertedImages[0],
           customizationEnabled: createDraft.customizationEnabled,
           customizationTemplatePng: createDraft.customizationEnabled
             ? createDraft.customizationTemplatePng.trim() || undefined
@@ -425,8 +495,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: stockBySize[size] }))
         },
         {
-          authorizationContext: buildAuthorizationContext(),
-          bearerToken: authSession.token
+          authorizationContext,
+          bearerToken
         }
       );
 
@@ -492,10 +562,11 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     if (editDraft.images.length === 0) {
       errors.push("Mantenha ao menos uma imagem do produto");
     }
-    if (editDraft.customizationEnabled && !editDraft.customizationTemplatePng.trim()) {
+    const editTemplate = editDraft.customizationTemplatePng.trim();
+    if (editDraft.customizationEnabled && !editTemplate) {
       errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
     }
-    if (editDraft.customizationEnabled && !isValidPngTemplate(editDraft.customizationTemplatePng)) {
+    if (editDraft.customizationEnabled && editTemplate && !isValidPngTemplate(editTemplate)) {
       errors.push("Template de personalizacao deve ser um PNG valido (.png)");
     }
 
@@ -521,6 +592,17 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     setEditErrors([]);
 
     try {
+      const authorizationContext = await buildAuthorizationContext();
+      if (!authorizationContext) {
+        setEditErrors(["Sessao admin expirada. Faca login novamente para editar produtos."]);
+        return;
+      }
+
+      const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
+      
+      // Convert local images to data URIs
+      const convertedImages = await convertLocalImagesToDataUris(editDraft.images);
+      
       const updated = await updateAdminProductApi(
         editingProductId,
         {
@@ -530,7 +612,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           description: editDraft.description.trim(),
           price: pricing.finalPrice,
           originalPrice: pricing.originalPrice,
-          imageUrl: editDraft.images[0],
+          imageUrl: convertedImages[0],
           customizationEnabled: editDraft.customizationEnabled,
           customizationTemplatePng: editDraft.customizationEnabled
             ? editDraft.customizationTemplatePng.trim() || undefined
@@ -541,8 +623,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           }))
         },
         {
-          authorizationContext: buildAuthorizationContext(),
-          bearerToken: authSession.token
+          authorizationContext,
+          bearerToken
         }
       );
 
@@ -619,9 +701,16 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           };
 
           try {
+            const authorizationContext = await buildAuthorizationContext();
+            if (!authorizationContext) {
+              showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+              return;
+            }
+
+            const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
             const updated = await updateAdminProductApi(product.id, updatePayload, {
-              authorizationContext: buildAuthorizationContext(),
-              bearerToken: authSession.token
+              authorizationContext,
+              bearerToken
             });
 
             const addedUnits = restockSize === "ALL" ? delta * SIZE_ORDER.length : delta;
@@ -786,9 +875,16 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
                         }
 
                         try {
+                          const authorizationContext = await buildAuthorizationContext();
+                          if (!authorizationContext) {
+                            showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+                            return;
+                          }
+
+                          const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
                           await deleteAdminProductApi(product.id, {
-                            authorizationContext: buildAuthorizationContext(),
-                            bearerToken: authSession.token
+                            authorizationContext,
+                            bearerToken
                           });
                           onUpdateProducts(products.filter((item) => item.id !== product.id));
                           showToast("✅ Produto removido com sucesso!", "success", 2500);

@@ -28,6 +28,6 @@ final class CatalogApplicationMapper {
     }
 
     static CatalogModelView toCatalogModelView(CatalogModel model) {
-        return new CatalogModelView(model.id(), model.name(), model.slug(), model.teamSlug(), model.displayOrder());
+        return new CatalogModelView(model.id(), model.name(), model.slug(), model.teamSlug(), model.imageUrl(), model.displayOrder(), model.stockQuantity());
     }
 }

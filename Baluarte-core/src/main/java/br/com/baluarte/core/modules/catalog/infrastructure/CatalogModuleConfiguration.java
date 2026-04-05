@@ -3,7 +3,6 @@ package br.com.baluarte.core.modules.catalog.infrastructure;
 import br.com.baluarte.core.modules.catalog.application.ListPublicModelsByTeamUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicCategoriesUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsByCategoryUseCase;
-import br.com.baluarte.core.modules.catalog.domain.CatalogModelRepository;
 import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
 import br.com.baluarte.core.modules.catalog.domain.TeamRepository;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +21,9 @@ public class CatalogModuleConfiguration {
         return new ListPublicTeamsByCategoryUseCase(teamRepository);
     }
 
-    @Bean
-    ListPublicModelsByTeamUseCase listPublicModelsByTeamUseCase(CatalogModelRepository catalogModelRepository) {
-        return new ListPublicModelsByTeamUseCase(catalogModelRepository);
-    }
+        // Deprecated: Consolidated to single Product table - UseCase replaced by PublicProductsController
+        // @Bean
+        // ListPublicModelsByTeamUseCase listPublicModelsByTeamUseCase(CatalogModelRepository catalogModelRepository) {
+        //     return new ListPublicModelsByTeamUseCase(catalogModelRepository);
+        // }
 }

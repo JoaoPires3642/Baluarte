@@ -1,5 +1,5 @@
 import { ApiClient } from "./client";
-import type { CatalogModelDto, CategoryDto, TeamDto } from "./contracts";
+import type { CategoryDto, TeamDto, CatalogModelDto } from "./contracts";
 import { shouldUseMockCategories } from "../env";
 import { SHARED_MOCK_CATEGORIES } from "@/shared/catalog/mock-categories";
 import { products, teams } from "@/lib/data";
@@ -51,10 +51,11 @@ export async function fetchPublicModelsByTeam(teamSlug: string, client: ApiClien
         name: product.name,
         slug: product.id,
         teamSlug,
+        imageUrl: product.image,
         displayOrder: index + 1
       }));
   }
 
-  const response = await client.request<CatalogModelDto[]>(`/catalog/teams/${encodeURIComponent(teamSlug)}/models`);
+  const response = await client.request<CatalogModelDto[]>(`/catalog/teams/${encodeURIComponent(teamSlug)}/products`);
   return response.data;
 }

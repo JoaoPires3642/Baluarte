@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { mockCoupons } from "../lib/data";
 import type { Category, Coupon, Product, Team } from "../lib/types";
+import type { ApiAuthorizationContext } from "../lib/mobile/api/contracts";
+import { getActiveClerkIdentity } from "../lib/clerkClient";
+import { listAdminProductsApi, mapAdminProductDtoToAdminProduct } from "../lib/mobile/api/admin-products";
 import { useAuthState } from "./useAuthState";
 import { useCartState } from "./useCartState";
 import { useInventoryState } from "./useInventoryState";
@@ -89,6 +92,49 @@ export function useAppState() {
   const { orders, setOrders } = useOrdersState();
 
   const [coupons, setCoupons] = useState<Coupon[]>(mockCoupons);
+
+  useEffect(() => {
+    if (!user || !authSession || user.role !== "admin" || authSession.internalRole !== "admin") {
+      return;
+    }
+
+    let active = true;
+
+    void (async () => {
+      const clerkIdentity = await getActiveClerkIdentity();
+      if (!active || !clerkIdentity?.sessionToken) {
+        return;
+      }
+
+      const authorizationContext: ApiAuthorizationContext = {
+        clerkIdentity: {
+          clerkUserId: clerkIdentity.userId,
+          email: clerkIdentity.email
+        },
+        internalRole: authSession.internalRole
+      };
+
+      const items = await listAdminProductsApi({
+        bearerToken: clerkIdentity.sessionToken,
+        authorizationContext
+      });
+
+      if (!active) {
+        return;
+      }
+
+      setProductList(items.map((item) => mapAdminProductDtoToAdminProduct(item, teamList)));
+    })().catch(() => {
+      if (!active) {
+        return;
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [authSession, setProductList, teamList, user]);
+
   const customizableTeamIds = useMemo(() => {
     return new Set(
       productList

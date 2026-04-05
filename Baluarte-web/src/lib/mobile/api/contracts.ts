@@ -72,5 +72,6 @@ export interface CatalogModelDto {
   name: string;
   slug: string;
   teamSlug: string;
+  imageUrl: string;
   displayOrder: number;
 }

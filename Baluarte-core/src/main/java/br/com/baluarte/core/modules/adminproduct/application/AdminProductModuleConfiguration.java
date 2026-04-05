@@ -31,4 +31,9 @@ public class AdminProductModuleConfiguration {
     DeactivateAdminProductUseCase deactivateAdminProductUseCase(AdminProductRepository adminProductRepository) {
         return new DeactivateAdminProductUseCase(adminProductRepository);
     }
+
+    @Bean
+    ListAdminProductsUseCase listAdminProductsUseCase(AdminProductRepository adminProductRepository) {
+        return new ListAdminProductsUseCase(adminProductRepository);
+    }
 }

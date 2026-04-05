@@ -43,17 +43,17 @@ on conflict (email) do update set
 insert into products (
   id, name, description, price, original_price, image, team_id, sizes, in_stock, stock_quantity, featured
 ) values
-('fla-home-2024', 'Camisa Flamengo I 2024', 'Camisa oficial do Flamengo para a temporada 2024. Modelo titular com as tradicionais listras rubro-negras.', 299.90, 349.90, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'flamengo', array['P','M','G','GG'], true, 50, true),
-('fla-away-2024', 'Camisa Flamengo II 2024', 'Camisa reserva do Flamengo para a temporada 2024. Design moderno em branco.', 299.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'flamengo', array['P','M','G','GG'], true, 25, false),
-('pal-home-2024', 'Camisa Palmeiras I 2024', 'Camisa oficial do Palmeiras para a temporada 2024. O manto verde do Verdão.', 289.90, 329.90, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'palmeiras', array['P','M','G','GG'], true, 40, true),
-('cor-home-2024', 'Camisa Corinthians I 2024', 'Camisa oficial do Corinthians para a temporada 2024. O manto do Timão.', 289.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'corinthians', array['P','M','G','GG'], true, 30, false),
-('spfc-home-2024', 'Camisa São Paulo I 2024', 'Camisa oficial do São Paulo para a temporada 2024. O tricolor paulista.', 289.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'sao-paulo', array['P','M','G','GG'], true, 20, false),
-('rm-home-2024', 'Camisa Real Madrid I 2024', 'Camisa oficial do Real Madrid para a temporada 2024. O branco merengue.', 449.90, 499.90, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'real-madrid', array['P','M','G','GG'], true, 20, true),
-('fcb-home-2024', 'Camisa Barcelona I 2024', 'Camisa oficial do Barcelona para a temporada 2024. As tradicionais listras blaugrana.', 449.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'barcelona', array['P','M','G','GG'], true, 20, false),
-('mci-home-2024', 'Camisa Manchester City I 2024', 'Camisa oficial do Manchester City para a temporada 2024. O azul celeste dos Citizens.', 449.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'manchester-city', array['P','M','G','GG'], true, 20, false),
-('bra-home-2024', 'Camisa Brasil I 2024', 'Camisa oficial da Seleção Brasileira para 2024. O amarelo canarinho.', 399.90, 449.90, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'brasil', array['P','M','G','GG'], true, 35, true),
-('arg-home-2024', 'Camisa Argentina I 2024', 'Camisa oficial da Seleção Argentina para 2024. A albiceleste campeã do mundo.', 399.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'argentina', array['P','M','G','GG'], true, 18, false),
-('fra-home-2024', 'Camisa França I 2024', 'Camisa oficial da Seleção Francesa para 2024. Les Bleus.', 399.90, null, 'https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop', 'franca', array['P','M','G','GG'], true, 15, false)
+('fla-home-2024', 'Camisa Flamengo I 2024', 'Camisa oficial do Flamengo para a temporada 2024. Modelo titular com as tradicionais listras rubro-negras.', 299.90, 349.90, '', 'flamengo', array['P','M','G','GG'], true, 50, true),
+('fla-away-2024', 'Camisa Flamengo II 2024', 'Camisa reserva do Flamengo para a temporada 2024. Design moderno em branco.', 299.90, null, '', 'flamengo', array['P','M','G','GG'], true, 25, false),
+('pal-home-2024', 'Camisa Palmeiras I 2024', 'Camisa oficial do Palmeiras para a temporada 2024. O manto verde do Verdão.', 289.90, 329.90, '', 'palmeiras', array['P','M','G','GG'], true, 40, true),
+('cor-home-2024', 'Camisa Corinthians I 2024', 'Camisa oficial do Corinthians para a temporada 2024. O manto do Timão.', 289.90, null, '', 'corinthians', array['P','M','G','GG'], true, 30, false),
+('spfc-home-2024', 'Camisa São Paulo I 2024', 'Camisa oficial do São Paulo para a temporada 2024. O tricolor paulista.', 289.90, null, '', 'sao-paulo', array['P','M','G','GG'], true, 20, false),
+('rm-home-2024', 'Camisa Real Madrid I 2024', 'Camisa oficial do Real Madrid para a temporada 2024. O branco merengue.', 449.90, 499.90, '', 'real-madrid', array['P','M','G','GG'], true, 20, true),
+('fcb-home-2024', 'Camisa Barcelona I 2024', 'Camisa oficial do Barcelona para a temporada 2024. As tradicionais listras blaugrana.', 449.90, null, '', 'barcelona', array['P','M','G','GG'], true, 20, false),
+('mci-home-2024', 'Camisa Manchester City I 2024', 'Camisa oficial do Manchester City para a temporada 2024. O azul celeste dos Citizens.', 449.90, null, '', 'manchester-city', array['P','M','G','GG'], true, 20, false),
+('bra-home-2024', 'Camisa Brasil I 2024', 'Camisa oficial da Seleção Brasileira para 2024. O amarelo canarinho.', 399.90, 449.90, '', 'brasil', array['P','M','G','GG'], true, 35, true),
+('arg-home-2024', 'Camisa Argentina I 2024', 'Camisa oficial da Seleção Argentina para 2024. A albiceleste campeã do mundo.', 399.90, null, '', 'argentina', array['P','M','G','GG'], true, 18, false),
+('fra-home-2024', 'Camisa França I 2024', 'Camisa oficial da Seleção Francesa para 2024. Les Bleus.', 399.90, null, '', 'franca', array['P','M','G','GG'], true, 15, false)
 on conflict (id) do update set
   name = excluded.name,
   description = excluded.description,

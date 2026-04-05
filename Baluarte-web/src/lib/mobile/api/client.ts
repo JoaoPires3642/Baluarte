@@ -7,8 +7,8 @@ function readAdminEmailAllowlistFromEnv(): string[] {
   const raw = process.env.EXPO_PUBLIC_ADMIN_EMAILS ?? "";
   return raw
     .split(",")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
+    .map((value: string) => value.trim())
+    .filter((value: string) => value.length > 0);
 }
 
 const ADMIN_EMAIL_ALLOWLIST = readAdminEmailAllowlistFromEnv();
@@ -30,6 +30,11 @@ export class ApiClient {
   constructor(private readonly apiV1BaseUrl: string = resolveApiV1BaseUrl()) {}
 
   async request<TData>(path: string, options: ApiRequestOptions = {}): Promise<ApiSuccessEnvelope<TData>> {
+    if ((process.env.NODE_ENV ?? "").toLowerCase() !== "production") {
+      const method = options.method ?? "GET";
+      console.info(`[api] ${method} ${this.apiV1BaseUrl}${path}`);
+    }
+
     if (isLikelyReactNativeRuntime() && isUnreachableLocalhostBaseUrl(this.apiV1BaseUrl)) {
       throw normalizeApiError({
         code: "API_BASE_URL_NOT_CONFIGURED",
@@ -65,7 +70,7 @@ export class ApiClient {
                   : {})
               }
             : {}),
-          ...options.headers
+          ...(options.headers || {})
         },
         body: options.body,
         signal: controller.signal

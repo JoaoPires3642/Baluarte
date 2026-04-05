@@ -1,20 +1,20 @@
 package br.com.baluarte.core.modules.catalog.infrastructure;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "catalog_model")
+// Deprecated: Consolidated to single Product table (admin_product)
+// This class remains for backwards compatibility only
 @Getter
+@Setter
 @NoArgsConstructor
 public class CatalogModelJpaEntity {
 
@@ -40,6 +40,12 @@ public class CatalogModelJpaEntity {
     @Column(nullable = false)
     private Boolean available;
 
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String imageUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "stock_quantity", nullable = false)
+    private Integer stockQuantity;
 }

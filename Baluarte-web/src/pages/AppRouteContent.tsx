@@ -175,13 +175,32 @@ export function mapHierarchyModelToProduct(
     name: model.name,
     description: "Modelo oficial disponivel no catalogo.",
     price: 0,
-    image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=400&q=80",
+    image: "",
     teamId: selectedTeam.id,
     team: selectedTeam,
     sizes: ["P", "M", "G", "GG"],
     stockBySize: { P: 0, M: 0, G: 0, GG: 0 },
     inStock: false
   };
+}
+
+export function mergeHierarchyModelsWithLocalProducts(
+  models: HierarchyModelShape[],
+  selectedTeam: Product["team"],
+  teamProducts: Product[]
+): Product[] {
+  const mappedProducts = models.map((model) => mapHierarchyModelToProduct(model, selectedTeam, teamProducts));
+  const includedIds = new Set(mappedProducts.map((product) => product.id));
+
+  const localOnlyProducts = teamProducts
+    .filter((product) => product.teamId === selectedTeam.id && product.inStock && !includedIds.has(product.id))
+    .map((product) => ({
+      ...product,
+      team: selectedTeam,
+      teamId: selectedTeam.id
+    }));
+
+  return [...mappedProducts, ...localOnlyProducts];
 }
 
 export function AppRouteContent({ state }: AppRouteContentProps) {
@@ -308,7 +327,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
             return {
               id: team.slug,
               name: team.name,
-              logo: team.logo ?? fallbackTeam?.logo ?? "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=300&q=80",
+              logo: team.logo ?? fallbackTeam?.logo ?? "",
               category: team.categorySlug,
               league: team.league
             };
@@ -389,7 +408,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
         const localProductsByTeam = productList.filter((product) => product.teamId === selectedTeam.id);
 
-        setHierarchyModels(modelsFromApi.map((model) => mapHierarchyModelToProduct(model, selectedTeam, localProductsByTeam)));
+        setHierarchyModels(mergeHierarchyModelsWithLocalProducts(modelsFromApi, selectedTeam, localProductsByTeam));
       })
       .catch(() => {
         if (!active) {
@@ -704,10 +723,10 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
             setRoute(route.redirectAfterLogin === "checkout" ? { name: "checkout" } : { name: "home" });
           }}
-          onStartEmailLogin={async (email) => {
+          onStartEmailLogin={async (email: string) => {
             return startEmailOtpLogin(email);
           }}
-          onVerifyEmailOtp={async (code) => {
+          onVerifyEmailOtp={async (code: string) => {
             const result = await verifyEmailOtpLogin(code);
             if (!result.ok) {
               return { ok: false, error: result.error ?? "Codigo OTP invalido." };
@@ -730,10 +749,10 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
             return { ok: true };
           }}
-          onStartEmailRegister={async (firstName, lastName, email) => {
+          onStartEmailRegister={async (firstName: string, lastName: string, email: string) => {
             return startEmailOtpRegister(firstName, lastName, email);
           }}
-          onVerifyRegisterOtp={async (code) => {
+          onVerifyRegisterOtp={async (code: string) => {
             const result = await verifyEmailOtpRegister(code);
             if (!result.ok) {
               return { ok: false, error: result.error ?? "Codigo OTP invalido." };
@@ -756,7 +775,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
             return { ok: true };
           }}
-          onLoginWithSocial={async (provider) => {
+          onLoginWithSocial={async (provider: "google" | "apple") => {
             const result = await loginWithClerkOAuth(provider);
             if (!result.ok) {
               return { ok: false, error: result.error ?? "Falha ao iniciar login social." };
@@ -764,7 +783,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
             return { ok: true };
           }}
-          onRegister={async (firstName, lastName, email) => {
+          onRegister={async (firstName: string, lastName: string, email: string) => {
             const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
             const generatedPassword = `Baluarte#${Date.now()}`;
             const result = await handleRegister(fullName, email, generatedPassword);
@@ -828,6 +847,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           onBack={() => setRoute({ name: "admin" })}
           onOpenOrders={() => setRoute({ name: "admin-orders" })}
           onOpenProducts={() => setRoute({ name: "admin-products" })}
+          products={productList}
         />
       ) : null}
 

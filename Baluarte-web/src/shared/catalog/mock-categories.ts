@@ -19,6 +19,6 @@ export const SHARED_MOCK_CATEGORIES: AdminCategory[] = [
   {
     slug: "personalizado",
     name: "Personalizado",
-    logo: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=120&q=80"
+    logo: ""
   }
 ];

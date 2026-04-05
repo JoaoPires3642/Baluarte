@@ -4,6 +4,7 @@ import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductC
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductVariantCommand;
 import br.com.baluarte.core.modules.adminproduct.application.DeactivateAdminProductUseCase;
+import br.com.baluarte.core.modules.adminproduct.application.ListAdminProductsUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductCommand;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,15 +29,27 @@ public class AdminProductController {
     private final CreateAdminProductUseCase createAdminProductUseCase;
     private final UpdateAdminProductUseCase updateAdminProductUseCase;
     private final DeactivateAdminProductUseCase deactivateAdminProductUseCase;
+    private final ListAdminProductsUseCase listAdminProductsUseCase;
 
     public AdminProductController(
         CreateAdminProductUseCase createAdminProductUseCase,
         UpdateAdminProductUseCase updateAdminProductUseCase,
-        DeactivateAdminProductUseCase deactivateAdminProductUseCase
+        DeactivateAdminProductUseCase deactivateAdminProductUseCase,
+        ListAdminProductsUseCase listAdminProductsUseCase
     ) {
         this.createAdminProductUseCase = createAdminProductUseCase;
         this.updateAdminProductUseCase = updateAdminProductUseCase;
         this.deactivateAdminProductUseCase = deactivateAdminProductUseCase;
+        this.listAdminProductsUseCase = listAdminProductsUseCase;
+    }
+
+    @GetMapping
+    public ApiSuccessResponse<List<AdminProductResponse>> listProducts() {
+        List<AdminProductResponse> data = listAdminProductsUseCase.execute().stream()
+            .map(this::toResponse)
+            .toList();
+
+        return ApiSuccessResponse.of(data);
     }
 
     @PostMapping

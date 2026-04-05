@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AdminProduct } from "../pages/admin/types";
 import { VALID_SIZES } from "../lib/admin-utils";
-import { defaultCategories } from "../lib/admin-categories";
-import { products as defaultProducts, teams as defaultTeams } from "../lib/data";
+import { fetchPublicCategories, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import type { AdminCategory, Product, Team } from "../lib/types";
 
 const normalizeProducts = (items: Product[]): AdminProduct[] => {
@@ -28,9 +27,63 @@ const normalizeProducts = (items: Product[]): AdminProduct[] => {
 };
 
 export function useInventoryState() {
-  const [categories, setCategories] = useState<AdminCategory[]>(defaultCategories);
-  const [teamList, setTeamList] = useState<Team[]>(defaultTeams);
-  const [productList, setProductList] = useState<AdminProduct[]>(() => normalizeProducts(defaultProducts));
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [teamList, setTeamList] = useState<Team[]>([]);
+  const [productList, setProductList] = useState<AdminProduct[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadInventory = async (): Promise<void> => {
+      try {
+        const categoriesFromApi = await fetchPublicCategories();
+        if (!active) {
+          return;
+        }
+
+        setCategories(
+          categoriesFromApi.map((category) => ({
+            slug: category.slug,
+            name: category.name,
+            logo: ""
+          }))
+        );
+
+        const teamsFromApi = await Promise.all(
+          categoriesFromApi.map((category) => fetchPublicTeamsByCategory(category.slug))
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setTeamList(
+          teamsFromApi
+            .flat()
+            .map((team) => ({
+              id: team.slug,
+              name: team.name,
+              logo: team.logo ?? "",
+              category: team.categorySlug,
+              league: team.league
+            }))
+        );
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setCategories([]);
+        setTeamList([]);
+      }
+    };
+
+    void loadInventory();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const featuredProducts = useMemo(() => productList.filter((product) => product.featured), [productList]);
 

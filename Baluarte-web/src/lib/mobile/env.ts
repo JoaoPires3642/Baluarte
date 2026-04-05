@@ -46,7 +46,7 @@ export function shouldUseMockCategories(): boolean {
     return false;
   }
 
-  return process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test";
+  return false;
 }
 
 export const DEFAULT_API_TIMEOUT_MS = 8000;

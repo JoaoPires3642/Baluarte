@@ -31,6 +31,7 @@ public class ApiCorsConfiguration implements WebMvcConfigurer {
                 "Content-Type",
                 "X-Clerk-User-Id",
                 "X-Clerk-Email",
+                "X-Internal-Role",
                 "X-Admin-Bypass-Key",
                 "X-Requested-With"
             )

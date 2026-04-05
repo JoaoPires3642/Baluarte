@@ -1,21 +1,33 @@
 import { View, Text, ScrollView, Pressable, Dimensions } from "react-native";
 
 import styles from "../../App.styles";
+import type { AdminProduct } from "./types";
 
 type AdminDashboardScreenProps = {
   onBack: () => void;
   onOpenOrders: () => void;
   onOpenProducts: () => void;
+  products: AdminProduct[];
 };
 
-export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts }: AdminDashboardScreenProps) {
-  // Mock data - será substituído por APIs no backend
-  const kpis = {
-    totalRevenue: 12450.75,
-    totalOrders: 47,
-    conversionRate: 3.2,
-    avgOrderValue: 265 
-  };
+export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, products }: AdminDashboardScreenProps) {
+  const activeProducts = products.filter((product) => product.active);
+  const totalInventoryUnits = activeProducts.reduce((sum, product) => sum + product.stockQuantity, 0);
+  const averagePrice = activeProducts.length > 0 ? activeProducts.reduce((sum, product) => sum + product.price, 0) / activeProducts.length : 0;
+  const conversionRate = products.length > 0 ? Math.min(100, Math.round((activeProducts.length / products.length) * 100)) : 0;
+
+  const teamSummary = Object.values(
+    products.reduce<Record<string, { teamName: string; count: number }>>((accumulator, product) => {
+      const entry = accumulator[product.teamId] ?? { teamName: product.team?.name ?? product.teamId, count: 0 };
+      accumulator[product.teamId] = {
+        teamName: product.team?.name ?? entry.teamName,
+        count: entry.count + 1
+      };
+      return accumulator;
+    }, {})
+  )
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 3);
 
   const revenueData = [800, 1200, 950, 1800, 2100, 1650, 900];
   const ordersData = [3, 5, 4, 8, 9, 7, 4];
@@ -35,27 +47,27 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts }: A
         {/* KPI Cards */}
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
-            <Text style={styles.screenDescription}>Receita Total</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#10b981", marginTop: 4 }}>R$ {kpis.totalRevenue.toFixed(2)}</Text>
-            <Text style={styles.screenDescription}>últimos 7 dias</Text>
+            <Text style={styles.screenDescription}>Produtos ativos</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#10b981", marginTop: 4 }}>{activeProducts.length}</Text>
+            <Text style={styles.screenDescription}>itens carregados do banco</Text>
           </View>
 
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
-            <Text style={styles.screenDescription}>Pedidos</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#3b82f6", marginTop: 4 }}>{kpis.totalOrders}</Text>
-            <Text style={styles.screenDescription}>últimos 7 dias</Text>
+            <Text style={styles.screenDescription}>Estoque total</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#3b82f6", marginTop: 4 }}>{totalInventoryUnits}</Text>
+            <Text style={styles.screenDescription}>unidades disponíveis</Text>
           </View>
 
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
-            <Text style={styles.screenDescription}>Ticket Médio</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#8b5cf6", marginTop: 4 }}>R$ {kpis.avgOrderValue.toFixed(2)}</Text>
-            <Text style={styles.screenDescription}>por pedido</Text>
+            <Text style={styles.screenDescription}>Preço médio</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#8b5cf6", marginTop: 4 }}>R$ {averagePrice.toFixed(2)}</Text>
+            <Text style={styles.screenDescription}>por produto</Text>
           </View>
 
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
-            <Text style={styles.screenDescription}>Taxa Conversão</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#f59e0b", marginTop: 4 }}>{kpis.conversionRate.toFixed(1)}%</Text>
-            <Text style={styles.screenDescription}>de visitantes</Text>
+            <Text style={styles.screenDescription}>Ativos publicados</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#f59e0b", marginTop: 4 }}>{conversionRate}%</Text>
+            <Text style={styles.screenDescription}>do catálogo interno</Text>
           </View>
         </View>
 
@@ -122,19 +134,17 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts }: A
 
         {/* Best Sellers Preview */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Top Times</Text>
-          <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>1. Flamengo</Text>
-            <Text style={styles.summaryValue}>45 vendas</Text>
-          </View>
-          <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>2. São Paulo</Text>
-            <Text style={styles.summaryValue}>38 vendas</Text>
-          </View>
-          <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>3. Corinthians</Text>
-            <Text style={styles.summaryValue}>35 vendas</Text>
-          </View>
+          <Text style={styles.summaryTitle}>Times com mais produtos</Text>
+          {teamSummary.length > 0 ? (
+            teamSummary.map((item, index) => (
+              <View key={item.teamName} style={styles.summaryLine}>
+                <Text style={styles.summaryKey}>{index + 1}. {item.teamName}</Text>
+                <Text style={styles.summaryValue}>{item.count} produtos</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.screenDescription}>Nenhum produto carregado ainda.</Text>
+          )}
           <Pressable style={styles.secondaryActionButton}>
             <Text style={styles.secondaryActionButtonText}>Ver Relatório Completo</Text>
           </Pressable>
