@@ -75,6 +75,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   const selectedSizeStock = selectedSize ? sizeStock[selectedSize] ?? 0 : 0;
   const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
   const previewName = customNames.join(" ").trim();
+  const galleryImages = product?.images?.length ? product.images : product?.image ? [product.image] : [];
 
   if (!product) {
     return (
@@ -93,7 +94,13 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
         <Text style={styles.backLink}>Voltar para {product.team.name}</Text>
       </Pressable>
 
-      <Image source={{ uri: product.image }} style={styles.detailImage as StyleProp<ImageStyle>} />
+      {galleryImages.map((imageUrl, index) => (
+        <Image
+          key={`${product.id}-image-${index}`}
+          source={{ uri: imageUrl }}
+          style={styles.detailImage as StyleProp<ImageStyle>}
+        />
+      ))}
       <Text style={styles.productTeam}>{product.team.name}</Text>
       <Text style={styles.screenTitle}>{product.name}</Text>
       {product.originalPrice ? (

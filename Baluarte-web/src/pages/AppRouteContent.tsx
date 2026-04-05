@@ -20,7 +20,7 @@ import { TeamScreen } from "./storefront/TeamScreen";
 import { ProfileScreen } from "./storefront/ProfileScreen";
 import type { AppState, RouteState } from "../hooks/useAppState";
 import type { Address, Category, Order, Product, Size } from "../lib/types";
-import { fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
+import { fetchPublicModelDetail, fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
 import styles from "../App.styles";
 
 type AppRouteContentProps = {
@@ -30,6 +30,17 @@ type AppRouteContentProps = {
 type HierarchyModelShape = {
   slug: string;
   name: string;
+  thumbnailUrl?: string;
+  images?: string[];
+  price?: number;
+  originalPrice?: number;
+  available?: boolean;
+  stockQuantity?: number;
+  variants?: Array<{
+    size: Size;
+    stockQuantity: number;
+    available: boolean;
+  }>;
 };
 
 type CheckoutContext = {
@@ -159,12 +170,33 @@ export function mapHierarchyModelToProduct(
   teamProducts: Product[]
 ): Product {
   const localMatch = teamProducts.find((product) => product.id === model.slug);
+  const primaryImage = model.images?.[0] ?? model.thumbnailUrl;
+  const variantStockBySize: Record<Size, number> = { P: 0, M: 0, G: 0, GG: 0 };
+  if (model.variants?.length) {
+    model.variants.forEach((variant) => {
+      variantStockBySize[variant.size] = Math.max(0, variant.stockQuantity);
+    });
+  }
+
+  const apiStockQuantity = model.variants?.length
+    ? Object.values(variantStockBySize).reduce((sum, quantity) => sum + quantity, 0)
+    : Math.max(0, model.stockQuantity ?? 0);
+
+  const apiVariantAvailability = model.variants?.some((variant) => variant.available && variant.stockQuantity > 0) ?? false;
+  const apiInStock = Boolean(model.available ?? (apiStockQuantity > 0));
+  const resolvedInStock = model.variants?.length ? apiVariantAvailability : apiInStock;
 
   if (localMatch) {
     return {
       ...localMatch,
       id: model.slug,
       name: model.name,
+      price: model.price ?? localMatch.price,
+      originalPrice: model.originalPrice ?? localMatch.originalPrice,
+      image: primaryImage ?? localMatch.image,
+      images: model.images?.length ? model.images : primaryImage ? [primaryImage] : localMatch.images,
+      stockBySize: model.variants?.length ? variantStockBySize : localMatch.stockBySize,
+      inStock: resolvedInStock,
       team: selectedTeam,
       teamId: selectedTeam.id
     };
@@ -174,13 +206,15 @@ export function mapHierarchyModelToProduct(
     id: model.slug,
     name: model.name,
     description: "Modelo oficial disponivel no catalogo.",
-    price: 0,
-    image: "",
+    price: model.price ?? 0,
+    originalPrice: model.originalPrice,
+    image: primaryImage ?? "",
+    images: model.images?.length ? model.images : primaryImage ? [primaryImage] : undefined,
     teamId: selectedTeam.id,
     team: selectedTeam,
     sizes: ["P", "M", "G", "GG"],
-    stockBySize: { P: 0, M: 0, G: 0, GG: 0 },
-    inStock: false
+    stockBySize: model.variants?.length ? variantStockBySize : { P: 0, M: 0, G: 0, GG: apiStockQuantity },
+    inStock: resolvedInStock
   };
 }
 
@@ -255,11 +289,16 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
   const [checkoutContext, setCheckoutContext] = useState<CheckoutContext>(DEFAULT_CHECKOUT_CONTEXT);
   const previousUserRef = useRef(user);
   const lastDeniedAdminRouteRef = useRef<string | null>(null);
+  const fetchedModelDetailsRef = useRef<Set<string>>(new Set());
   const selectedTeam =
     hierarchyTeams.find((team) => route.name === "team" && team.id === route.id) ??
     (route.name === "team" ? teamList.find((team) => team.id === route.id) : undefined) ??
     (route.name === "team" ? screen?.team : undefined) ??
     null;
+  const selectedRouteProduct =
+    route.name === "product"
+      ? ((screen?.product as Product | undefined) ?? hierarchyModels.find((item) => item.id === route.id) ?? null)
+      : null;
   const activeTeamFilters = selectedTeam ? teamFiltersById[selectedTeam.id] ?? DEFAULT_TEAM_FILTERS : DEFAULT_TEAM_FILTERS;
   const visibleTeamModels = filterCatalogProducts(hierarchyModels, activeTeamFilters);
 
@@ -427,6 +466,73 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
       active = false;
     };
   }, [route, productList, selectedTeam]);
+
+  useEffect(() => {
+    if (route.name !== "product") {
+      fetchedModelDetailsRef.current.clear();
+    }
+  }, [route.name]);
+
+  useEffect(() => {
+    if (route.name !== "product" || !selectedRouteProduct || selectedRouteProduct.team.category === "personalizado") {
+      return;
+    }
+
+    const detailCacheKey = `${selectedRouteProduct.team.id}:${selectedRouteProduct.id}`;
+    if (fetchedModelDetailsRef.current.has(detailCacheKey)) {
+      return;
+    }
+
+    fetchedModelDetailsRef.current.add(detailCacheKey);
+
+    let active = true;
+
+    fetchPublicModelDetail(selectedRouteProduct.team.id, selectedRouteProduct.id)
+      .then((modelDetail) => {
+        if (!active) {
+          return;
+        }
+
+        const merged = mapHierarchyModelToProduct(
+          {
+            slug: modelDetail.slug,
+            name: modelDetail.name,
+            thumbnailUrl: modelDetail.thumbnailUrl,
+            images: modelDetail.images,
+            price: modelDetail.price,
+            originalPrice: modelDetail.originalPrice,
+            available: modelDetail.available,
+            stockQuantity: modelDetail.stockQuantity,
+            variants: modelDetail.variants
+          },
+          selectedRouteProduct.team,
+          [selectedRouteProduct]
+        );
+
+        setHierarchyModels((prev) => {
+          const index = prev.findIndex((item) => item.id === merged.id);
+          if (index === -1) {
+            return [...prev, merged];
+          }
+
+          const next = [...prev];
+          next[index] = merged;
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        // Permite nova tentativa caso a chamada falhe.
+        fetchedModelDetailsRef.current.delete(detailCacheKey);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [route, selectedRouteProduct]);
 
   useEffect(() => {
     if (route.name !== "login" || !user || !authSession?.token) {
@@ -630,7 +736,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
 
       {route.name === "product" ? (
         <ProductScreen
-          product={(screen?.product as Product | undefined) ?? hierarchyModels.find((item) => item.id === route.id) ?? null}
+          product={selectedRouteProduct}
           onBackToTeam={(teamId) => setRoute({ name: "team", id: teamId })}
           onBackHome={() => setRoute({ name: "home" })}
           onAddToCart={addToCart}

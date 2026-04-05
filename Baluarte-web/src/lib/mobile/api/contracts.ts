@@ -72,6 +72,33 @@ export interface CatalogModelDto {
   name: string;
   slug: string;
   teamSlug: string;
-  imageUrl: string;
+  thumbnailUrl: string;
   displayOrder: number;
+  price?: number;
+  originalPrice?: number;
+  available?: boolean;
+  stockQuantity?: number;
+  variants?: Array<{
+    size: "P" | "M" | "G" | "GG";
+    stockQuantity: number;
+    available: boolean;
+  }>;
+}
+
+export interface CatalogModelDetailDto {
+  id: string;
+  slug: string;
+  name: string;
+  teamSlug: string;
+  thumbnailUrl: string;
+  images: string[];
+  price?: number;
+  originalPrice?: number;
+  available?: boolean;
+  stockQuantity?: number;
+  variants?: Array<{
+    size: "P" | "M" | "G" | "GG";
+    stockQuantity: number;
+    available: boolean;
+  }>;
 }

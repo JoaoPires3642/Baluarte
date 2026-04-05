@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.catalog.api;
 
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
+import br.com.baluarte.core.modules.adminproduct.api.AdminProductVariantResponse;
 import br.com.baluarte.core.modules.catalog.application.ListPublicCategoriesUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsByCategoryUseCase;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
@@ -10,13 +11,16 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/catalog")
@@ -54,39 +58,73 @@ public class CatalogController {
     }
 
     @GetMapping("/teams/{teamSlug}/models")
-    public ApiSuccessResponse<List<CatalogModelResponse>> listModelsByTeam(
+    public ApiSuccessResponse<List<CatalogModelListResponse>> listModelsByTeam(
         @PathVariable @Pattern(regexp = "^[a-z0-9-]+$") String teamSlug,
         @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit
     ) {
         String normalizedSlug = normalizeSlug(teamSlug);
-        List<CatalogModelResponse> data = adminProductRepository.findAll()
+        List<CatalogModelListResponse> data = adminProductRepository.findAll()
             .stream()
             .filter(product -> product.active()
                 && product.available()
                 && product.teamSlug().equalsIgnoreCase(normalizedSlug))
             .limit(limit)
-            .map(this::toCatalogModelResponse)
+            .map(this::toCatalogModelListResponse)
             .toList();
 
         return ApiSuccessResponse.of(data);
     }
 
-    private CatalogModelResponse toCatalogModelResponse(AdminProduct product) {
-        return new CatalogModelResponse(
+    @GetMapping("/teams/{teamSlug}/models/{modelId}")
+    public ApiSuccessResponse<CatalogModelDetailResponse> getModelByTeamAndId(
+        @PathVariable @Pattern(regexp = "^[a-z0-9-]+$") String teamSlug,
+        @PathVariable UUID modelId
+    ) {
+        String normalizedSlug = normalizeSlug(teamSlug);
+        AdminProduct product = adminProductRepository.findById(modelId)
+            .filter(item -> item.active() && item.available() && item.teamSlug().equalsIgnoreCase(normalizedSlug))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Modelo nao encontrado"));
+
+        return ApiSuccessResponse.of(toCatalogModelDetailResponse(product));
+    }
+
+    private CatalogModelListResponse toCatalogModelListResponse(AdminProduct product) {
+        List<AdminProductVariantResponse> variants = product.variants().stream()
+            .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
+            .toList();
+
+        return new CatalogModelListResponse(
             product.id(),
-            product.modelName(),
-            generateSlug(product.modelName()),
             product.teamSlug(),
+            product.modelName(),
+            product.description(),
+            product.price(),
+            product.originalPrice(),
             product.imageUrl(),
-            1
+            product.available(),
+            product.stockQuantity(),
+            variants
         );
     }
 
-    private String generateSlug(String name) {
-        return name.trim()
-            .toLowerCase(Locale.ROOT)
-            .replaceAll("[^a-z0-9]+", "-")
-            .replaceAll("^-|-$", "");
+    private CatalogModelDetailResponse toCatalogModelDetailResponse(AdminProduct product) {
+        List<AdminProductVariantResponse> variants = product.variants().stream()
+            .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
+            .toList();
+
+        return new CatalogModelDetailResponse(
+            product.id(),
+            product.teamSlug(),
+            product.modelName(),
+            product.description(),
+            product.price(),
+            product.originalPrice(),
+            product.imageUrl(),
+            List.of(product.imageUrl()),
+            product.available(),
+            product.stockQuantity(),
+            variants
+        );
     }
 
     private String normalizeSlug(String slug) {

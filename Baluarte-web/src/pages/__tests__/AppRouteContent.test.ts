@@ -111,6 +111,40 @@ describe("mapHierarchyModelToProduct", () => {
     expect(mapped.inStock).toBe(false);
     expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
   });
+
+  it("maps stock by size from api variants", () => {
+    const selectedTeam = {
+      id: "team-a",
+      name: "Team A",
+      logo: "https://example.com/a.png",
+      category: "nacionais",
+      league: "Serie A"
+    };
+
+    const mapped = mapHierarchyModelToProduct(
+      {
+        slug: "modelo-1",
+        name: "Modelo API",
+        price: 149,
+        originalPrice: 299.9,
+        thumbnailUrl: "https://example.com/modelo.png",
+        variants: [
+          { size: "P", stockQuantity: 10, available: true },
+          { size: "M", stockQuantity: 10, available: true },
+          { size: "G", stockQuantity: 10, available: true },
+          { size: "GG", stockQuantity: 10, available: true }
+        ]
+      },
+      selectedTeam,
+      []
+    );
+
+    expect(mapped.price).toBe(149);
+    expect(mapped.originalPrice).toBe(299.9);
+    expect(mapped.image).toBe("https://example.com/modelo.png");
+    expect(mapped.stockBySize).toEqual({ P: 10, M: 10, G: 10, GG: 10 });
+    expect(mapped.inStock).toBe(true);
+  });
 });
 
 describe("mergeHierarchyModelsWithLocalProducts", () => {
