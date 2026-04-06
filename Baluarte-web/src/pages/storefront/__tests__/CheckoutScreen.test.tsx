@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { CheckoutScreen } from "../CheckoutScreen";
 import type { Address } from "../../../lib/types";
@@ -12,9 +12,22 @@ const guestAddress: Address = {
   state: "SP"
 };
 
+const defaultQuoteOptions = [
+  {
+    id: "standard",
+    label: "Padrao",
+    price: 19.9,
+    estimatedDays: 4,
+    deliveryEstimate: "4 dia(s)"
+  }
+];
+
+const resolveShippingQuotes = async () => ({ ok: true as const, options: defaultQuoteOptions });
+
 describe("CheckoutScreen", () => {
-  it("allows visitor to advance checkout before login", () => {
+  it("allows visitor to quote and advance checkout before login", async () => {
     const onSetShipping = jest.fn();
+    const onRequestShippingQuotes = jest.fn(resolveShippingQuotes);
 
     render(
       <CheckoutScreen
@@ -47,9 +60,11 @@ describe("CheckoutScreen", () => {
         discount={0}
         total={299.9}
         onSetShipping={onSetShipping}
+        onRequestShippingQuotes={onRequestShippingQuotes}
         onBackCart={() => undefined}
         onGoProfile={() => undefined}
         onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
         onOrderComplete={() => undefined}
       />
     );
@@ -61,9 +76,20 @@ describe("CheckoutScreen", () => {
     fireEvent.changeText(screen.getByPlaceholderText("Cidade"), guestAddress.city);
     fireEvent.changeText(screen.getByPlaceholderText("UF"), guestAddress.state);
 
-    fireEvent.press(screen.getByText("Calcular frete e continuar"));
+    await act(async () => {
+      fireEvent.press(screen.getByText("Buscar opcoes de frete"));
+      await Promise.resolve();
+    });
 
-    expect(onSetShipping).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onRequestShippingQuotes).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Padrao")).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText("Continuar para revisao"));
+
+    expect(onSetShipping).toHaveBeenCalledTimes(2);
+    expect(onSetShipping).toHaveBeenLastCalledWith(19.9);
     expect(screen.getByText("Revisar pedido")).toBeTruthy();
   });
 
@@ -83,9 +109,11 @@ describe("CheckoutScreen", () => {
         guestAddressDraft={guestAddress}
         onCheckoutContextChange={onCheckoutContextChange}
         onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
         onBackCart={() => undefined}
         onGoProfile={() => undefined}
         onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => ({ ok: true })}
         onOrderComplete={() => undefined}
       />
     );
@@ -117,9 +145,11 @@ describe("CheckoutScreen", () => {
         guestAddressDraft={guestAddress}
         onCheckoutContextChange={onCheckoutContextChange}
         onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
         onBackCart={() => undefined}
         onGoProfile={() => undefined}
         onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => ({ ok: true })}
         onOrderComplete={() => undefined}
       />
     );
@@ -160,9 +190,11 @@ describe("CheckoutScreen", () => {
         guestAddressDraft={guestAddress}
         onCheckoutContextChange={onCheckoutContextChange}
         onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
         onBackCart={() => undefined}
         onGoProfile={() => undefined}
         onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
         onOrderComplete={() => undefined}
       />
     );
@@ -180,6 +212,7 @@ describe("CheckoutScreen", () => {
   it("sends preserved checkout address when confirming payment after auth", async () => {
     jest.useFakeTimers();
     const onOrderComplete = jest.fn();
+    const onFinalizeOrder = jest.fn(async () => ({ ok: true as const }));
 
     render(
       <CheckoutScreen
@@ -211,25 +244,231 @@ describe("CheckoutScreen", () => {
         guestAddressDraft={guestAddress}
         onCheckoutContextChange={() => undefined}
         onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
         onBackCart={() => undefined}
         onGoProfile={() => undefined}
         onRequireAuth={() => undefined}
+        onFinalizeOrder={onFinalizeOrder}
         onOrderComplete={onOrderComplete}
       />
     );
 
     await act(async () => {
       fireEvent.press(screen.getByText("Confirmar pagamento de R$ 120,00"));
-      jest.advanceTimersByTime(1200);
+      jest.advanceTimersByTime(600);
       await Promise.resolve();
     });
 
-    expect(onOrderComplete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        street: "Rua A",
-        number: "100"
-      })
-    );
+    await waitFor(() => {
+      expect(onFinalizeOrder).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(onOrderComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          street: "Rua A",
+          number: "100"
+        })
+      );
+    });
     jest.useRealTimers();
+  });
+
+  it("redirects to auth when backend finalization check requests re-authentication", async () => {
+    const onRequireAuth = jest.fn();
+    const onOrderComplete = jest.fn();
+
+    render(
+      <CheckoutScreen
+        user={{
+          id: "u1",
+          name: "Joao",
+          email: "joao@email.com",
+          role: "client"
+        }}
+        items={[]}
+        subtotal={100}
+        shipping={20}
+        discount={0}
+        total={120}
+        initialStep={3}
+        guestAddressDraft={guestAddress}
+        onCheckoutContextChange={() => undefined}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => ({ ok: false, requiresAuth: true })}
+        onOrderComplete={onOrderComplete}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Confirmar pagamento de R$ 120,00"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(onRequireAuth).toHaveBeenCalledTimes(1);
+      expect(onOrderComplete).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows recoverable error when finalization callback throws", async () => {
+    const onRequireAuth = jest.fn();
+
+    render(
+      <CheckoutScreen
+        user={{
+          id: "u1",
+          name: "Joao",
+          email: "joao@email.com",
+          role: "client"
+        }}
+        items={[]}
+        subtotal={100}
+        shipping={20}
+        discount={0}
+        total={120}
+        initialStep={3}
+        guestAddressDraft={guestAddress}
+        onCheckoutContextChange={() => undefined}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => {
+          throw new Error("network");
+        }}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Confirmar pagamento de R$ 120,00"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Nao foi possivel validar a sessao. Tente novamente.")).toBeTruthy();
+      expect(onRequireAuth).not.toHaveBeenCalled();
+    });
+  });
+
+  it("preserves checkout context across reauth and allows final confirmation", async () => {
+    const onRequireAuth = jest.fn();
+    const onOrderComplete = jest.fn();
+    const onCheckoutContextChange = jest.fn();
+
+    const { rerender } = render(
+      <CheckoutScreen
+        user={null}
+        items={[]}
+        subtotal={100}
+        shipping={20}
+        discount={0}
+        total={120}
+        initialStep={3}
+        guestAddressDraft={guestAddress}
+        onCheckoutContextChange={onCheckoutContextChange}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => ({ ok: false, requiresAuth: true })}
+        onOrderComplete={onOrderComplete}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Entrar para finalizar"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(onRequireAuth).toHaveBeenCalledTimes(1);
+      expect(onCheckoutContextChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          step: 3,
+          guestAddressDraft: expect.objectContaining({ street: "Rua A", number: "100" })
+        })
+      );
+    });
+
+    rerender(
+      <CheckoutScreen
+        user={{
+          id: "u1",
+          name: "Joao",
+          email: "joao@email.com",
+          role: "client"
+        }}
+        items={[]}
+        subtotal={100}
+        shipping={20}
+        discount={0}
+        total={120}
+        initialStep={3}
+        guestAddressDraft={guestAddress}
+        onCheckoutContextChange={onCheckoutContextChange}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={onRequireAuth}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={onOrderComplete}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Confirmar pagamento de R$ 120,00"));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(onOrderComplete).toHaveBeenCalledWith(
+        expect.objectContaining({
+          street: "Rua A",
+          number: "100"
+        })
+      );
+    });
+  });
+
+  it("requires logged user without saved addresses to go to profile", () => {
+    const onGoProfile = jest.fn();
+
+    render(
+      <CheckoutScreen
+        user={{
+          id: "u-no-address",
+          name: "Cliente",
+          email: "cliente@email.com",
+          role: "client",
+          addresses: []
+        }}
+        items={[]}
+        subtotal={100}
+        shipping={0}
+        discount={0}
+        total={100}
+        onCheckoutContextChange={() => undefined}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={onGoProfile}
+        onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    expect(screen.getByText("Para continuar, cadastre pelo menos um endereco no seu perfil.")).toBeTruthy();
+    fireEvent.press(screen.getByText("Cadastrar endereco no perfil"));
+    expect(onGoProfile).toHaveBeenCalledTimes(1);
   });
 });

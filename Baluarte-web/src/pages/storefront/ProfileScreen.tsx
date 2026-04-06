@@ -6,7 +6,7 @@ import { AddressManager } from "../../components/storefront/AddressManager";
 import type { Address } from "../../lib/types";
 import type { ProfileScreenProps } from "./types";
 
-export function ProfileScreen({ user, ordersCount, onBack, onLogin, onUpdateAddress, onOpenOrders }: ProfileScreenProps) {
+export function ProfileScreen({ user, ordersCount, onBack, onLogin, onUpdateAddress, onUpdateAddresses, onOpenOrders }: ProfileScreenProps) {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [defaultAddressId, setDefaultAddressId] = useState<string | undefined>();
 
@@ -29,33 +29,42 @@ export function ProfileScreen({ user, ordersCount, onBack, onLogin, onUpdateAddr
   const handleAddAddress = (address: Address) => {
     const newAddresses = [...addresses, address];
     setAddresses(newAddresses);
-    // Persist to parent via onUpdateAddress with first address
-    onUpdateAddress(newAddresses[0]);
+    const nextDefault = defaultAddressId ?? address.id;
+    if (nextDefault) {
+      setDefaultAddressId(nextDefault);
+    }
+    onUpdateAddresses(newAddresses, nextDefault);
   };
 
   const handleUpdateAddress = (address: Address) => {
     const updated = addresses.map((a) => (a.id === address.id ? address : a));
     setAddresses(updated);
-    onUpdateAddress(updated[0]);
+    onUpdateAddresses(updated, defaultAddressId);
   };
 
   const handleDeleteAddress = (id: string) => {
     const updated = addresses.filter((a) => a.id !== id);
     setAddresses(updated);
+    let nextDefault = defaultAddressId;
+
     if (defaultAddressId === id && updated.length > 0) {
-      setDefaultAddressId(updated[0].id);
+      nextDefault = updated[0].id;
+      setDefaultAddressId(nextDefault);
     }
+
+    if (updated.length === 0) {
+      nextDefault = undefined;
+      setDefaultAddressId(undefined);
+    }
+
     if (updated.length > 0) {
-      onUpdateAddress(updated[0]);
+      onUpdateAddresses(updated, nextDefault);
     }
   };
 
   const handleSetDefault = (id: string) => {
     setDefaultAddressId(id);
-    const defaultAddr = addresses.find((a) => a.id === id);
-    if (defaultAddr) {
-      onUpdateAddress(defaultAddr);
-    }
+    onUpdateAddresses(addresses, id);
   };
 
   if (!user) {

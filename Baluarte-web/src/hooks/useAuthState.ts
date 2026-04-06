@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Address, User } from "../lib/types";
 import {
+  listProfileAddressesApi,
+  mapProfileAddressDtoToAddress,
+  syncProfileAddressesApi
+} from "../lib/mobile/api/profile-addresses";
+import {
   beginEmailCodeSignUp,
   beginEmailCodeLogin,
-  getActiveClerkIdentity,
   isClerkConfigured,
   loginWithOAuth,
   resolveBackendSessionRole,
@@ -91,6 +95,8 @@ export function useAuthState() {
   const [securityAuditEvents, setSecurityAuditEvents] = useState<SecurityAuditEvent[]>([]);
   const [pendingClerkEmail, setPendingClerkEmail] = useState<string | null>(null);
   const [pendingClerkSignUpEmail, setPendingClerkSignUpEmail] = useState<string | null>(null);
+  const lastHydratedClerkIdentityKeyRef = useRef<string | null>(null);
+  const lastHydratedClerkRoleRef = useRef<User["role"]>("client");
 
   const createSessionToken = (role: User["role"]) => {
     const now = Date.now();
@@ -106,21 +112,104 @@ export function useAuthState() {
     setSecurityAuditEvents((prev) => [nextEvent, ...prev]);
   };
 
+  const buildProfileAddressApiOptions = (
+    clerkIdentity: { userId: string; email: string; sessionToken?: string },
+    internalRole: User["role"]
+  ) => {
+    if (!clerkIdentity?.sessionToken) {
+      return null;
+    }
+
+    return {
+      authorizationContext: {
+        clerkIdentity: {
+          clerkUserId: clerkIdentity.userId,
+          email: clerkIdentity.email
+        },
+        internalRole
+      },
+      bearerToken: clerkIdentity.sessionToken
+    };
+  };
+
+  const buildProfileAddressApiOptionsFromSession = (
+    sessionToken: string | undefined,
+    clerkUserId: string,
+    clerkEmail: string,
+    internalRole: User["role"]
+  ) => {
+    const normalizedSessionToken = sessionToken?.trim();
+    if (!normalizedSessionToken) {
+      return null;
+    }
+
+    return {
+      authorizationContext: {
+        clerkIdentity: {
+          clerkUserId,
+          email: clerkEmail
+        },
+        internalRole
+      },
+      bearerToken: normalizedSessionToken
+    };
+  };
+
+  const applyAddressesToCurrentUser = useCallback((addresses: Address[], defaultAddressId?: string) => {
+    const normalizedAddresses = addresses.map((address) => ({
+      ...address,
+      label: address.label?.trim() || "Endereco"
+    }));
+    const resolvedDefaultAddressId =
+      defaultAddressId || normalizedAddresses.find((address) => address.id)?.id || undefined;
+    const defaultAddress = normalizedAddresses.find((address) => address.id === resolvedDefaultAddressId) ?? normalizedAddresses[0];
+
+    setUsers((prev) =>
+      prev.map((item) =>
+        user && item.id === user.id
+          ? {
+              ...item,
+              addresses: normalizedAddresses,
+              defaultAddressId: resolvedDefaultAddressId,
+              defaultAddress
+            }
+          : item
+      )
+    );
+
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            addresses: normalizedAddresses,
+            defaultAddressId: resolvedDefaultAddressId,
+            defaultAddress
+          }
+        : prev
+    );
+  }, [user]);
+
+  const refreshClerkAddresses = useCallback(async (
+    clerkIdentity: { userId: string; email: string; sessionToken?: string },
+    internalRole: User["role"]
+  ) => {
+    const options = buildProfileAddressApiOptions(clerkIdentity, internalRole);
+    if (!options) {
+      return;
+    }
+
+    const addressDtos = await listProfileAddressesApi(options);
+    const addresses = addressDtos.map(mapProfileAddressDtoToAddress);
+    const defaultAddress = addressDtos.find((address) => address.isDefault)?.id;
+    applyAddressesToCurrentUser(addresses, defaultAddress);
+  }, [applyAddressesToCurrentUser]);
+
   const createUserFromClerkIdentity = useCallback((identity: {
     userId: string;
     email: string;
     fullName?: string;
   }, role: User["role"]): User => {
     const normalizedEmail = identity.email.trim().toLowerCase();
-    const existing = users.find((item) => item.email.toLowerCase() === normalizedEmail);
-
-    if (existing) {
-      return {
-        ...existing,
-        id: identity.userId,
-        role
-      };
-    }
 
     return {
       id: identity.userId,
@@ -128,7 +217,7 @@ export function useAuthState() {
       email: normalizedEmail,
       role
     };
-  }, [users]);
+  }, []);
 
   const applyClerkIdentityToSession = useCallback((identity: {
     userId: string;
@@ -155,9 +244,18 @@ export function useAuthState() {
     fullName?: string;
     sessionToken?: string;
   }): Promise<User["role"]> => {
+    const hydrationKey = `${identity.userId}:${identity.email.trim().toLowerCase()}`;
+    if (lastHydratedClerkIdentityKeyRef.current === hydrationKey) {
+      return lastHydratedClerkRoleRef.current;
+    }
+
     const backendSession = await resolveBackendSessionRole(identity);
-    return applyClerkIdentityToSession(identity, backendSession.role);
-  }, [applyClerkIdentityToSession]);
+    const resolvedRole = applyClerkIdentityToSession(identity, backendSession.role);
+    lastHydratedClerkIdentityKeyRef.current = hydrationKey;
+    lastHydratedClerkRoleRef.current = resolvedRole;
+    await refreshClerkAddresses(identity, backendSession.role);
+    return resolvedRole;
+  }, [applyClerkIdentityToSession, refreshClerkAddresses]);
 
   useEffect(() => {
     let active = true;
@@ -169,18 +267,6 @@ export function useAuthState() {
       };
     }
 
-    getActiveClerkIdentity()
-      .then((identity) => {
-        if (!active || !identity) {
-          return;
-        }
-
-        void syncClerkIdentityWithBackend(identity);
-      })
-      .catch(() => {
-        // Ignore hydration failure and keep app usable with local auth flow.
-      });
-
     void subscribeToClerkSessionChanges((identity) => {
       if (!active) {
         return;
@@ -189,6 +275,8 @@ export function useAuthState() {
       if (!identity) {
         setUser(null);
         setAuthSession(null);
+        lastHydratedClerkIdentityKeyRef.current = null;
+        lastHydratedClerkRoleRef.current = "client";
         return;
       }
 
@@ -360,11 +448,13 @@ export function useAuthState() {
     setAuthSession(null);
     setPendingClerkEmail(null);
     setPendingClerkSignUpEmail(null);
+    lastHydratedClerkIdentityKeyRef.current = null;
+    lastHydratedClerkRoleRef.current = "client";
   };
 
   const accountLabel = !user ? "Perfil" : user.role === "admin" ? "Admin" : "Perfil";
 
-  const updateUserAddress = (address: Address): { ok: true } | { ok: false; error: string } => {
+  const updateUserAddress = async (address: Address): Promise<{ ok: true } | { ok: false; error: string }> => {
     if (!user) {
       return { ok: false, error: "Usuario nao autenticado" };
     }
@@ -389,101 +479,74 @@ export function useAuthState() {
       state: address.state.trim().toUpperCase()
     };
 
-    setUsers((prev) =>
-      prev.map((item) => {
-        if (item.id !== user.id) return item;
-        
-        let addresses = item.addresses || [];
-        let defaultAddressId = item.defaultAddressId;
-        
-        // If address has an id, it's an existing address to update
-        if (address.id) {
-          addresses = addresses.map((a) => (a.id === address.id ? normalizedAddress : a));
-          if (!addresses.find((a) => a.id === address.id)) {
-            // If not found, add it (shouldn't happen normally)
-            addresses.push(normalizedAddress);
-          }
-          // Set as default if there's no default or if it's the first address
-          if (!defaultAddressId) {
-            defaultAddressId = address.id;
-          }
-        } else {
-          // No id means it's a new address being added
-          addresses.push(normalizedAddress);
-          if (!defaultAddressId) {
-            defaultAddressId = normalizedAddress.id!;
-          }
-        }
+    const nextAddresses = [...(user.addresses ?? [])];
+    const existingIndex = nextAddresses.findIndex((item) => item.id === normalizedAddress.id);
 
-        return {
-          ...item,
-          addresses,
-          defaultAddressId,
-          // Backward compatibility: keep defaultAddress updated
-          defaultAddress: normalizedAddress
-        };
-      })
-    );
-    
-    setUser((prev) => {
-      if (!prev) return prev;
-      
-      let addresses = prev.addresses || [];
-      let defaultAddressId = prev.defaultAddressId;
-      
-      if (address.id) {
-        addresses = addresses.map((a) => (a.id === address.id ? normalizedAddress : a));
-        if (!addresses.find((a) => a.id === address.id)) {
-          addresses.push(normalizedAddress);
-        }
-        if (!defaultAddressId) {
-          defaultAddressId = address.id;
-        }
-      } else {
-        addresses.push(normalizedAddress);
-        if (!defaultAddressId) {
-          defaultAddressId = normalizedAddress.id!;
-        }
-      }
-      
-      return {
-        ...prev,
-        addresses,
-        defaultAddressId,
-        defaultAddress: normalizedAddress
-      };
-    });
-    
-    return { ok: true };
+    if (existingIndex === -1) {
+      nextAddresses.push(normalizedAddress);
+    } else {
+      nextAddresses[existingIndex] = normalizedAddress;
+    }
+
+    const nextDefaultAddressId = user.defaultAddressId || normalizedAddress.id;
+
+    return updateUserAddresses(nextAddresses, nextDefaultAddressId);
   };
 
-  const updateUserAddresses = (addresses: Address[], defaultAddressId?: string): { ok: true } | { ok: false; error: string } => {
+  const updateUserAddresses = async (
+    addresses: Address[],
+    defaultAddressId?: string
+  ): Promise<{ ok: true } | { ok: false; error: string }> => {
     if (!user) {
       return { ok: false, error: "Usuario nao autenticado" };
     }
 
-    setUsers((prev) =>
-      prev.map((item) =>
-        item.id === user.id
-          ? {
-              ...item,
-              addresses,
-              defaultAddressId: defaultAddressId || item.defaultAddressId
-            }
-          : item
-      )
-    );
+    const resolvedDefaultAddressId = defaultAddressId || addresses.find((address) => address.id)?.id;
 
-    setUser((prev) =>
-      prev
-        ? {
-            ...prev,
-            addresses,
-            defaultAddressId: defaultAddressId || prev.defaultAddressId
-          }
-        : prev
-    );
+    if (authSession?.provider === "clerk") {
+      const options = buildProfileAddressApiOptionsFromSession(
+        authSession.token,
+        user.id,
+        user.email,
+        authSession.internalRole
+      );
 
+      if (!options) {
+        return { ok: false, error: "Sessao de autenticacao indisponivel" };
+      }
+
+      try {
+        const persisted = await syncProfileAddressesApi(
+          {
+            defaultAddressId: resolvedDefaultAddressId,
+            addresses: addresses.map((address) => ({
+              id: address.id,
+              label: address.label ?? "Endereco",
+              cep: address.cep,
+              street: address.street,
+              number: address.number,
+              complement: address.complement,
+              neighborhood: address.neighborhood,
+              city: address.city,
+              state: address.state
+            }))
+          },
+          options
+        );
+
+        const nextAddresses = persisted.map(mapProfileAddressDtoToAddress);
+        const nextDefaultAddressId = persisted.find((address) => address.isDefault)?.id;
+        applyAddressesToCurrentUser(nextAddresses, nextDefaultAddressId);
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : "Nao foi possivel salvar os enderecos"
+        };
+      }
+    }
+
+    applyAddressesToCurrentUser(addresses, resolvedDefaultAddressId);
     return { ok: true };
   };
 

@@ -4,6 +4,7 @@ import { Pressable, Text, View, ScrollView, TextInput } from "react-native";
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
 import type { Address } from "../../lib/types";
+import type { ShippingQuoteOptionDto } from "../../lib/mobile/api/contracts";
 import type { CheckoutScreenProps } from "./types";
 
 const EMPTY_GUEST_ADDRESS: Address = {
@@ -39,31 +40,26 @@ export function CheckoutScreen({
   guestAddressDraft = null,
   onCheckoutContextChange,
   onSetShipping,
+  onRequestShippingQuotes,
   onBackCart,
   onGoProfile,
   onRequireAuth,
+  onFinalizeOrder,
   onOrderComplete
 }: CheckoutScreenProps) {
   const [step, setStep] = useState<1 | 2 | 3>(initialStep);
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [addressError, setAddressError] = useState("");
+  const [shippingQuoteError, setShippingQuoteError] = useState("");
+  const [isQuotingShipping, setIsQuotingShipping] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<ShippingQuoteOptionDto[]>([]);
+  const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string | null>(null);
+  const [finalizationError, setFinalizationError] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(
     initialSelectedAddressId ?? (isAddressValid(guestAddressDraft) ? undefined : user?.defaultAddressId)
   );
   const [guestAddress, setGuestAddress] = useState<Address>(guestAddressDraft ?? EMPTY_GUEST_ADDRESS);
-
-  const calculateShippingByCep = (cep: string): number => {
-    const digits = cep.replace(/\D/g, "");
-    const first = Number(digits.slice(0, 1));
-    if (first <= 2) {
-      return 14.9;
-    }
-    if (first <= 5) {
-      return 19.9;
-    }
-    return 24.9;
-  };
 
   useEffect(() => {
     setStep(initialStep);
@@ -90,6 +86,12 @@ export function CheckoutScreen({
   }, [guestAddressDraft]);
 
   useEffect(() => {
+    setShippingOptions([]);
+    setSelectedShippingOptionId(null);
+    setShippingQuoteError("");
+  }, [selectedAddressId, guestAddress]);
+
+  useEffect(() => {
     onCheckoutContextChange?.({
       step,
       selectedAddressId,
@@ -101,6 +103,8 @@ export function CheckoutScreen({
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
   const effectiveAddress = selectedAddress ?? guestAddress;
   const hasValidAddress = isAddressValid(effectiveAddress);
+  const needsSavedAddressFromProfile = Boolean(user && addresses.length === 0 && !isAddressValid(guestAddressDraft));
+  const selectedShippingOption = shippingOptions.find((option) => option.id === selectedShippingOptionId) ?? null;
 
   if (completed) {
     return (
@@ -150,6 +154,13 @@ export function CheckoutScreen({
                   </Pressable>
                 ))}
               </ScrollView>
+            </>
+          ) : needsSavedAddressFromProfile ? (
+            <>
+              <Text style={styles.screenDescription}>Para continuar, cadastre pelo menos um endereco no seu perfil.</Text>
+              <Pressable style={styles.primaryActionButton} onPress={onGoProfile}>
+                <Text style={styles.primaryActionButtonText}>Cadastrar endereco no perfil</Text>
+              </Pressable>
             </>
           ) : (
             <>
@@ -207,23 +218,88 @@ export function CheckoutScreen({
           ) : null}
 
           <Pressable
-            style={styles.primaryActionButton}
-            onPress={() => {
+            style={[styles.primaryActionButton, isQuotingShipping ? { opacity: 0.7 } : null]}
+            disabled={isQuotingShipping}
+            onPress={async () => {
               if (!hasValidAddress) {
                 setAddressError("Selecione um endereco valido");
                 return;
               }
-              const cep = effectiveAddress?.cep ?? "";
-              const nextShipping = calculateShippingByCep(cep);
-              onSetShipping(nextShipping);
+
               setAddressError("");
-              setStep(2);
+
+              if (shippingOptions.length > 0 && selectedShippingOption) {
+                onSetShipping(selectedShippingOption.price);
+                setStep(2);
+                return;
+              }
+
+              setIsQuotingShipping(true);
+              setShippingQuoteError("");
+
+              const quoteResult = await onRequestShippingQuotes(effectiveAddress, items.length);
+              setIsQuotingShipping(false);
+
+              if (!quoteResult.ok) {
+                setShippingQuoteError(quoteResult.error);
+                return;
+              }
+
+              if (quoteResult.options.length === 0) {
+                setShippingQuoteError("Nenhuma opcao de frete disponivel para o destino informado.");
+                return;
+              }
+
+              setShippingOptions(quoteResult.options);
+              const defaultOption = quoteResult.options[0];
+              setSelectedShippingOptionId(defaultOption.id);
+              onSetShipping(defaultOption.price);
             }}
           >
-            <Text style={styles.primaryActionButtonText}>Calcular frete e continuar</Text>
+            <Text style={styles.primaryActionButtonText}>
+              {isQuotingShipping
+                ? "Buscando opcoes..."
+                : shippingOptions.length > 0
+                  ? "Continuar para revisao"
+                  : "Buscar opcoes de frete"}
+            </Text>
           </Pressable>
 
           {addressError ? <Text style={styles.errorText}>{addressError}</Text> : null}
+          {shippingQuoteError ? <Text style={styles.errorText}>{shippingQuoteError}</Text> : null}
+
+          {shippingOptions.length > 0 ? (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.summaryTitle}>Opcoes de frete</Text>
+              {shippingOptions.map((option) => {
+                const selected = option.id === selectedShippingOptionId;
+                return (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => {
+                      setSelectedShippingOptionId(option.id);
+                      onSetShipping(option.price);
+                    }}
+                    style={{ marginTop: 8 }}
+                  >
+                    <View
+                      style={[
+                        styles.summaryCard,
+                        {
+                          borderWidth: selected ? 2 : 1,
+                          borderColor: selected ? "#2563eb" : "#e5e7eb"
+                        }
+                      ]}
+                    >
+                      <Text style={{ fontWeight: "600", fontSize: 14 }}>{option.label}</Text>
+                      <Text style={styles.screenDescription}>{option.deliveryEstimate}</Text>
+                      <Text style={styles.summaryValue}>{toBrl(option.price)}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
       ) : step === 2 ? (
         <View style={styles.summaryCard}>
@@ -293,14 +369,44 @@ export function CheckoutScreen({
             <Text style={styles.summaryTotalValue}>{toBrl(total)}</Text>
           </View>
           <Pressable
-            style={styles.primaryActionButton}
+            style={[styles.primaryActionButton, processing ? { opacity: 0.7 } : null]}
+            disabled={processing}
             onPress={async () => {
+              if (processing) {
+                return;
+              }
+
+              setFinalizationError("");
+
               if (!user) {
                 onRequireAuth();
                 return;
               }
+
               setProcessing(true);
-              await new Promise((resolve) => setTimeout(resolve, 1200));
+              let finalizationResult;
+
+              try {
+                finalizationResult = await onFinalizeOrder(effectiveAddress);
+              } catch {
+                setProcessing(false);
+                setFinalizationError("Nao foi possivel validar a sessao. Tente novamente.");
+                return;
+              }
+
+              if (!finalizationResult.ok) {
+                setProcessing(false);
+
+                if (finalizationResult.requiresAuth) {
+                  onRequireAuth();
+                  return;
+                }
+
+                setFinalizationError(finalizationResult.error ?? "Nao foi possivel finalizar. Tente novamente.");
+                return;
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, 600));
               setProcessing(false);
               setCompleted(true);
               onOrderComplete(effectiveAddress);
@@ -314,6 +420,8 @@ export function CheckoutScreen({
           <Pressable style={styles.secondaryActionButton} onPress={() => setStep(2)}>
             <Text style={styles.secondaryActionButtonText}>Voltar para revisao</Text>
           </Pressable>
+
+          {finalizationError ? <Text style={styles.errorText}>{finalizationError}</Text> : null}
         </View>
       )}
     </View>

@@ -21,6 +21,8 @@ import { ProfileScreen } from "./storefront/ProfileScreen";
 import type { AppState, RouteState } from "../hooks/useAppState";
 import type { Address, Category, Order, Product, Size } from "../lib/types";
 import { fetchPublicModelDetail, fetchPublicModelsByTeam, fetchPublicTeamsByCategory } from "../lib/mobile/api/catalog";
+import { requestShippingQuotes } from "../lib/mobile/api/checkout";
+import { getActiveClerkIdentity, resolveBackendSessionRole } from "../lib/clerkClient";
 import styles from "../App.styles";
 
 type AppRouteContentProps = {
@@ -129,6 +131,35 @@ export function resolveCheckoutShippingAddress(
   }
 
   return user?.defaultAddress;
+}
+
+export async function ensureCheckoutFinalizationAuthorized(
+  user: AppState["user"],
+  authSession: AppState["authSession"]
+): Promise<{ ok: true } | { ok: false; requiresAuth: true }> {
+  if (!user || !authSession?.token) {
+    return { ok: false, requiresAuth: true };
+  }
+
+  if (authSession.provider !== "clerk") {
+    return { ok: true };
+  }
+
+  try {
+    const identity = await getActiveClerkIdentity();
+    if (!identity?.sessionToken) {
+      return { ok: false, requiresAuth: true };
+    }
+
+    const backendSession = await resolveBackendSessionRole(identity);
+    if (!backendSession.ok) {
+      return { ok: false, requiresAuth: true };
+    }
+
+    return { ok: true };
+  } catch {
+    return { ok: false, requiresAuth: true };
+  }
 }
 
 export function filterCatalogProducts(products: Product[], filters: TeamCatalogFilters): Product[] {
@@ -278,6 +309,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
+    updateUserAddresses,
     screen
   } = state;
 
@@ -756,6 +788,17 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           discount={discount}
           total={total}
           appliedCoupon={appliedCoupon}
+          onRequestShippingQuotes={async (destination, itemsCount) => {
+            try {
+              const options = await requestShippingQuotes(destination, itemsCount);
+              return { ok: true as const, options };
+            } catch {
+              return {
+                ok: false as const,
+                error: "Nao foi possivel cotar o frete para este CEP. Revise os dados e tente novamente."
+              };
+            }
+          }}
           onApplyCoupon={(code) => {
             const coupon = coupons.find((item) => item.code.toLowerCase() === code.toLowerCase() && item.active);
             if (!coupon) {
@@ -792,9 +835,29 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           guestAddressDraft={checkoutContext.guestAddressDraft}
           onCheckoutContextChange={setCheckoutContext}
           onSetShipping={setShipping}
+          onRequestShippingQuotes={async (destination, itemsCount) => {
+            try {
+              const options = await requestShippingQuotes(destination, itemsCount);
+              return { ok: true as const, options };
+            } catch {
+              return {
+                ok: false as const,
+                error: "Nao foi possivel cotar o frete para este destino. Revise os dados e tente novamente."
+              };
+            }
+          }}
           onBackCart={() => setRoute({ name: "cart" })}
           onGoProfile={() => setRoute({ name: "profile" })}
           onRequireAuth={() => setRoute({ name: "login", redirectAfterLogin: "checkout" })}
+          onFinalizeOrder={async () => {
+            const authorization = await ensureCheckoutFinalizationAuthorized(user, authSession);
+
+            if (!authorization.ok) {
+              return { ok: false as const, requiresAuth: true as const };
+            }
+
+            return { ok: true as const };
+          }}
           onOrderComplete={(shippingAddressFromCheckout) => {
             const shippingAddress = shippingAddressFromCheckout ?? resolveCheckoutShippingAddress(user, checkoutContext);
             if (!shippingAddress) {
@@ -929,6 +992,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           onLogin={() => setRoute({ name: "login", redirectAfterLogin: "profile", authMode: "login" })}
           onOpenOrders={() => setRoute({ name: "orders" })}
           onUpdateAddress={updateUserAddress}
+          onUpdateAddresses={updateUserAddresses}
         />
       ) : null}
 

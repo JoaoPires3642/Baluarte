@@ -1,4 +1,5 @@
 import type { Address, CartItem, Coupon, Order, Product, Size, Team, User } from "../../lib/types";
+import type { ShippingQuoteOptionDto } from "../../lib/mobile/api/contracts";
 
 export type CouponApplyResult = { ok: true } | { ok: false; error: string };
 
@@ -37,6 +38,10 @@ export type CartScreenProps = {
   discount: number;
   total: number;
   appliedCoupon: Coupon | null;
+  onRequestShippingQuotes: (
+    destination: Address,
+    itemsCount: number
+  ) => Promise<{ ok: true; options: ShippingQuoteOptionDto[] } | { ok: false; error: string }>;
   onApplyCoupon: (code: string) => CouponApplyResult;
   onRemoveCoupon: () => void;
   onSetShipping: (value: number) => void;
@@ -58,9 +63,16 @@ export type CheckoutScreenProps = {
   guestAddressDraft?: Address | null;
   onCheckoutContextChange?: (context: { step: 1 | 2 | 3; selectedAddressId?: string; guestAddressDraft: Address | null }) => void;
   onSetShipping: (value: number) => void;
+  onRequestShippingQuotes: (
+    destination: Address,
+    itemsCount: number
+  ) => Promise<{ ok: true; options: ShippingQuoteOptionDto[] } | { ok: false; error: string }>;
   onBackCart: () => void;
   onGoProfile: () => void;
   onRequireAuth: () => void;
+  onFinalizeOrder: (
+    shippingAddress?: Address
+  ) => Promise<{ ok: true } | { ok: false; requiresAuth?: boolean; error?: string }>;
   onOrderComplete: (shippingAddress?: Address) => void;
 };
 
@@ -88,7 +100,11 @@ export type ProfileScreenProps = {
   onBack: () => void;
   onLogin: () => void;
   onOpenOrders: () => void;
-  onUpdateAddress: (address: Address) => { ok: true } | { ok: false; error: string };
+  onUpdateAddress: (address: Address) => Promise<{ ok: true } | { ok: false; error: string }> | { ok: true } | { ok: false; error: string };
+  onUpdateAddresses: (
+    addresses: Address[],
+    defaultAddressId?: string
+  ) => Promise<{ ok: true } | { ok: false; error: string }> | { ok: true } | { ok: false; error: string };
 };
 
 export type HomeScreenProps = {

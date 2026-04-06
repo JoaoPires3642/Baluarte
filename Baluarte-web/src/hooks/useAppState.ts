@@ -87,6 +87,7 @@ export function useAppState() {
     loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
+    updateUserAddresses,
     accountLabel
   } = useAuthState();
   const { orders, setOrders } = useOrdersState();
@@ -243,6 +244,7 @@ export function useAppState() {
     loginWithClerkOAuth,
     handleRegister,
     updateUserAddress,
+    updateUserAddresses,
     screen,
     inAdminArea,
     accountLabel

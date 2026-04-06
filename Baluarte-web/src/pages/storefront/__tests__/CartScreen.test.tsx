@@ -53,6 +53,7 @@ describe("CartScreen", () => {
         discount={0}
         total={364.9}
         appliedCoupon={null}
+        onRequestShippingQuotes={async () => ({ ok: true, options: [] })}
         onApplyCoupon={() => ({ ok: true })}
         onRemoveCoupon={() => undefined}
         onSetShipping={() => undefined}

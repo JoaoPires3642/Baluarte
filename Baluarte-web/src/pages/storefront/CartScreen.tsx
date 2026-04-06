@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Modal, Pressable, Text, TextInput, View } from "react-native";
 
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
+import { useViaCep } from "../../hooks/useViaCep";
 import type { CartScreenProps } from "./types";
 
 export function CartScreen({
@@ -16,6 +17,7 @@ export function CartScreen({
   discount,
   total,
   appliedCoupon,
+  onRequestShippingQuotes,
   onApplyCoupon,
   onRemoveCoupon,
   onSetShipping,
@@ -26,17 +28,74 @@ export function CartScreen({
 }: CartScreenProps) {
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  const [shippingCep, setShippingCep] = useState("");
+  const [shippingError, setShippingError] = useState("");
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<Array<{
+    id: string;
+    label: string;
+    price: number;
+    deliveryEstimate: string;
+  }>>([]);
+  const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string | null>(null);
+  const { fetchAddressByCep, loading: cepLoading, error: cepError } = useViaCep();
 
-  const applyShipping = (kind: "pac" | "sedex" | "sedex10") => {
-    if (kind === "pac") {
-      onSetShipping(25);
+  const calculateShipping = async () => {
+    const digits = shippingCep.replace(/\D/g, "");
+    if (digits.length !== 8) {
+      setShippingError("Informe um CEP valido com 8 digitos");
       return;
     }
-    if (kind === "sedex") {
-      onSetShipping(40);
+
+    setShippingError("");
+    setIsCalculatingShipping(true);
+
+    const viaCepAddress = await fetchAddressByCep(digits);
+    if (!viaCepAddress) {
+      setIsCalculatingShipping(false);
+      setShippingError("Nao foi possivel localizar o CEP informado");
       return;
     }
-    onSetShipping(55);
+
+    const quoteResult = await onRequestShippingQuotes(
+      {
+        cep: viaCepAddress.cep ?? shippingCep,
+        street: viaCepAddress.street ?? "",
+        number: "S/N",
+        neighborhood: viaCepAddress.neighborhood ?? "",
+        city: viaCepAddress.city ?? "",
+        state: viaCepAddress.state ?? "",
+        complement: viaCepAddress.complement,
+        label: "Destino do carrinho"
+      },
+      items.length
+    );
+
+    setIsCalculatingShipping(false);
+
+    if (!quoteResult.ok) {
+      setShippingError(quoteResult.error);
+      return;
+    }
+
+    if (quoteResult.options.length === 0) {
+      setShippingError("Nenhuma opcao de frete disponivel para este CEP");
+      return;
+    }
+
+    const mappedOptions = quoteResult.options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      price: option.price,
+      deliveryEstimate: option.deliveryEstimate
+    }));
+
+    setShippingOptions(mappedOptions);
+    const defaultOption = mappedOptions[0];
+    setSelectedShippingOptionId(defaultOption.id);
+    onSetShipping(defaultOption.price);
+    setShowShippingModal(false);
   };
 
   if (items.length === 0) {
@@ -155,20 +214,43 @@ export function CartScreen({
         )}
 
         <Text style={styles.summaryTitle}>Frete</Text>
-        <View style={styles.shippingRow}>
-          <Pressable style={styles.shippingOption} onPress={() => applyShipping("pac")}>
-            <Text style={styles.shippingLabel}>PAC</Text>
-            <Text style={styles.shippingValue}>R$ 25,00</Text>
-          </Pressable>
-          <Pressable style={styles.shippingOption} onPress={() => applyShipping("sedex")}>
-            <Text style={styles.shippingLabel}>SEDEX</Text>
-            <Text style={styles.shippingValue}>R$ 40,00</Text>
-          </Pressable>
-          <Pressable style={styles.shippingOption} onPress={() => applyShipping("sedex10")}>
-            <Text style={styles.shippingLabel}>SEDEX 10</Text>
-            <Text style={styles.shippingValue}>R$ 55,00</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          style={styles.secondaryActionButton}
+          onPress={() => {
+            setShippingError("");
+            setShowShippingModal(true);
+          }}
+        >
+          <Text style={styles.secondaryActionButtonText}>Calcular frete por CEP</Text>
+        </Pressable>
+
+        {cepError ? <Text style={styles.errorText}>{cepError}</Text> : null}
+        {shippingError ? <Text style={styles.errorText}>{shippingError}</Text> : null}
+
+        {shippingOptions.length > 0 ? (
+          <View style={styles.shippingRow}>
+            {shippingOptions.map((option) => {
+              const selected = option.id === selectedShippingOptionId;
+              return (
+                <Pressable
+                  key={option.id}
+                  style={[
+                    styles.shippingOption,
+                    selected ? { borderColor: "#2563eb", borderWidth: 2 } : null
+                  ]}
+                  onPress={() => {
+                    setSelectedShippingOptionId(option.id);
+                    onSetShipping(option.price);
+                  }}
+                >
+                  <Text style={styles.shippingLabel}>{option.label}</Text>
+                  <Text style={styles.shippingValue}>{toBrl(option.price)}</Text>
+                  <Text style={styles.screenDescription}>{option.deliveryEstimate}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         <View style={styles.summaryLine}><Text style={styles.summaryKey}>Subtotal</Text><Text style={styles.summaryValue}>{toBrl(subtotal)}</Text></View>
         {customizationNameCount > 0 ? (
@@ -184,13 +266,61 @@ export function CartScreen({
           </View>
         ) : null}
         <View style={styles.summaryLine}><Text style={styles.summaryKey}>Desconto</Text><Text style={styles.summaryValue}>-{toBrl(discount)}</Text></View>
-        <View style={styles.summaryLine}><Text style={styles.summaryKey}>Frete</Text><Text style={styles.summaryValue}>{shipping > 0 ? toBrl(shipping) : "Calcule acima"}</Text></View>
+        <View style={styles.summaryLine}><Text style={styles.summaryKey}>Frete</Text><Text style={styles.summaryValue}>{shipping > 0 ? toBrl(shipping) : "Calcule pelo CEP"}</Text></View>
         <View style={styles.summaryLineTotal}><Text style={styles.summaryTotalKey}>Total</Text><Text style={styles.summaryTotalValue}>{toBrl(total)}</Text></View>
 
         <Pressable style={styles.primaryActionButton} onPress={onCheckout}>
           <Text style={styles.primaryActionButtonText}>Finalizar compra</Text>
         </Pressable>
       </View>
+
+      <Modal visible={showShippingModal} transparent animationType="fade" onRequestClose={() => setShowShippingModal(false)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(15,23,42,0.45)",
+            justifyContent: "center",
+            padding: 20
+          }}
+        >
+          <View style={[styles.summaryCard, { marginTop: 0 }]}> 
+            <Text style={styles.summaryTitle}>Calcular frete</Text>
+            <Text style={styles.screenDescription}>Informe apenas o CEP para consultar opcoes de entrega.</Text>
+
+            <TextInput
+              style={styles.formInput}
+              value={shippingCep}
+              onChangeText={(value) => {
+                const digits = value.replace(/\D/g, "").slice(0, 8);
+                const formatted = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+                setShippingCep(formatted);
+              }}
+              placeholder="CEP"
+              placeholderTextColor="#9ca3af"
+              keyboardType="number-pad"
+            />
+
+            {cepError ? <Text style={styles.errorText}>{cepError}</Text> : null}
+            {shippingError ? <Text style={styles.errorText}>{shippingError}</Text> : null}
+
+            <Pressable
+              style={[styles.primaryActionButton, isCalculatingShipping || cepLoading ? { opacity: 0.7 } : null]}
+              disabled={isCalculatingShipping || cepLoading}
+              onPress={() => {
+                void calculateShipping();
+              }}
+            >
+              <Text style={styles.primaryActionButtonText}>
+                {isCalculatingShipping || cepLoading ? "Calculando..." : "Buscar opcoes"}
+              </Text>
+            </Pressable>
+
+            <Pressable style={styles.secondaryActionButton} onPress={() => setShowShippingModal(false)}>
+              <Text style={styles.secondaryActionButtonText}>Fechar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

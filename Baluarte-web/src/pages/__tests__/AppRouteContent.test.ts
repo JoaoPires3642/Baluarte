@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import {
   AppRouteContent,
   buildAdminRecoveryLoginRoute,
+  ensureCheckoutFinalizationAuthorized,
   hasAdminRouteAccess,
   filterCatalogProducts,
   mapHierarchyModelToProduct,
@@ -12,6 +13,7 @@ import {
   shouldResetCheckoutContextOnUserChange,
   isAdminRoute
 } from "../AppRouteContent";
+import * as clerkClient from "../../lib/clerkClient";
 import type { AppState } from "../../hooks/useAppState";
 import type { Product } from "../../lib/types";
 
@@ -82,6 +84,7 @@ function buildAppState(overrides: Partial<AppState>): AppState {
     loginWithClerkOAuth: jest.fn(),
     handleRegister: jest.fn(),
     updateUserAddress: jest.fn(),
+    updateUserAddresses: jest.fn(),
     screen: null,
     inAdminArea: false,
     accountLabel: "Perfil",
@@ -413,5 +416,102 @@ describe("shouldResetCheckoutContextOnUserChange", () => {
     const shouldReset = shouldResetCheckoutContextOnUserChange(null, null);
 
     expect(shouldReset).toBe(false);
+  });
+});
+
+describe("ensureCheckoutFinalizationAuthorized", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("requires authentication when user session is missing", async () => {
+    await expect(ensureCheckoutFinalizationAuthorized(null, null)).resolves.toEqual({
+      ok: false,
+      requiresAuth: true
+    });
+  });
+
+  it("authorizes demo sessions without backend roundtrip", async () => {
+    const resolveSpy = jest.spyOn(clerkClient, "resolveBackendSessionRole");
+
+    await expect(
+      ensureCheckoutFinalizationAuthorized(
+        { id: "u1", name: "Joao", email: "joao@email.com", role: "client" },
+        { token: "sess-demo-1", internalRole: "client", provider: "demo", issuedAt: new Date().toISOString() }
+      )
+    ).resolves.toEqual({ ok: true });
+
+    expect(resolveSpy).not.toHaveBeenCalled();
+  });
+
+  it("requires authentication when Clerk identity is unavailable", async () => {
+    jest.spyOn(clerkClient, "getActiveClerkIdentity").mockResolvedValue(null);
+
+    await expect(
+      ensureCheckoutFinalizationAuthorized(
+        { id: "u1", name: "Joao", email: "joao@email.com", role: "client" },
+        { token: "sess-clerk-1", internalRole: "client", provider: "clerk", issuedAt: new Date().toISOString() }
+      )
+    ).resolves.toEqual({
+      ok: false,
+      requiresAuth: true
+    });
+  });
+
+  it("authorizes Clerk sessions after backend validation succeeds", async () => {
+    jest.spyOn(clerkClient, "getActiveClerkIdentity").mockResolvedValue({
+      userId: "user_321",
+      email: "joao@email.com",
+      sessionToken: "token_clerk_1"
+    });
+    jest.spyOn(clerkClient, "resolveBackendSessionRole").mockResolvedValue({
+      ok: true,
+      role: "client",
+      session: {
+        userId: "user_321",
+        email: "joao@email.com",
+        internalRole: "client"
+      }
+    });
+
+    await expect(
+      ensureCheckoutFinalizationAuthorized(
+        { id: "u1", name: "Joao", email: "joao@email.com", role: "client" },
+        { token: "sess-clerk-1", internalRole: "client", provider: "clerk", issuedAt: new Date().toISOString() }
+      )
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it("requires authentication when Clerk identity lookup throws", async () => {
+    jest.spyOn(clerkClient, "getActiveClerkIdentity").mockRejectedValue(new Error("lookup-failed"));
+
+    await expect(
+      ensureCheckoutFinalizationAuthorized(
+        { id: "u1", name: "Joao", email: "joao@email.com", role: "client" },
+        { token: "sess-clerk-1", internalRole: "client", provider: "clerk", issuedAt: new Date().toISOString() }
+      )
+    ).resolves.toEqual({
+      ok: false,
+      requiresAuth: true
+    });
+  });
+
+  it("requires authentication when backend session resolution throws", async () => {
+    jest.spyOn(clerkClient, "getActiveClerkIdentity").mockResolvedValue({
+      userId: "user_321",
+      email: "joao@email.com",
+      sessionToken: "token_clerk_1"
+    });
+    jest.spyOn(clerkClient, "resolveBackendSessionRole").mockRejectedValue(new Error("backend-down"));
+
+    await expect(
+      ensureCheckoutFinalizationAuthorized(
+        { id: "u1", name: "Joao", email: "joao@email.com", role: "client" },
+        { token: "sess-clerk-1", internalRole: "client", provider: "clerk", issuedAt: new Date().toISOString() }
+      )
+    ).resolves.toEqual({
+      ok: false,
+      requiresAuth: true
+    });
   });
 });

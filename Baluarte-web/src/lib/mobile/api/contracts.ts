@@ -102,3 +102,25 @@ export interface CatalogModelDetailDto {
     available: boolean;
   }>;
 }
+
+export interface ShippingQuoteOptionDto {
+  id: string;
+  label: string;
+  price: number;
+  estimatedDays: number;
+  deliveryEstimate: string;
+}
+
+export interface ProfileAddressDto {
+  id: string;
+  label: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  isDefault: boolean;
+}
+
