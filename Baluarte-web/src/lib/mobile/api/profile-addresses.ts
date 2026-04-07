@@ -11,7 +11,7 @@ export type ProfileAddressApiOptions = {
 
 export type ProfileAddressSyncPayload = {
   defaultAddressId?: string;
-  addresses: Array<{
+  addresses: {
     id?: string;
     label: string;
     cep: string;
@@ -21,7 +21,7 @@ export type ProfileAddressSyncPayload = {
     neighborhood: string;
     city: string;
     state: string;
-  }>;
+  }[];
 };
 
 export async function listProfileAddressesApi(options: ProfileAddressApiOptions): Promise<ProfileAddressDto[]> {

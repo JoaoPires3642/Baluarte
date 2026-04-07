@@ -22,6 +22,16 @@ const defaultQuoteOptions = [
   }
 ];
 
+const freeShippingQuoteOptions = [
+  {
+    id: "pickup",
+    label: "Retirada na loja",
+    price: 0,
+    estimatedDays: 0,
+    deliveryEstimate: "Mesmo dia"
+  }
+];
+
 const resolveShippingQuotes = async () => ({ ok: true as const, options: defaultQuoteOptions });
 
 describe("CheckoutScreen", () => {
@@ -470,5 +480,197 @@ describe("CheckoutScreen", () => {
     expect(screen.getByText("Para continuar, cadastre pelo menos um endereco no seu perfil.")).toBeTruthy();
     fireEvent.press(screen.getByText("Cadastrar endereco no perfil"));
     expect(onGoProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks transition to payment when review data is invalid", () => {
+    render(
+      <CheckoutScreen
+        user={null}
+        items={[
+          {
+            product: {
+              id: "fla-home-2024",
+              name: "Camisa Flamengo I",
+              description: "desc",
+              price: 299.9,
+              image: "https://example.com/a.png",
+              teamId: "flamengo",
+              team: {
+                id: "flamengo",
+                name: "Flamengo",
+                logo: "https://example.com/logo.png",
+                category: "nacionais"
+              },
+              sizes: ["P", "M", "G", "GG"],
+              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              inStock: true
+            },
+            size: "M",
+            quantity: 1
+          }
+        ]}
+        subtotal={299.9}
+        shipping={0}
+        discount={0}
+        total={299.9}
+        initialStep={2}
+        guestAddressDraft={guestAddress}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    fireEvent.press(screen.getByText("Confirmar e pagar"));
+
+    expect(screen.getByText("Selecione uma opcao de frete para continuar.")).toBeTruthy();
+    expect(screen.queryByText("Pagamento")).toBeNull();
+  });
+
+  it("allows transition to payment with explicit free shipping option selected", async () => {
+    const onSetShipping = jest.fn();
+    const onRequestShippingQuotes = jest.fn(async () => ({ ok: true as const, options: freeShippingQuoteOptions }));
+
+    render(
+      <CheckoutScreen
+        user={null}
+        items={[
+          {
+            product: {
+              id: "fla-home-2024",
+              name: "Camisa Flamengo I",
+              description: "desc",
+              price: 299.9,
+              image: "https://example.com/a.png",
+              teamId: "flamengo",
+              team: {
+                id: "flamengo",
+                name: "Flamengo",
+                logo: "https://example.com/logo.png",
+                category: "nacionais"
+              },
+              sizes: ["P", "M", "G", "GG"],
+              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              inStock: true
+            },
+            size: "M",
+            quantity: 1
+          }
+        ]}
+        subtotal={299.9}
+        shipping={0}
+        discount={0}
+        total={299.9}
+        onSetShipping={onSetShipping}
+        onRequestShippingQuotes={onRequestShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    fireEvent.changeText(screen.getByPlaceholderText("CEP"), guestAddress.cep);
+    fireEvent.changeText(screen.getByPlaceholderText("Rua"), guestAddress.street);
+    fireEvent.changeText(screen.getByPlaceholderText("Numero"), guestAddress.number);
+    fireEvent.changeText(screen.getByPlaceholderText("Bairro"), guestAddress.neighborhood);
+    fireEvent.changeText(screen.getByPlaceholderText("Cidade"), guestAddress.city);
+    fireEvent.changeText(screen.getByPlaceholderText("UF"), guestAddress.state);
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Buscar opcoes de frete"));
+      await Promise.resolve();
+    });
+
+    fireEvent.press(screen.getByText("Continuar para revisao"));
+    fireEvent.press(screen.getByText("Confirmar e pagar"));
+
+    expect(onSetShipping).toHaveBeenLastCalledWith(0);
+    expect(screen.getByText("Pagamento")).toBeTruthy();
+    expect(screen.queryByText("Selecione uma opcao de frete para continuar.")).toBeNull();
+  });
+
+  it("blocks transition to payment when review has empty cart", () => {
+    render(
+      <CheckoutScreen
+        user={null}
+        items={[]}
+        subtotal={0}
+        shipping={19.9}
+        discount={0}
+        total={19.9}
+        initialStep={2}
+        guestAddressDraft={guestAddress}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    fireEvent.press(screen.getByText("Confirmar e pagar"));
+
+    expect(screen.getByText("Seu carrinho esta vazio. Volte e adicione itens para continuar.")).toBeTruthy();
+    expect(screen.queryByText("Pagamento")).toBeNull();
+  });
+
+  it("blocks transition to payment when review has invalid address", () => {
+    render(
+      <CheckoutScreen
+        user={null}
+        items={[
+          {
+            product: {
+              id: "fla-home-2024",
+              name: "Camisa Flamengo I",
+              description: "desc",
+              price: 299.9,
+              image: "https://example.com/a.png",
+              teamId: "flamengo",
+              team: {
+                id: "flamengo",
+                name: "Flamengo",
+                logo: "https://example.com/logo.png",
+                category: "nacionais"
+              },
+              sizes: ["P", "M", "G", "GG"],
+              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              inStock: true
+            },
+            size: "M",
+            quantity: 1
+          }
+        ]}
+        subtotal={299.9}
+        shipping={19.9}
+        discount={0}
+        total={319.8}
+        initialStep={2}
+        guestAddressDraft={{
+          ...guestAddress,
+          cep: "123"
+        }}
+        onSetShipping={() => undefined}
+        onRequestShippingQuotes={resolveShippingQuotes}
+        onBackCart={() => undefined}
+        onGoProfile={() => undefined}
+        onRequireAuth={() => undefined}
+        onFinalizeOrder={async () => ({ ok: true })}
+        onOrderComplete={() => undefined}
+      />
+    );
+
+    fireEvent.press(screen.getByText("Confirmar e pagar"));
+
+    expect(screen.getByText("Endereco de entrega invalido. Revise os dados para continuar.")).toBeTruthy();
+    expect(screen.queryByText("Pagamento")).toBeNull();
   });
 });

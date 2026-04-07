@@ -56,6 +56,7 @@ export function CheckoutScreen({
   const [shippingOptions, setShippingOptions] = useState<ShippingQuoteOptionDto[]>([]);
   const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string | null>(null);
   const [finalizationError, setFinalizationError] = useState("");
+  const [reviewError, setReviewError] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(
     initialSelectedAddressId ?? (isAddressValid(guestAddressDraft) ? undefined : user?.defaultAddressId)
   );
@@ -98,6 +99,12 @@ export function CheckoutScreen({
       guestAddressDraft: isAddressValid(guestAddress) ? guestAddress : null
     });
   }, [guestAddress, onCheckoutContextChange, selectedAddressId, step]);
+
+  useEffect(() => {
+    if (step !== 2 && reviewError) {
+      setReviewError("");
+    }
+  }, [reviewError, step]);
 
   const addresses = user?.addresses ?? [];
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
@@ -306,6 +313,17 @@ export function CheckoutScreen({
           <Text style={styles.summaryTitle}>Revisar pedido</Text>
           <Text style={styles.screenDescription}>{items.length} item(ns) no pedido</Text>
 
+          <View style={{ marginTop: 12 }}>
+            {items.map((item, index) => (
+              <View key={`${item.product.id}-${item.size}-${index}`} style={styles.summaryLine}>
+                <Text style={styles.summaryKey}>
+                  {item.quantity}x {item.product.name} ({item.size})
+                </Text>
+                <Text style={styles.summaryValue}>{toBrl(item.product.price * item.quantity)}</Text>
+              </View>
+            ))}
+          </View>
+
           <View style={{ marginVertical: 12, borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingTop: 12 }}>
             <Text style={{ fontWeight: "600", fontSize: 14, marginBottom: 8 }}>Endereco de entrega</Text>
             {effectiveAddress && (
@@ -344,10 +362,33 @@ export function CheckoutScreen({
             <Pressable style={[styles.secondaryActionButton, { flex: 1 }]} onPress={() => setStep(1)}>
               <Text style={styles.secondaryActionButtonText}>Voltar</Text>
             </Pressable>
-            <Pressable style={[styles.primaryActionButton, { flex: 1 }]} onPress={() => setStep(3)}>
+            <Pressable
+              style={[styles.primaryActionButton, { flex: 1 }]}
+              onPress={() => {
+                if (items.length === 0) {
+                  setReviewError("Seu carrinho esta vazio. Volte e adicione itens para continuar.");
+                  return;
+                }
+
+                if (!hasValidAddress) {
+                  setReviewError("Endereco de entrega invalido. Revise os dados para continuar.");
+                  return;
+                }
+
+                if (!selectedShippingOptionId) {
+                  setReviewError("Selecione uma opcao de frete para continuar.");
+                  return;
+                }
+
+                setReviewError("");
+                setStep(3);
+              }}
+            >
               <Text style={styles.primaryActionButtonText}>Confirmar e pagar</Text>
             </Pressable>
           </View>
+
+          {reviewError ? <Text style={styles.errorText}>{reviewError}</Text> : null}
         </View>
       ) : (
         <View style={styles.summaryCard}>

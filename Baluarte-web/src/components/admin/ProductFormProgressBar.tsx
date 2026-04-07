@@ -7,7 +7,7 @@ type ProductFormProgressBarProps = {
   step: ProductFormStep;
 };
 
-const LABELS: Array<{ step: ProductFormStep; label: string }> = [
+const LABELS: { step: ProductFormStep; label: string }[] = [
   { step: 1, label: "Informacoes" },
   { step: 2, label: "Preco e estoque" },
   { step: 3, label: "Imagens" }

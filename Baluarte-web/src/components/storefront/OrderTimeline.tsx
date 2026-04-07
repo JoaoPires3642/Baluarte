@@ -15,7 +15,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
 };
 
 export function OrderTimeline({ order }: OrderTimelineProps) {
-  const statusSequence: Array<keyof typeof statusConfig> = ["aguardando_pagamento", "pronto_envio", "enviado", "entregue"];
+  const statusSequence: (keyof typeof statusConfig)[] = ["aguardando_pagamento", "pronto_envio", "enviado", "entregue"];
   const currentStatusIndex = statusSequence.indexOf(order.status as keyof typeof statusConfig);
 
   return (

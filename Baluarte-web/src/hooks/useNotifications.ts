@@ -4,6 +4,10 @@ import type { Notification } from "../components/admin/NotificationCenter";
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
   const addNotification = useCallback((
     title: string,
     message: string,
@@ -31,11 +35,7 @@ export function useNotifications() {
     }
 
     return id;
-  }, []);
-
-  const dismissNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  }, [dismissNotification]);
 
   const success = useCallback((title: string, message: string) => {
     return addNotification(title, message, "success");

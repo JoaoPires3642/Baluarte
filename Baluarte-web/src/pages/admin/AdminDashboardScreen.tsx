@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, Dimensions } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 
 import styles from "../../App.styles";
 import type { AdminProduct } from "./types";

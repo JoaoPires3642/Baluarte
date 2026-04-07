@@ -10,7 +10,8 @@ describe("App smoke", () => {
       expect(screen.getAllByText("Categorias").length).toBeGreaterThan(0);
       expect(screen.getByText("Nacionais")).toBeTruthy();
       expect(screen.getByText("Mais Vendidos")).toBeTruthy();
-      expect(screen.getByText("Camisa Flamengo I 2024")).toBeTruthy();
+      expect(screen.getByText("Ver Todos")).toBeTruthy();
+      expect(screen.getAllByText("Ver Colecao →").length).toBeGreaterThan(0);
     });
   });
 });

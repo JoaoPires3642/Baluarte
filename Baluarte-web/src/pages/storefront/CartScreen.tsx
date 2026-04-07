@@ -32,12 +32,12 @@ export function CartScreen({
   const [shippingCep, setShippingCep] = useState("");
   const [shippingError, setShippingError] = useState("");
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
-  const [shippingOptions, setShippingOptions] = useState<Array<{
+  const [shippingOptions, setShippingOptions] = useState<{
     id: string;
     label: string;
     price: number;
     deliveryEstimate: string;
-  }>>([]);
+  }[]>([]);
   const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string | null>(null);
   const { fetchAddressByCep, loading: cepLoading, error: cepError } = useViaCep();
 

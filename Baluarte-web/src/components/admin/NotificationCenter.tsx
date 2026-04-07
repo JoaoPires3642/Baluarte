@@ -1,5 +1,5 @@
 import { View, Text, Pressable, Animated } from "react-native";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import styles from "../../App.styles";
 
@@ -19,7 +19,7 @@ type NotificationCenterProps = {
 };
 
 export function NotificationCenter({ notifications, onDismiss }: NotificationCenterProps) {
-  const [visible, setVisible] = useState(notifications.length > 0);
+  const visible = notifications.length > 0;
   const fadeAnim = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {

@@ -44,7 +44,7 @@ export function useViaCep() {
         city: data.localidade,
         state: data.uf
       };
-    } catch (err) {
+    } catch {
       setError("Erro ao buscar CEP. Tente novamente.");
       return null;
     } finally {
