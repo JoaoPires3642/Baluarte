@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { ImageStyle, StyleProp } from "react-native";
 
 import styles from "../../App.styles";
+import { TemplateMappingTool } from "./TemplateMappingTool";
 import type { ProductFormDraft } from "./ProductFormTypes";
 
 type ProductFormStepThreeProps = {
@@ -32,7 +33,13 @@ export function ProductFormStepThree({
       <View style={styles.inlineActionRow}>
         <Pressable
           style={draft.customizationEnabled ? styles.primaryActionButton : styles.secondaryActionButton}
-          onPress={() => setDraft((prev) => ({ ...prev, customizationEnabled: !prev.customizationEnabled }))}
+          onPress={() =>
+            setDraft((prev) => ({
+              ...prev,
+              customizationEnabled: !prev.customizationEnabled,
+              customizationTemplateMetadata: prev.customizationEnabled ? "" : prev.customizationTemplateMetadata
+            }))
+          }
         >
           <Text style={draft.customizationEnabled ? styles.primaryActionButtonText : styles.secondaryActionButtonText}>
             {draft.customizationEnabled ? "Personalizacao habilitada" : "Habilitar personalizacao"}
@@ -42,17 +49,40 @@ export function ProductFormStepThree({
 
       {draft.customizationEnabled ? (
         <>
-          <Text style={styles.summaryKey}>Template base PNG (URL)</Text>
+          <Text style={styles.summaryKey}>Template base (URL de imagem, PNG recomendado)</Text>
           <View style={styles.inlineActionRow}>
             <TextInput
               style={[styles.formInput, styles.imageUrlInput]}
               value={draft.customizationTemplatePng}
-              onChangeText={(value) => setDraft((prev) => ({ ...prev, customizationTemplatePng: value }))}
-              placeholder="https://...template.png"
+              onChangeText={(value) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  customizationTemplatePng: value,
+                  customizationTemplateMetadata: value.trim() ? prev.customizationTemplateMetadata : ""
+                }))
+              }
+              placeholder="https://...template"
               placeholderTextColor="#9ca3af"
               autoCapitalize="none"
             />
           </View>
+
+          {draft.customizationTemplatePng.trim() ? (
+            <TemplateMappingTool
+              templateUri={draft.customizationTemplatePng}
+              metadataValue={draft.customizationTemplateMetadata}
+              onMetadataChange={(value) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  customizationTemplateMetadata: value
+                }))
+              }
+            />
+          ) : (
+            <Text style={styles.screenDescription}>
+              Defina o template PNG para ajustar os 4 pontos da area util de personalizacao.
+            </Text>
+          )}
         </>
       ) : null}
 

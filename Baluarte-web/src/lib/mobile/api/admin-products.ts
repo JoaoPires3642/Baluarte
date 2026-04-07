@@ -21,6 +21,7 @@ export type CreateAdminProductPayload = {
   imageUrl: string;
   customizationEnabled: boolean;
   customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   variants: CreateAdminProductVariantPayload[];
 };
 
@@ -43,6 +44,7 @@ type AdminProductDto = {
   imageUrl: string;
   customizationEnabled: boolean;
   customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   active: boolean;
   available: boolean;
   stockQuantity: number;
@@ -170,6 +172,7 @@ export function mapAdminProductDtoToAdminProduct(dto: AdminProductDto, teams: Te
     images: [dto.imageUrl],
     customizationEnabled: dto.customizationEnabled,
     customizationTemplatePng: dto.customizationTemplatePng,
+    customizationTemplateMetadata: dto.customizationTemplateMetadata,
     featured: false
   };
 }

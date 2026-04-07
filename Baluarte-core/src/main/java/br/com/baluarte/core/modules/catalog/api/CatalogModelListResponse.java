@@ -13,6 +13,9 @@ public record CatalogModelListResponse(
     BigDecimal price,
     BigDecimal originalPrice,
     String thumbnailUrl,
+    boolean customizationEnabled,
+    String customizationTemplatePng,
+    String customizationTemplateMetadata,
     boolean available,
     int stockQuantity,
     List<AdminProductVariantResponse> variants

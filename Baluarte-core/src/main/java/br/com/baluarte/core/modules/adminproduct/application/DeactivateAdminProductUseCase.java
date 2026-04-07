@@ -45,6 +45,7 @@ public class DeactivateAdminProductUseCase {
             existing.imageUrl(),
             existing.customizationEnabled(),
             existing.customizationTemplatePng(),
+            existing.customizationTemplateMetadata(),
             false,
             false,
             0,

@@ -4,6 +4,10 @@ import type { ImageStyle, StyleProp } from "react-native";
 
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
+import {
+  buildPerspectiveOverlayLayout,
+  resolveFrontPointsFromRawMetadata
+} from "../../lib/personalization/perspective-preview";
 import type { Size } from "../../lib/types";
 import type { ProductScreenProps } from "./types";
 
@@ -50,6 +54,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   const [customNames, setCustomNames] = useState<string[]>([]);
   const [customNumberInput, setCustomNumberInput] = useState("");
   const [customNumber, setCustomNumber] = useState<string | null>(null);
+  const [previewFrame, setPreviewFrame] = useState({ width: 0, height: 0 });
 
   const sizeStock = useMemo(() => {
     if (!product) {
@@ -76,6 +81,15 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
   const previewName = customNames.join(" ").trim();
   const galleryImages = product?.images?.length ? product.images : product?.image ? [product.image] : [];
+  const perspectivePoints = useMemo(() => resolveFrontPointsFromRawMetadata(product?.customizationTemplateMetadata), [
+    product?.customizationTemplateMetadata
+  ]);
+  const perspectiveOverlay = useMemo(() => {
+    if (!perspectivePoints) {
+      return null;
+    }
+    return buildPerspectiveOverlayLayout(perspectivePoints, previewFrame.width, previewFrame.height);
+  }, [perspectivePoints, previewFrame.height, previewFrame.width]);
 
   if (!product) {
     return (
@@ -246,15 +260,43 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
                     testID="personalization-preview-template"
                     source={{ uri: product.customizationTemplatePng as string }}
                     style={styles.personalizationPreviewImage as StyleProp<ImageStyle>}
+                    onLayout={(event) => {
+                      const { width, height } = event.nativeEvent.layout;
+                      setPreviewFrame({ width, height });
+                    }}
                   />
-                  <View style={styles.personalizationPreviewOverlay}>
+                  <View
+                    style={
+                      perspectiveOverlay
+                        ? [
+                            {
+                              position: "absolute",
+                              left: perspectiveOverlay.left,
+                              top: perspectiveOverlay.top,
+                              width: perspectiveOverlay.width,
+                              height: perspectiveOverlay.height,
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              paddingTop: 12,
+                              paddingBottom: 12,
+                              transform: [
+                                { perspective: 900 },
+                                { rotateZ: `${perspectiveOverlay.rotateDeg}deg` },
+                                { skewX: `${perspectiveOverlay.skewXDeg}deg` }
+                              ]
+                            }
+                          ]
+                        : styles.personalizationPreviewOverlay
+                    }
+                  >
                     {previewName ? (
                       <Text
                         style={[
                           styles.personalizationPreviewName,
                           {
                             fontSize: getPreviewNameFontSize(previewName),
-                            letterSpacing: getPreviewNameLetterSpacing(previewName)
+                            letterSpacing: getPreviewNameLetterSpacing(previewName),
+                            maxWidth: perspectiveOverlay ? "90%" : "80%"
                           }
                         ]}
                       >

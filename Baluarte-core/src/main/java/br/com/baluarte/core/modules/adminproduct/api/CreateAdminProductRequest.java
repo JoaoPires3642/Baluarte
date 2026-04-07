@@ -17,6 +17,7 @@ public record CreateAdminProductRequest(
     @NotBlank String imageUrl,
     boolean customizationEnabled,
     String customizationTemplatePng,
+    String customizationTemplateMetadata,
     @NotNull @Valid List<CreateAdminProductVariantRequest> variants
 ) {
 }

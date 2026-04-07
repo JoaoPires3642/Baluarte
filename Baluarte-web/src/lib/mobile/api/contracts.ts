@@ -76,13 +76,16 @@ export interface CatalogModelDto {
   displayOrder: number;
   price?: number;
   originalPrice?: number;
+  customizationEnabled?: boolean;
+  customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   available?: boolean;
   stockQuantity?: number;
-  variants?: Array<{
+  variants?: {
     size: "P" | "M" | "G" | "GG";
     stockQuantity: number;
     available: boolean;
-  }>;
+  }[];
 }
 
 export interface CatalogModelDetailDto {
@@ -94,13 +97,16 @@ export interface CatalogModelDetailDto {
   images: string[];
   price?: number;
   originalPrice?: number;
+  customizationEnabled?: boolean;
+  customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   available?: boolean;
   stockQuantity?: number;
-  variants?: Array<{
+  variants?: {
     size: "P" | "M" | "G" | "GG";
     stockQuantity: number;
     available: boolean;
-  }>;
+  }[];
 }
 
 export interface ShippingQuoteOptionDto {

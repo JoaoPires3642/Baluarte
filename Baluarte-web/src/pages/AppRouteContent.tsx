@@ -32,17 +32,21 @@ type AppRouteContentProps = {
 type HierarchyModelShape = {
   slug: string;
   name: string;
+  description?: string;
   thumbnailUrl?: string;
   images?: string[];
   price?: number;
   originalPrice?: number;
+  customizationEnabled?: boolean;
+  customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   available?: boolean;
   stockQuantity?: number;
-  variants?: Array<{
+  variants?: {
     size: Size;
     stockQuantity: number;
     available: boolean;
-  }>;
+  }[];
 };
 
 type CheckoutContext = {
@@ -222,10 +226,14 @@ export function mapHierarchyModelToProduct(
       ...localMatch,
       id: model.slug,
       name: model.name,
+      description: model.description ?? localMatch.description,
       price: model.price ?? localMatch.price,
       originalPrice: model.originalPrice ?? localMatch.originalPrice,
       image: primaryImage ?? localMatch.image,
       images: model.images?.length ? model.images : primaryImage ? [primaryImage] : localMatch.images,
+      customizationEnabled: model.customizationEnabled ?? localMatch.customizationEnabled,
+      customizationTemplatePng: model.customizationTemplatePng ?? localMatch.customizationTemplatePng,
+      customizationTemplateMetadata: model.customizationTemplateMetadata ?? localMatch.customizationTemplateMetadata,
       stockBySize: model.variants?.length ? variantStockBySize : localMatch.stockBySize,
       inStock: resolvedInStock,
       team: selectedTeam,
@@ -236,11 +244,14 @@ export function mapHierarchyModelToProduct(
   return {
     id: model.slug,
     name: model.name,
-    description: "Modelo oficial disponivel no catalogo.",
+    description: model.description ?? "Modelo oficial disponivel no catalogo.",
     price: model.price ?? 0,
     originalPrice: model.originalPrice,
     image: primaryImage ?? "",
     images: model.images?.length ? model.images : primaryImage ? [primaryImage] : undefined,
+    customizationEnabled: model.customizationEnabled,
+    customizationTemplatePng: model.customizationTemplatePng,
+    customizationTemplateMetadata: model.customizationTemplateMetadata,
     teamId: selectedTeam.id,
     team: selectedTeam,
     sizes: ["P", "M", "G", "GG"],
@@ -529,10 +540,14 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           {
             slug: modelDetail.slug,
             name: modelDetail.name,
+            description: modelDetail.description,
             thumbnailUrl: modelDetail.thumbnailUrl,
             images: modelDetail.images,
             price: modelDetail.price,
             originalPrice: modelDetail.originalPrice,
+            customizationEnabled: modelDetail.customizationEnabled,
+            customizationTemplatePng: modelDetail.customizationTemplatePng,
+            customizationTemplateMetadata: modelDetail.customizationTemplateMetadata,
             available: modelDetail.available,
             stockQuantity: modelDetail.stockQuantity,
             variants: modelDetail.variants

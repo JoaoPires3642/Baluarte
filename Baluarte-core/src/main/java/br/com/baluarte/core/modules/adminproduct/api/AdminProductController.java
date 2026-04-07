@@ -76,6 +76,7 @@ public class AdminProductController {
                 request.imageUrl(),
                 request.customizationEnabled(),
                 request.customizationTemplatePng(),
+                request.customizationTemplateMetadata(),
                 request.variants().stream()
                     .map(variant -> new CreateAdminProductVariantCommand(variant.size(), variant.stockQuantity()))
                     .toList()
@@ -103,6 +104,7 @@ public class AdminProductController {
             request.imageUrl(),
             request.customizationEnabled(),
             request.customizationTemplatePng(),
+            request.customizationTemplateMetadata(),
             request.variants().stream()
                 .map(variant -> new CreateAdminProductVariantCommand(variant.size(), variant.stockQuantity()))
                 .toList()
@@ -125,6 +127,7 @@ public class AdminProductController {
             product.imageUrl(),
             product.customizationEnabled(),
             product.customizationTemplatePng(),
+            product.customizationTemplateMetadata(),
             product.active(),
             product.available(),
             product.stockQuantity(),

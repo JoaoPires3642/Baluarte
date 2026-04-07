@@ -73,6 +73,7 @@ public class UpdateAdminProductUseCase {
             command.imageUrl().trim(),
             command.customizationEnabled(),
             normalizeTemplate(command.customizationTemplatePng()),
+            normalizeTemplate(command.customizationTemplateMetadata()),
             existing.active(),
             existing.active() && stockQuantity > 0,
             stockQuantity,

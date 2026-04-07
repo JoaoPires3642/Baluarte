@@ -80,6 +80,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             entity.getImageUrl(),
             Boolean.TRUE.equals(entity.getCustomizationEnabled()),
             entity.getCustomizationTemplatePng(),
+            entity.getCustomizationTemplateMetadata(),
             Boolean.TRUE.equals(entity.getActive()),
             Boolean.TRUE.equals(entity.getAvailable()),
             entity.getStockQuantity(),

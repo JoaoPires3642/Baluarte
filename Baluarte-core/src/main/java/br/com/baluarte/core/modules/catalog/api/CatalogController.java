@@ -101,6 +101,9 @@ public class CatalogController {
             product.price(),
             product.originalPrice(),
             product.imageUrl(),
+            product.customizationEnabled(),
+            product.customizationTemplatePng(),
+            product.customizationTemplateMetadata(),
             product.available(),
             product.stockQuantity(),
             variants
@@ -121,6 +124,9 @@ public class CatalogController {
             product.originalPrice(),
             product.imageUrl(),
             List.of(product.imageUrl()),
+            product.customizationEnabled(),
+            product.customizationTemplatePng(),
+            product.customizationTemplateMetadata(),
             product.available(),
             product.stockQuantity(),
             variants

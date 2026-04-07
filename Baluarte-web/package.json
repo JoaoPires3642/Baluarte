@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@clerk/clerk-js": "^6.4.0",
+    "@mediapipe/tasks-vision": "^0.10.14",
     "@react-native-picker/picker": "^2.11.4",
     "expo": "~54.0.13",
     "expo-document-picker": "~14.0.8",

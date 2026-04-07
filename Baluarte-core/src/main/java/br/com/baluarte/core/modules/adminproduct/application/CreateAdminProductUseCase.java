@@ -69,6 +69,7 @@ public class CreateAdminProductUseCase {
             command.imageUrl().trim(),
             command.customizationEnabled(),
             normalizeTemplate(command.customizationTemplatePng()),
+            normalizeTemplate(command.customizationTemplateMetadata()),
             true,
             stockQuantity > 0,
             stockQuantity,

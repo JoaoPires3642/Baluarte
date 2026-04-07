@@ -13,6 +13,7 @@ public record CreateAdminProductCommand(
     String imageUrl,
     boolean customizationEnabled,
     String customizationTemplatePng,
+    String customizationTemplateMetadata,
     List<CreateAdminProductVariantCommand> variants
 ) {
 }

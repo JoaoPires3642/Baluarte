@@ -11,33 +11,41 @@ type CatalogModelApiDto = {
   id: string;
   teamSlug: string;
   modelName: string;
+  description?: string;
   thumbnailUrl: string;
   price: number;
   originalPrice?: number;
+  customizationEnabled?: boolean;
+  customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   available: boolean;
   stockQuantity: number;
-  variants: Array<{
+  variants: {
     size: "P" | "M" | "G" | "GG";
     stockQuantity: number;
     available: boolean;
-  }>;
+  }[];
 };
 
 type CatalogModelDetailApiDto = {
   id: string;
   teamSlug: string;
   modelName: string;
+  description?: string;
   thumbnailUrl: string;
   images: string[];
   price: number;
   originalPrice?: number;
+  customizationEnabled?: boolean;
+  customizationTemplatePng?: string;
+  customizationTemplateMetadata?: string;
   available: boolean;
   stockQuantity: number;
-  variants: Array<{
+  variants: {
     size: "P" | "M" | "G" | "GG";
     stockQuantity: number;
     available: boolean;
-  }>;
+  }[];
 };
 
 export async function fetchPublicCategories(client: ApiClient = defaultClient): Promise<CategoryDto[]> {
@@ -106,11 +114,15 @@ export async function fetchPublicModelsByTeam(teamSlug: string, client: ApiClien
     id: item.id,
     name: item.modelName,
     slug: item.id,
+    description: item.description,
     teamSlug: item.teamSlug,
     thumbnailUrl: item.thumbnailUrl,
     displayOrder: index + 1,
     price: item.price,
     originalPrice: item.originalPrice,
+    customizationEnabled: item.customizationEnabled,
+    customizationTemplatePng: item.customizationTemplatePng,
+    customizationTemplateMetadata: item.customizationTemplateMetadata,
     available: item.available,
     stockQuantity: item.stockQuantity,
     variants: item.variants
@@ -160,11 +172,15 @@ export async function fetchPublicModelDetail(
     id: response.data.id,
     slug: response.data.id,
     name: response.data.modelName,
+    description: response.data.description,
     teamSlug: response.data.teamSlug,
     thumbnailUrl: response.data.thumbnailUrl,
     images: response.data.images,
     price: response.data.price,
     originalPrice: response.data.originalPrice,
+    customizationEnabled: response.data.customizationEnabled,
+    customizationTemplatePng: response.data.customizationTemplatePng,
+    customizationTemplateMetadata: response.data.customizationTemplateMetadata,
     available: response.data.available,
     stockQuantity: response.data.stockQuantity,
     variants: response.data.variants

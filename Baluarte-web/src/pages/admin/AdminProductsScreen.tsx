@@ -13,6 +13,10 @@ import {
   updateAdminProductApi
 } from "../../lib/mobile/api/admin-products";
 import { convertLocalImagesToDataUris } from "../../lib/mobile/image-utils";
+import {
+  parseCustomizationTemplateMetadata,
+  validateCustomizationTemplateMetadata
+} from "../../lib/personalization/template-metadata";
 import { getActiveClerkIdentity } from "../../lib/clerkClient";
 import type { NormalizedApiError, ApiAuthorizationContext } from "../../lib/mobile/api/contracts";
 import { ProductFormModal } from "../../components/admin/ProductFormModal";
@@ -51,6 +55,7 @@ export function AdminProductsScreen(props: AdminProductsScreenProps) {
     discountPrice: "",
     customizationEnabled: false,
     customizationTemplatePng: "",
+    customizationTemplateMetadata: "",
     category: defaultCategory,
     teamId: defaultTeamId,
     stockBySize: defaultStock(),
@@ -182,18 +187,33 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     return imageExtensions.some((ext) => normalizedPath.endsWith(ext));
   };
 
-  const isValidPngTemplate = (value: string): boolean => {
+  const isValidTemplateImage = (value: string): boolean => {
     const normalized = value.trim();
     if (!normalized) {
       return false;
     }
 
-    if (normalized.toLowerCase().startsWith("data:image/png")) {
+    if (normalized.toLowerCase().startsWith("data:image/")) {
       return true;
     }
 
+    if (isLocalImageUri(normalized)) {
+      return true;
+    }
+
+    // Alguns provedores de imagem não expõem extensão no path (ex.: Google/GCS).
+    // Para não bloquear o fluxo do admin, aceitamos qualquer URL http/https válida.
+    try {
+      const parsed = new URL(normalized);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return true;
+      }
+    } catch {
+      // continua para validação por extensão abaixo
+    }
+
     const normalizedPath = resolvePathWithoutQuery(normalized);
-    return normalizedPath.endsWith(".png");
+    return [".png", ".jpg", ".jpeg", ".webp"].some((ext) => normalizedPath.endsWith(ext));
   };
 
   const isNormalizedApiError = (value: unknown): value is NormalizedApiError => {
@@ -252,6 +272,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       imageUrl: string;
       customizationEnabled: boolean;
       customizationTemplatePng?: string;
+      customizationTemplateMetadata?: string;
       active: boolean;
       stockQuantity: number;
       variants: { size: ValidSize; stockQuantity: number }[];
@@ -283,7 +304,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       image: dto.imageUrl,
       images: [dto.imageUrl],
       customizationEnabled: dto.customizationEnabled,
-      customizationTemplatePng: dto.customizationTemplatePng
+      customizationTemplatePng: dto.customizationTemplatePng,
+      customizationTemplateMetadata: dto.customizationTemplateMetadata
     };
   };
 
@@ -376,6 +398,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       discountPrice: product.originalPrice ? product.price.toFixed(2) : "",
       customizationEnabled: Boolean(product.customizationEnabled),
       customizationTemplatePng: product.customizationTemplatePng ?? "",
+      customizationTemplateMetadata: product.customizationTemplateMetadata ?? "",
       category: product.team.category,
       teamId: product.teamId,
       stockBySize: SIZE_ORDER.reduce<Record<ValidSize, string>>((acc, size) => {
@@ -438,11 +461,24 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       errors.push("Adicione pelo menos uma imagem na etapa 2");
     }
     const createTemplate = createDraft.customizationTemplatePng.trim();
+    const createMetadata = createDraft.customizationTemplateMetadata.trim();
     if (createDraft.customizationEnabled && !createTemplate) {
       errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
     }
-    if (createDraft.customizationEnabled && createTemplate && !isValidPngTemplate(createTemplate)) {
-      errors.push("Template de personalizacao deve ser um PNG valido (.png)");
+    if (createDraft.customizationEnabled && createTemplate && !isValidTemplateImage(createTemplate)) {
+      errors.push("Template de personalizacao deve ser uma URL de imagem valida (PNG recomendado)");
+    }
+    if (createDraft.customizationEnabled && !createMetadata) {
+      errors.push("Ajuste e salve os 4 pontos da area util antes de cadastrar o produto.");
+    }
+    if (createDraft.customizationEnabled && createMetadata) {
+      const parsedMetadata = parseCustomizationTemplateMetadata(createMetadata);
+      if (!parsedMetadata) {
+        errors.push("Metadata da personalizacao esta invalida. Revise o mapeamento.");
+      } else {
+        const metadataErrors = validateCustomizationTemplateMetadata(parsedMetadata);
+        errors.push(...metadataErrors);
+      }
     }
 
     if (errors.length > 0) {
@@ -491,6 +527,9 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           customizationEnabled: createDraft.customizationEnabled,
           customizationTemplatePng: createDraft.customizationEnabled
             ? createDraft.customizationTemplatePng.trim() || undefined
+            : undefined,
+          customizationTemplateMetadata: createDraft.customizationEnabled
+            ? createDraft.customizationTemplateMetadata.trim() || undefined
             : undefined,
           variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: stockBySize[size] }))
         },
@@ -563,11 +602,24 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       errors.push("Mantenha ao menos uma imagem do produto");
     }
     const editTemplate = editDraft.customizationTemplatePng.trim();
+    const editMetadata = editDraft.customizationTemplateMetadata.trim();
     if (editDraft.customizationEnabled && !editTemplate) {
       errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
     }
-    if (editDraft.customizationEnabled && editTemplate && !isValidPngTemplate(editTemplate)) {
-      errors.push("Template de personalizacao deve ser um PNG valido (.png)");
+    if (editDraft.customizationEnabled && editTemplate && !isValidTemplateImage(editTemplate)) {
+      errors.push("Template de personalizacao deve ser uma URL de imagem valida (PNG recomendado)");
+    }
+    if (editDraft.customizationEnabled && !editMetadata) {
+      errors.push("Ajuste e salve os 4 pontos da area util antes de atualizar o produto.");
+    }
+    if (editDraft.customizationEnabled && editMetadata) {
+      const parsedMetadata = parseCustomizationTemplateMetadata(editMetadata);
+      if (!parsedMetadata) {
+        errors.push("Metadata da personalizacao esta invalida. Revise o mapeamento.");
+      } else {
+        const metadataErrors = validateCustomizationTemplateMetadata(parsedMetadata);
+        errors.push(...metadataErrors);
+      }
     }
 
     if (errors.length > 0) {
@@ -616,6 +668,9 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           customizationEnabled: editDraft.customizationEnabled,
           customizationTemplatePng: editDraft.customizationEnabled
             ? editDraft.customizationTemplatePng.trim() || undefined
+            : undefined,
+          customizationTemplateMetadata: editDraft.customizationEnabled
+            ? editDraft.customizationTemplateMetadata.trim() || undefined
             : undefined,
           variants: SIZE_ORDER.map((size) => ({
             size,
@@ -694,6 +749,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
             imageUrl: product.image,
             customizationEnabled: Boolean(product.customizationEnabled),
             customizationTemplatePng: product.customizationTemplatePng,
+            customizationTemplateMetadata: product.customizationTemplateMetadata,
             variants: SIZE_ORDER.map((size) => ({
               size,
               stockQuantity: nextStockBySize[size] ?? 0

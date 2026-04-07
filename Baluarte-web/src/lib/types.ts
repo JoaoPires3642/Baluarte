@@ -26,6 +26,7 @@ export interface Product {
 	images?: string[];
 	customizationEnabled?: boolean;
 	customizationTemplatePng?: string;
+	customizationTemplateMetadata?: string;
 	teamId: string;
 	team: Team;
 	sizes: Size[];

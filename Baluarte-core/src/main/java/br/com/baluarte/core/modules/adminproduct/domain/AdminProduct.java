@@ -18,6 +18,7 @@ public record AdminProduct(
     String imageUrl,
     boolean customizationEnabled,
     String customizationTemplatePng,
+    String customizationTemplateMetadata,
     boolean active,
     boolean available,
     int stockQuantity,
