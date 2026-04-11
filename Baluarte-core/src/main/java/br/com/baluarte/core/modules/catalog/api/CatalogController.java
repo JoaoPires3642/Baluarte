@@ -44,6 +44,20 @@ public class CatalogController {
         return ApiSuccessResponse.of(data);
     }
 
+    @GetMapping("/featured")
+    public ApiSuccessResponse<List<CatalogModelListResponse>> listFeaturedProducts(
+        @RequestParam(defaultValue = "8") @Min(1) @Max(50) int limit
+    ) {
+        List<CatalogModelListResponse> data = adminProductRepository.findAll()
+            .stream()
+            .filter(product -> product.active() && product.available())
+            .limit(limit)
+            .map(this::toCatalogModelListResponse)
+            .toList();
+
+        return ApiSuccessResponse.of(data);
+    }
+
     @GetMapping("/categories/{categorySlug}/teams")
     public ApiSuccessResponse<List<TeamResponse>> listTeamsByCategory(
         @PathVariable @Pattern(regexp = "^[a-z0-9-]+$") String categorySlug,

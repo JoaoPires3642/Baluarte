@@ -4,47 +4,14 @@ import type { ImageStyle, StyleProp } from "react-native";
 
 import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
-import {
-  buildPerspectiveOverlayLayout,
-  resolveFrontPointsFromRawMetadata
-} from "../../lib/personalization/perspective-preview";
 import type { Size } from "../../lib/types";
 import type { ProductScreenProps } from "./types";
+import { JerseyPreview } from "../../components/storefront/JerseyPreview";
 
 const MAX_CUSTOM_NAME_LENGTH = 14;
 const CUSTOM_NAME_PRICE_BRL = 25;
 const CUSTOM_NUMBER_DIGIT_PRICE_BRL = 20;
 const JERSEY_NUMBER_PATTERN = /^\d{1,2}$/;
-
-const getPreviewNameFontSize = (value: string): number => {
-  const normalizedLength = value.replace(/\s+/g, "").length;
-
-  if (normalizedLength <= 8) {
-    return 30;
-  }
-  if (normalizedLength <= 12) {
-    return 26;
-  }
-  if (normalizedLength <= 16) {
-    return 22;
-  }
-  if (normalizedLength <= 20) {
-    return 19;
-  }
-  return 17;
-};
-
-const getPreviewNameLetterSpacing = (value: string): number => {
-  const normalizedLength = value.replace(/\s+/g, "").length;
-
-  if (normalizedLength <= 10) {
-    return 1.5;
-  }
-  if (normalizedLength <= 16) {
-    return 1.1;
-  }
-  return 0.6;
-};
 
 export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, onGoCart }: ProductScreenProps) {
   const [selectedSize, setSelectedSize] = useState<Size | null>(null);
@@ -81,15 +48,6 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
   const previewName = customNames.join(" ").trim();
   const galleryImages = product?.images?.length ? product.images : product?.image ? [product.image] : [];
-  const perspectivePoints = useMemo(() => resolveFrontPointsFromRawMetadata(product?.customizationTemplateMetadata), [
-    product?.customizationTemplateMetadata
-  ]);
-  const perspectiveOverlay = useMemo(() => {
-    if (!perspectivePoints) {
-      return null;
-    }
-    return buildPerspectiveOverlayLayout(perspectivePoints, previewFrame.width, previewFrame.height);
-  }, [perspectivePoints, previewFrame.height, previewFrame.width]);
 
   if (!product) {
     return (
@@ -256,54 +214,22 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
               <Text style={styles.summaryTitle}>Preview da personalizacao</Text>
               {previewName || customNumber ? (
                 <View style={styles.personalizationPreviewCard}>
-                  <Image
-                    testID="personalization-preview-template"
-                    source={{ uri: product.customizationTemplatePng as string }}
-                    style={styles.personalizationPreviewImage as StyleProp<ImageStyle>}
+                  <View
+                    style={styles.personalizationPreviewContainer}
                     onLayout={(event) => {
                       const { width, height } = event.nativeEvent.layout;
                       setPreviewFrame({ width, height });
                     }}
-                  />
-                  <View
-                    style={
-                      perspectiveOverlay
-                        ? [
-                            {
-                              position: "absolute",
-                              left: perspectiveOverlay.left,
-                              top: perspectiveOverlay.top,
-                              width: perspectiveOverlay.width,
-                              height: perspectiveOverlay.height,
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              paddingTop: 12,
-                              paddingBottom: 12,
-                              transform: [
-                                { perspective: 900 },
-                                { rotateZ: `${perspectiveOverlay.rotateDeg}deg` },
-                                { skewX: `${perspectiveOverlay.skewXDeg}deg` }
-                              ]
-                            }
-                          ]
-                        : styles.personalizationPreviewOverlay
-                    }
                   >
-                    {previewName ? (
-                      <Text
-                        style={[
-                          styles.personalizationPreviewName,
-                          {
-                            fontSize: getPreviewNameFontSize(previewName),
-                            letterSpacing: getPreviewNameLetterSpacing(previewName),
-                            maxWidth: perspectiveOverlay ? "90%" : "80%"
-                          }
-                        ]}
-                      >
-                        {previewName}
-                      </Text>
-                    ) : null}
-                    {customNumber ? <Text style={styles.personalizationPreviewNumber}>{customNumber}</Text> : null}
+                    {previewFrame.width > 0 && previewFrame.height > 0 && (
+                      <JerseyPreview
+                        templateUri={product.customizationTemplatePng as string}
+                        name={previewName}
+                        number={customNumber}
+                        width={previewFrame.width}
+                        height={previewFrame.height}
+                      />
+                    )}
                   </View>
                 </View>
               ) : (

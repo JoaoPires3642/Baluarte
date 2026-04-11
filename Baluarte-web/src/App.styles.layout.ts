@@ -327,8 +327,78 @@ export const layoutStyles = {
     padding: 14,
     gap: 10
   },
-  modalBody: {
+modalBody: {
     gap: 8,
     paddingBottom: 6
+  },
+  contentShell: {
+    flex: 1
+  },
+  contentShellDesktop: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    flex: 1
+  },
+  containerDesktop: {
+    flex: 1,
+    maxWidth: 1200,
+    alignSelf: "center",
+    paddingBottom: 48,
+    paddingHorizontal: 32
+  },
+  appShellDesktop: {
+    maxWidth: "100%",
+    flexDirection: "row"
+  },
+  bottomNavDesktop: {
+    position: "static",
+    width: 220,
+    minHeight: "auto",
+    borderRadius: 0,
+    borderRightWidth: 1,
+    borderRightColor: "#e5e7eb",
+    margin: 0,
+    padding: 16,
+    paddingTop: 24
+  },
+  headerDesktop: {
+    paddingHorizontal: 32,
+    minHeight: 80
+  },
+  headerActionsDesktop: {
+    maxWidth: "none",
+    gap: 16,
+    flexDirection: "row"
+  }
+};
+
+export const desktopStyles = {
+  heroSectionDesktop: {
+    marginHorizontal: 0,
+    marginTop: 24,
+    borderRadius: 16,
+    minHeight: 480
+  },
+  heroButtonsDesktop: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16
+  },
+  sectionDesktop: {
+    paddingHorizontal: 0,
+    paddingTop: 32,
+    gap: 16
+  },
+  productGridDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    rowGap: 20,
+    columnGap: 16
+  },
+  stackScreenDesktop: {
+    paddingHorizontal: 0,
+    paddingTop: 24,
+    gap: 16
   }
 };

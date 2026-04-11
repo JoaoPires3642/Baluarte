@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import styles from "../../App.styles";
 
 type BottomNavProps = {
+  isDesktop?: boolean;
   isAdminUser: boolean;
   isHomeActive: boolean;
   isCartActive: boolean;
@@ -23,6 +24,7 @@ type BottomNavProps = {
 };
 
 export function BottomNav({
+  isDesktop = false,
   isAdminUser,
   isHomeActive,
   isCartActive,
@@ -41,9 +43,11 @@ export function BottomNav({
   onPressAdminOrders,
   onPressAdminCoupons
 }: BottomNavProps) {
+  const navStyle = isDesktop ? styles.bottomNavDesktop : styles.bottomNav;
+  
   if (isAdminUser) {
     return (
-      <View style={styles.bottomNav}>
+      <View style={navStyle}>
         <Pressable style={[styles.bottomNavItem, isAdminActive ? styles.bottomNavItemActive : null]} onPress={onPressAccount}>
           <Text style={[styles.bottomNavText, isAdminActive ? styles.bottomNavTextActive : null]}>Painel</Text>
         </Pressable>
@@ -64,7 +68,7 @@ export function BottomNav({
   }
 
   return (
-    <View style={styles.bottomNav}>
+    <View style={navStyle}>
       <Pressable style={[styles.bottomNavItem, isHomeActive ? styles.bottomNavItemActive : null]} onPress={onPressHome}>
         <Text style={[styles.bottomNavText, isHomeActive ? styles.bottomNavTextActive : null]}>Inicio</Text>
       </Pressable>

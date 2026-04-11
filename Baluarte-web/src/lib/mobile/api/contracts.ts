@@ -130,3 +130,55 @@ export interface ProfileAddressDto {
   isDefault: boolean;
 }
 
+export interface PaymentRequestDto {
+  checkoutSessionId: string;
+  idempotencyKey: string;
+  method: "pix" | "card";
+  payer: {
+    email: string;
+    identification: { type: "CPF" | "CNPJ"; number: string };
+  };
+  shippingAddress: {
+    cep: string;
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+  };
+  shipping: {
+    optionId: string;
+    label: string;
+    price: number;
+  };
+  items: Array<{
+    productId: string;
+    size: string;
+    quantity: number;
+    unitPrice: number;
+    customNames?: string[];
+    customNumber?: string;
+  }>;
+  card?: {
+    token: string;
+    paymentMethodId: string;
+    issuerId?: string;
+    installments: number;
+  };
+}
+
+export interface PaymentResponseDto {
+  paymentId: string;
+  orderReference: string;
+  provider: string;
+  method: "pix" | "card";
+  status: string;
+  statusDetail: string;
+  installments?: number;
+  pix?: {
+    qrCode: string;
+    qrCodeBase64: string;
+    copyPasteCode: string;
+  };
+}
+

@@ -50,3 +50,16 @@ export function shouldUseMockCategories(): boolean {
 }
 
 export const DEFAULT_API_TIMEOUT_MS = 8000;
+
+export function resolveCardTokenMode(): "mock" | "mercadopago" {
+  const mode = process.env.EXPO_PUBLIC_PAYMENT_CARD_TOKEN_MODE;
+  return mode === "mercadopago" ? "mercadopago" : "mock";
+}
+
+export function resolveMercadoPagoPublicKey(): string {
+  return process.env.EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.trim() ?? "";
+}
+
+export function resolvePaymentProvider(): string {
+  return process.env.EXPO_PUBLIC_PAYMENT_PROVIDER ?? "mock";
+}

@@ -27,6 +27,7 @@ import styles from "../App.styles";
 
 type AppRouteContentProps = {
   state: AppState;
+  isDesktop?: boolean;
 };
 
 type HierarchyModelShape = {

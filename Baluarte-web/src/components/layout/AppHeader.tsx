@@ -6,16 +6,17 @@ import type { User } from "../../lib/types";
 type AppHeaderProps = {
   user: User | null;
   topInset: number;
+  isDesktop?: boolean;
   onGoHome: () => void;
   onOpenLogin: () => void;
   onOpenRegister: () => void;
   onLogout: () => void;
 };
 
-export function AppHeader({ user, topInset, onGoHome, onOpenLogin, onOpenRegister, onLogout }: AppHeaderProps) {
+export function AppHeader({ user, topInset, isDesktop = false, onGoHome, onOpenLogin, onOpenRegister, onLogout }: AppHeaderProps) {
   return (
     <View style={styles.headerShell}>
-      <View style={[styles.header, { paddingTop: Math.max(8, topInset + 6) }]}>
+      <View style={[styles.header, { paddingTop: Math.max(8, topInset + 6) }, isDesktop && styles.headerDesktop]}>
         <Pressable style={styles.headerBrand} onPress={onGoHome}>
           <Image source={require("../../../public/logo.png")} style={styles.brandLogo} resizeMode="contain" />
           <View style={styles.headerBrandTextWrap}>
@@ -24,23 +25,25 @@ export function AppHeader({ user, topInset, onGoHome, onOpenLogin, onOpenRegiste
           </View>
         </Pressable>
 
-        {user ? (
-          <View style={styles.headerActions}>
-            <Text style={styles.headerUserName} numberOfLines={1}>{user.name}</Text>
-            <Pressable style={styles.navChip} onPress={onLogout}>
-              <Text style={styles.navChipText}>Sair</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <View style={styles.headerActions}>
-            <Pressable style={styles.navChip} onPress={onOpenLogin}>
-              <Text style={styles.navChipText}>Entrar</Text>
-            </Pressable>
-            <Pressable style={styles.navChipPrimary} onPress={onOpenRegister}>
-              <Text style={styles.navChipPrimaryText}>Cadastrar</Text>
-            </Pressable>
-          </View>
-        )}
+        <View style={[styles.headerActions, isDesktop && styles.headerActionsDesktop]}>
+          {user ? (
+            <>
+              <Text style={styles.headerUserName} numberOfLines={1}>{user.name}</Text>
+              <Pressable style={styles.navChip} onPress={onLogout}>
+                <Text style={styles.navChipText}>Sair</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable style={styles.navChip} onPress={onOpenLogin}>
+                <Text style={styles.navChipText}>Entrar</Text>
+              </Pressable>
+              <Pressable style={styles.navChipPrimary} onPress={onOpenRegister}>
+                <Text style={styles.navChipPrimaryText}>Cadastrar</Text>
+              </Pressable>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );

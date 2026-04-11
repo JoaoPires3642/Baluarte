@@ -33,7 +33,7 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
   const ordersData = [3, 5, 4, 8, 9, 7, 4];
   const maxRevenue = Math.max(...revenueData);
   const maxOrders = Math.max(...ordersData);
-  const days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"];
+  const days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
   return (
     <View style={styles.stackScreen}>
@@ -44,7 +44,6 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
       <Text style={styles.screenDescription}>Visão geral de vendas e desempenho.</Text>
 
       <ScrollView style={{ marginBottom: 20 }}>
-        {/* KPI Cards */}
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
             <Text style={styles.screenDescription}>Produtos ativos</Text>
@@ -60,95 +59,88 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
 
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
             <Text style={styles.screenDescription}>Preço médio</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#8b5cf6", marginTop: 4 }}>R$ {averagePrice.toFixed(2)}</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#f59e0b", marginTop: 4 }}>R$ {Math.round(averagePrice)}</Text>
             <Text style={styles.screenDescription}>por produto</Text>
           </View>
 
           <View style={[styles.summaryCard, { flex: 1, minWidth: "45%" }]}>
-            <Text style={styles.screenDescription}>Ativos publicados</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: "#f59e0b", marginTop: 4 }}>{conversionRate}%</Text>
-            <Text style={styles.screenDescription}>do catálogo interno</Text>
+            <Text style={styles.screenDescription}>Conversion rate</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#8b5cf6", marginTop: 4 }}>{conversionRate}%</Text>
+            <Text style={styles.screenDescription}>ativos vs total</Text>
           </View>
         </View>
 
-        {/* Revenue Chart (Simple bar visualization) */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Receita (últimos 7 dias)</Text>
-          <View style={{ marginVertical: 12, gap: 8 }}>
-            {revenueData.map((value, idx) => (
-              <View key={idx}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <Text style={{ fontSize: 12, color: "#6b7280" }}>{days[idx]}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#2563eb" }}>R$ {value.toFixed(2)}</Text>
-                </View>
-                <View style={{ height: 6, backgroundColor: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                  <View
-                    style={{
-                      height: "100%",
-                      width: `${(value / maxRevenue) * 100}%`,
-                      backgroundColor: "#2563eb",
-                      borderRadius: 3
-                    }}
-                  />
-                </View>
+          <Text style={styles.screenTitle}>Receita (últimos 7 dias)</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12, height: 120, alignItems: "flex-end" }}>
+            {revenueData.map((value, index) => (
+              <View key={index} style={{ flex: 1, alignItems: "center" }}>
+                <View
+                  style={{
+                    width: "100%",
+                    height: `${(value / maxRevenue) * 100}%`,
+                    backgroundColor: "#10b981",
+                    borderRadius: 4,
+                    minHeight: 8
+                  }}
+                />
+              </View>
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
+            {days.map((day, index) => (
+              <Text key={index} style={styles.screenDescription}>{day}</Text>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.screenTitle}>Pedidos (últimos 7 dias)</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12, height: 80, alignItems: "flex-end" }}>
+            {ordersData.map((value, index) => (
+              <View key={index} style={{ flex: 1, alignItems: "center" }}>
+                <View
+                  style={{
+                    width: "100%",
+                    height: `${(value / maxOrders) * 100}%`,
+                    backgroundColor: "#3b82f6",
+                    borderRadius: 4,
+                    minHeight: 8
+                  }}
+                />
               </View>
             ))}
           </View>
         </View>
 
-        {/* Orders Chart */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Pedidos (últimos 7 dias)</Text>
-          <View style={{ marginVertical: 12, gap: 8 }}>
-            {ordersData.map((value, idx) => (
-              <View key={idx}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <Text style={{ fontSize: 12, color: "#6b7280" }}>{days[idx]}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#3b82f6" }}>{value} pedidos</Text>
-                </View>
-                <View style={{ height: 6, backgroundColor: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                  <View
-                    style={{
-                      height: "100%",
-                      width: `${(value / maxOrders) * 100}%`,
-                      backgroundColor: "#3b82f6",
-                      borderRadius: 3
-                    }}
-                  />
-                </View>
-              </View>
-            ))}
+          <Text style={styles.screenTitle}>Ações Rápidas</Text>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <Pressable style={styles.primaryActionButton} onPress={onOpenOrders}>
+              <Text style={styles.primaryActionButtonText}>Ver Pedidos</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryActionButton} onPress={onOpenProducts}>
+              <Text style={styles.secondaryActionButtonText}>Gerenciar Produtos</Text>
+            </Pressable>
           </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Ações Rápidas</Text>
-          <Pressable style={styles.primaryActionButton} onPress={onOpenOrders}>
-            <Text style={styles.primaryActionButtonText}>Ver Pedidos</Text>
-          </Pressable>
-          <Pressable style={styles.secondaryActionButton} onPress={onOpenProducts}>
-            <Text style={styles.secondaryActionButtonText}>Gerenciar Produtos</Text>
-          </Pressable>
-        </View>
-
-        {/* Best Sellers Preview */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Times com mais produtos</Text>
-          {teamSummary.length > 0 ? (
-            teamSummary.map((item, index) => (
-              <View key={item.teamName} style={styles.summaryLine}>
-                <Text style={styles.summaryKey}>{index + 1}. {item.teamName}</Text>
-                <Text style={styles.summaryValue}>{item.count} produtos</Text>
+        {teamSummary.length > 0 ? (
+          <View style={styles.summaryCard}>
+            <Text style={styles.screenTitle}>Times com mais produtos</Text>
+            {teamSummary.map((entry, index) => (
+              <View key={index} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
+                <Text style={styles.screenDescription}>{entry.teamName}</Text>
+                <Text style={{ fontWeight: "600" }}>{entry.count} produtos</Text>
               </View>
-            ))
-          ) : (
-            <Text style={styles.screenDescription}>Nenhum produto carregado ainda.</Text>
-          )}
-          <Pressable style={styles.secondaryActionButton}>
-            <Text style={styles.secondaryActionButtonText}>Ver Relatório Completo</Text>
-          </Pressable>
-        </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.screenDescription}>Nenhum produto carregado ainda.</Text>
+        )}
+        <Pressable style={styles.secondaryActionButton}>
+          <Text style={styles.secondaryActionButtonText}>Ver Relatório Completo</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );

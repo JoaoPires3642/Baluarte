@@ -1,10 +1,13 @@
 package br.com.baluarte.core.shared.error;
 
 import br.com.baluarte.core.modules.adminproduct.application.AdminProductValidationException;
+import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +18,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
@@ -79,8 +84,28 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(PaymentValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handlePaymentValidation(
+        PaymentValidationException exception,
+        HttpServletRequest request
+    ) {
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            "VALIDATION_ERROR",
+            exception.getMessage(),
+            List.of(),
+            request
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception, HttpServletRequest request) {
+        String traceId = request.getAttribute(TraceIdFilter.TRACE_ID_KEY) instanceof String value
+            ? value
+            : MDC.get(TraceIdFilter.TRACE_ID_KEY);
+
+        log.error("Unhandled exception for traceId={}", traceId, exception);
+
         return buildResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",

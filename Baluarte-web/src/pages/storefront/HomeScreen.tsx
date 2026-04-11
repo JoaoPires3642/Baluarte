@@ -62,12 +62,10 @@ export function HomeScreen({ isLoading, featuredProducts, onOpenCategory, onOpen
 
         <View style={styles.productGrid}>
           {isLoading ? (
-            // Show skeleton loaders during loading
             Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={`skeleton-${i}`} variant="product" />
             ))
           ) : (
-            // Show actual products when loaded
             featuredProducts.map((product) => (
               <Pressable key={product.id} style={styles.productCard} onPress={() => onOpenProduct(product.id)}>
                 <Image source={{ uri: product.image }} style={styles.productImage} />

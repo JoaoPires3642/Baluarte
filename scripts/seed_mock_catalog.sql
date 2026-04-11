@@ -5,7 +5,8 @@ WITH category_data(slug, name, display_order) AS (
     VALUES
         ('nacionais', 'Nacionais', 10),
         ('internacionais', 'Internacionais', 11),
-        ('selecoes', 'Selecoes', 12)
+        ('selecoes', 'Selecoes', 12),
+        ('personalizado', 'Personalizado', 13)
 )
 INSERT INTO catalog_category (id, name, slug, display_order, active)
 SELECT
@@ -33,13 +34,13 @@ WITH team_data(slug, name, category_slug, league, display_order) AS (
         ('flamengo', 'Flamengo', 'nacionais', 'Serie A', 1),
         ('palmeiras', 'Palmeiras', 'nacionais', 'Serie A', 2),
         ('corinthians', 'Corinthians', 'nacionais', 'Serie A', 3),
-        ('sao-paulo', 'Sao Paulo', 'nacionais', 'Serie A', 4),
+        ('sao-paulo', 'São Paulo', 'nacionais', 'Serie A', 4),
         ('santos', 'Santos', 'nacionais', 'Serie A', 5),
         ('botafogo', 'Botafogo', 'nacionais', 'Serie A', 6),
         ('fluminense', 'Fluminense', 'nacionais', 'Serie A', 7),
-        ('gremio', 'Gremio', 'nacionais', 'Serie A', 8),
+        ('gremio', 'Grêmio', 'nacionais', 'Serie A', 8),
         ('internacional', 'Internacional', 'nacionais', 'Serie A', 9),
-        ('atletico-mg', 'Atletico-MG', 'nacionais', 'Serie A', 10),
+        ('atletico-mg', 'Atlético-MG', 'nacionais', 'Serie A', 10),
         ('real-madrid', 'Real Madrid', 'internacionais', 'La Liga', 1),
         ('barcelona', 'Barcelona', 'internacionais', 'La Liga', 2),
         ('manchester-city', 'Manchester City', 'internacionais', 'Premier League', 3),
@@ -47,10 +48,10 @@ WITH team_data(slug, name, category_slug, league, display_order) AS (
         ('psg', 'PSG', 'internacionais', 'Ligue 1', 5),
         ('juventus', 'Juventus', 'internacionais', 'Serie A', 6),
         ('bayern', 'Bayern de Munique', 'internacionais', 'Bundesliga', 7),
-        ('inter-milan', 'Inter de Milao', 'internacionais', 'Serie A', 8),
+        ('inter-milan', 'Inter de Milão', 'internacionais', 'Serie A', 8),
         ('brasil', 'Brasil', 'selecoes', NULL, 1),
         ('argentina', 'Argentina', 'selecoes', NULL, 2),
-        ('franca', 'Franca', 'selecoes', NULL, 3),
+        ('franca', 'França', 'selecoes', NULL, 3),
         ('alemanha', 'Alemanha', 'selecoes', NULL, 4),
         ('portugal', 'Portugal', 'selecoes', NULL, 5),
         ('espanha', 'Espanha', 'selecoes', NULL, 6)
