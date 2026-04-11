@@ -1,9 +1,7 @@
 import Link from "next/link"
-import Image from "next/image"
-import { ShieldCheck, Shirt } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 import { fetchModelsByTeam, type Model } from "@/lib/api"
-import { resolveMediaUrl } from "@/lib/media"
-import { Card, CardContent } from "@/components/ui/card"
+import { ProductCard } from "@/components/product-card"
 
 type DisplayModel = Model & {
   image?: string
@@ -41,38 +39,18 @@ export default async function TeamPage({ params }: Props) {
         <p className="mt-2 text-sm text-slate-500">Produtos organizados em uma vitrine mais limpa e confiável.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {models.map((model: DisplayModel) => {
-          const mediaUrl = resolveMediaUrl(model.thumbnailUrl || model.imageUrl || model.image)
-
           return (
-          <Link key={model.id} href={`/produto/${model.id}?team=${encodeURIComponent(slug)}`}>
-            <Card className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
-              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                {mediaUrl ? (
-                  <Image
-                    src={mediaUrl}
-                    alt={model.modelName || model.name || "Produto Baluarte"}
-                    fill
-                    unoptimized
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <Shirt className="h-12 w-12 text-[#0f274d]" />
-                )}
-              </div>
-              <CardContent className="p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">{teamName}</p>
-                <h3 className="mt-2 line-clamp-2 text-base font-bold uppercase tracking-[-0.03em] text-slate-900 sm:text-lg">{model.modelName || model.name}</h3>
-                <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-                  {model.originalPrice ? <span className="text-sm text-slate-400 line-through">R$ {Number(model.originalPrice).toFixed(2).replace(".", ",")}</span> : null}
-                  <p className="text-xl font-extrabold text-[#102a5c] sm:text-2xl">
-                    R$ {Number(model.price).toFixed(2).replace(".", ",")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+            <ProductCard
+              key={model.id}
+              href={`/produto/${model.id}?team=${encodeURIComponent(slug)}`}
+              teamLabel={teamName}
+              title={model.modelName || model.name || "Produto Baluarte"}
+              price={Number(model.price)}
+              originalPrice={model.originalPrice ?? null}
+              imageUrl={model.thumbnailUrl || model.imageUrl || model.image}
+            />
         )})}
       </div>
 

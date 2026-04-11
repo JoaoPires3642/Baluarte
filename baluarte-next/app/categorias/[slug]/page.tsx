@@ -1,10 +1,9 @@
 import Link from "next/link"
-import Image from "next/image"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy } from "lucide-react"
-import { fetchTeamsByCategory, fetchPublicModels, type Model, type Team } from "@/lib/api"
+import { fetchModelsByTeam, fetchTeamsByCategory, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
-import { resolveMediaUrl } from "@/lib/media"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
+import { ProductCard } from "@/components/product-card"
 
 type DisplayModel = Model & {
   image?: string
@@ -23,11 +22,16 @@ const categoryNames: Record<string, string> = {
 
 async function getData(slug: string) {
   try {
-    const [teamsRes, modelsRes] = await Promise.all([
-      fetchTeamsByCategory(slug),
-      fetchPublicModels(),
-    ])
-    return { teams: teamsRes.data, models: modelsRes.data }
+    const teamsRes = await fetchTeamsByCategory(slug)
+    const teams = teamsRes.data
+
+    const modelResponses = await Promise.all(
+      teams.map((team) => fetchModelsByTeam(team.slug).catch(() => ({ data: [] as Model[] })))
+    )
+
+    const models = modelResponses.flatMap((response) => response.data)
+
+    return { teams, models }
   } catch {
     return { teams: [], models: [] }
   }
@@ -90,12 +94,12 @@ export default async function CategoryPage({ params }: Props) {
 
       <section className="mb-12">
           <h2 className="mb-4 text-xl font-semibold">Times</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           {displayTeams.map((team: Team) => (
               <Link key={team.id} href={`/times/${team.slug}`}>
-                <Card className="cursor-pointer p-5 text-center transition-shadow hover:shadow-lg sm:p-6">
-                  <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d]"><ShieldCheck className="h-7 w-7" /></div>
-                  <h3 className="font-semibold">{team.name}</h3>
+                <Card className="cursor-pointer p-4 text-center transition-shadow hover:shadow-lg sm:p-6">
+                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14"><ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+                  <h3 className="text-sm font-semibold sm:text-base">{team.name}</h3>
                   <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c3222a]">Ver produtos <ChevronRight className="h-3.5 w-3.5" /></p>
                 </Card>
               </Link>
@@ -106,35 +110,18 @@ export default async function CategoryPage({ params }: Props) {
 
       <section>
           <h2 className="mb-4 text-xl font-semibold">Produtos</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           {displayModels.map((model: DisplayModel) => {
-            const mediaUrl = resolveMediaUrl(model.thumbnailUrl || model.imageUrl || model.image)
-
             return (
-            <Link key={model.id} href={`/produto/${model.id}?team=${encodeURIComponent(model.teamSlug || "")}`}>
-              <Card className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
-                <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                  {mediaUrl ? (
-                    <Image
-                      src={mediaUrl}
-                      alt={model.modelName || model.name || "Produto Baluarte"}
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <Shirt className="h-12 w-12 text-[#0f274d]" />
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">{model.team?.name || model.teamSlug}</p>
-                  <h3 className="line-clamp-2 text-base font-bold uppercase tracking-[-0.03em] text-slate-900 sm:text-lg">{model.modelName || model.name}</h3>
-                  <p className="mt-3 border-t border-slate-100 pt-3 text-xl font-extrabold text-[#102a5c] sm:text-2xl">
-                    R$ {model.price.toFixed(2).replace(".", ",")}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <ProductCard
+              key={model.id}
+              href={`/produto/${model.id}?team=${encodeURIComponent(model.teamSlug || "")}`}
+              teamLabel={model.team?.name || model.teamSlug || "Baluarte"}
+              title={model.modelName || model.name || "Produto Baluarte"}
+              price={Number(model.price)}
+              originalPrice={model.originalPrice ?? null}
+              imageUrl={model.thumbnailUrl || model.imageUrl || model.image}
+            />
           )})}
         </div>
         {displayModels.length === 0 ? <p className="mt-4 text-sm text-slate-500">Nenhum produto disponivel nesta categoria.</p> : null}

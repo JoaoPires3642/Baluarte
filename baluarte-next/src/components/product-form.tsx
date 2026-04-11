@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Check, Sparkles, X } from "lucide-react"
 import { useCart, type CartItem } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { Button } from "@/components/ui/button"
@@ -20,17 +22,58 @@ type ProductFormProps = {
   product: ModelDetail
 }
 
+type CustomizationMetadata = {
+  maxNameLength?: number
+  maxNumberLength?: number
+  customNamePrice?: number
+  customNumberPrice?: number
+  front?: { x?: number; y?: number; width?: number; height?: number }
+  back?: { x?: number; y?: number; width?: number; height?: number }
+}
+
+function clampPercent(value: number | undefined, fallback: number) {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback
+  return Math.min(100, Math.max(0, value))
+}
+
+function parseCustomizationMetadata(rawMetadata?: string): CustomizationMetadata | null {
+  if (!rawMetadata) return null
+
+  try {
+    const parsed = JSON.parse(rawMetadata) as CustomizationMetadata
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter()
   const { addItem } = useCart()
   const { showToast } = useToast()
   const [selectedSize, setSelectedSize] = useState<string>("")
+  const [personalizationEnabled, setPersonalizationEnabled] = useState(false)
+  const [personalizationMobileOpen, setPersonalizationMobileOpen] = useState(false)
   const [customName, setCustomName] = useState("")
   const [customNumber, setCustomNumber] = useState("")
+  const [showMobileSizeSheet, setShowMobileSizeSheet] = useState(false)
 
   const displayProduct = product as ProductFormModel
   const sizes = product.variants?.map((variant) => variant.size) || displayProduct.sizes || ["P", "M", "G", "GG"]
-  const canPersonalize = Boolean(product.customizationEnabled && product.customizationTemplatePng)
+  const customizationMetadata = useMemo(
+    () => parseCustomizationMetadata(product.customizationTemplateMetadata),
+    [product.customizationTemplateMetadata]
+  )
+  const canPersonalize = Boolean(product.customizationEnabled)
+  const templatePreviewUrl = product.customizationTemplatePng || undefined
+  const customNamePrice = customizationMetadata?.customNamePrice ?? 25
+  const customNumberPrice = customizationMetadata?.customNumberPrice ?? 25
+  const maxNameLength = customizationMetadata?.maxNameLength ?? 14
+  const maxNumberLength = customizationMetadata?.maxNumberLength ?? 2
+  const previewAnchor = customizationMetadata?.back || customizationMetadata?.front
+  const previewTop = clampPercent(previewAnchor?.y, 26)
+  const previewLeft = clampPercent(previewAnchor?.x, 50)
+  const previewWidth = clampPercent(previewAnchor?.width, 52)
 
   const personalizationParts = [
     customName.trim() ? `Nome: ${customName.trim()}` : "",
@@ -48,30 +91,31 @@ export function ProductForm({ product }: ProductFormProps) {
   const personalizationLabel = personalizationParts.join(" | ")
 
   const personalizationExtra =
-    (customNameCount * 25) +
-    (customNumberCount * 25)
+    (customNameCount * customNamePrice) +
+    (customNumberCount * customNumberPrice)
 
-  const finalPrice = Number(product.price) + personalizationExtra
+  const finalPrice = Number(product.price) + (personalizationEnabled ? personalizationExtra : 0)
 
   const buildCartItem = (): CartItem => {
     const productName = product.modelName || displayProduct.name || "Produto"
 
     return {
       id: product.id,
-      name: personalizationLabel ? `${productName} (${personalizationLabel})` : productName,
+      name: personalizationEnabled && personalizationLabel ? `${productName} (${personalizationLabel})` : productName,
       price: finalPrice,
       basePrice: Number(product.price),
       image: product.thumbnailUrl || product.imageUrl || displayProduct.image || product.images?.[0],
       teamName: product.teamSlug,
       size: selectedSize,
       quantity: 1,
-      customNames: customName.trim() ? customName.trim().split(/\s+/).filter(Boolean) : [],
-      customNumber: customNumber.trim() || undefined,
+        customNames: personalizationEnabled && customName.trim() ? customName.trim().split(/\s+/).filter(Boolean) : [],
+        customNumber: personalizationEnabled ? customNumber.trim() || undefined : undefined,
     }
   }
 
   const handleAddToCart = () => {
     if (!selectedSize) {
+      setShowMobileSizeSheet(true)
       showToast("Selecione um tamanho", "error")
       return
     }
@@ -84,6 +128,7 @@ export function ProductForm({ product }: ProductFormProps) {
 
   const handleBuyNow = () => {
     if (!selectedSize) {
+      setShowMobileSizeSheet(true)
       showToast("Selecione um tamanho", "error")
       return
     }
@@ -94,13 +139,89 @@ export function ProductForm({ product }: ProductFormProps) {
     router.push("/checkout")
   }
 
+  const personalizationPanel = (
+    <>
+      <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white">
+        <div className="relative aspect-[4/5] bg-slate-100">
+          {templatePreviewUrl ? (
+            <Image src={templatePreviewUrl} alt={`Template de personalização de ${product.modelName}`} fill unoptimized className="object-contain" />
+          ) : null}
+
+          <div
+            className="pointer-events-none absolute flex -translate-x-1/2 flex-col items-center text-center"
+            style={{ top: `${previewTop}%`, left: `${previewLeft}%`, width: `${previewWidth}%` }}
+          >
+            {customName ? <p className="text-sm font-black uppercase tracking-[0.28em] text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.55)] sm:text-base">{customName}</p> : null}
+            {customNumber ? <p className="mt-2 text-4xl font-black leading-none tracking-[0.2em] text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.6)] sm:text-6xl">{customNumber}</p> : null}
+          </div>
+
+          {!templatePreviewUrl ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#10233f] to-[#0f274d] p-6 text-center text-white">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Preview</p>
+              {customName ? <p className="mt-4 text-lg font-black uppercase tracking-[0.28em]">{customName}</p> : null}
+              {customNumber ? <p className="mt-3 text-5xl font-black tracking-[0.2em]">{customNumber}</p> : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="border-t border-slate-100 px-4 py-3 text-sm text-slate-600">
+          <p className="font-semibold text-[#10233f]">Preview da personalização</p>
+          <p className="mt-1 text-xs text-slate-500">Nome, número e base visual aparecem juntos para facilitar a decisão no mobile.</p>
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-[#e6edf6] bg-[#f8fbff] p-3 text-xs text-slate-600">
+          <p>Nome: até {maxNameLength} caracteres</p>
+          <p>Número: até {maxNumberLength} dígitos</p>
+          <p>Preço nome: R$ {customNamePrice.toFixed(2).replace(".", ",")}</p>
+          <p>Preço número: R$ {customNumberPrice.toFixed(2).replace(".", ",")}</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Nome na camisa</Label>
+          <Input
+            placeholder="Ex: JOAO"
+            maxLength={maxNameLength}
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value.toUpperCase())}
+          />
+          <p className="text-xs text-muted-foreground">+ R$ {customNamePrice.toFixed(2).replace(".", ",")} por nome</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Número</Label>
+          <Input
+            placeholder="Ex: 10"
+            maxLength={maxNumberLength}
+            value={customNumber}
+            onChange={(e) => setCustomNumber(e.target.value.replace(/\D/g, "").slice(0, maxNumberLength))}
+          />
+          <p className="text-xs text-muted-foreground">+ R$ {customNumberPrice.toFixed(2).replace(".", ",")} por número</p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+          <p>Nomes: {customNameCount} x R$ {customNamePrice.toFixed(2).replace(".", ",")}</p>
+          <p>Números: {customNumberCount} x R$ {customNumberPrice.toFixed(2).replace(".", ",")}</p>
+          <p className="mt-2 font-semibold text-[#10233f]">Adicional: R$ {personalizationExtra.toFixed(2).replace(".", ",")}</p>
+        </div>
+
+        <div className="sm:hidden">
+          <Button className="w-full" onClick={() => setPersonalizationMobileOpen(false)}>
+            Aplicar personalização
+          </Button>
+        </div>
+      </div>
+    </>
+  )
+
   return (
     <>
       <Separator />
 
-      <div className="space-y-3">
+      <div className="hidden space-y-3 sm:block">
         <Label>Tamanho *</Label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {sizes.map((size) => (
             <Button
               key={size}
@@ -114,65 +235,143 @@ export function ProductForm({ product }: ProductFormProps) {
         </div>
       </div>
 
-      {canPersonalize ? (
-        <div className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+      <div className="sm:hidden">
+        <button type="button" onClick={() => setShowMobileSizeSheet(true)} className="flex w-full items-center justify-between rounded-[1.25rem] border border-slate-200 bg-white p-4 text-left">
           <div>
-            <Label>Personalizacao</Label>
-            <p className="mt-1 text-xs text-muted-foreground">Produto compativel com nome e numero personalizados.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Tamanho</p>
+            <p className="mt-1 text-base font-semibold text-[#10233f]">{selectedSize || "Escolher tamanho"}</p>
           </div>
+          <span className="text-sm font-semibold text-[#0f274d]">Alterar</span>
+        </button>
+      </div>
 
-          <div className="space-y-2">
-            <Label>Nome na camisa</Label>
-            <Input
-              placeholder="Ex: JOAO"
-              maxLength={14}
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value.toUpperCase())}
-            />
-            <p className="text-xs text-muted-foreground">+ R$ 25,00 por nome</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Numero</Label>
-            <Input
-              placeholder="Ex: 10"
-              maxLength={2}
-              value={customNumber}
-              onChange={(e) => setCustomNumber(e.target.value.replace(/\D/g, ""))}
-            />
-            <p className="text-xs text-muted-foreground">+ R$ 25,00 por numero</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-600">
-            <p>Nomes: {customNameCount} x R$ 25,00</p>
-            <p>Numeros: {customNumberCount} x R$ 25,00</p>
-          </div>
-
-          {customName || customNumber ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Preview textual</p>
-              {customName ? <p className="mt-3 text-lg font-black uppercase tracking-[0.2em] text-slate-900">{customName}</p> : null}
-              {customNumber ? <p className="mt-2 text-4xl font-black tracking-[0.2em] text-slate-900">{customNumber}</p> : null}
+      {canPersonalize ? (
+        <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <button
+            type="button"
+            onClick={() => {
+              setPersonalizationEnabled((current) => {
+                const next = !current
+                if (next) setPersonalizationMobileOpen(true)
+                if (!next) setPersonalizationMobileOpen(false)
+                return next
+              })
+            }}
+            className={`flex w-full items-start justify-between gap-4 rounded-[1.25rem] border p-4 text-left transition-all ${personalizationEnabled ? "border-[#0f274d] bg-white shadow-sm" : "border-slate-200 bg-white/80 hover:border-[#0f274d]/30 hover:bg-white"}`}
+          >
+            <div>
+              <Label className="inline-flex items-center gap-2 cursor-pointer"><Sparkles className="h-4 w-4 text-[#c3222a]" /> Personalizar camisa</Label>
+              <p className="mt-1 text-xs text-slate-500">Ative para adicionar nome e número com preview visual antes da compra.</p>
             </div>
+            <span className={`flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition-colors ${personalizationEnabled ? "bg-[#0f274d]" : "bg-slate-300"}`}>
+              <span className={`flex h-4 w-4 rounded-full bg-white transition-transform ${personalizationEnabled ? "translate-x-5" : "translate-x-0"}`}>
+                {personalizationEnabled ? <Check className="m-auto h-3 w-3 text-[#0f274d]" /> : null}
+              </span>
+            </span>
+          </button>
+
+          {personalizationEnabled ? (
+            <>
+              <div className="mt-4 hidden gap-4 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                {personalizationPanel}
+              </div>
+
+              <div className="mt-4 rounded-[1.25rem] border border-[#e6edf6] bg-white p-4 lg:hidden">
+                <p className="text-sm font-semibold text-[#10233f]">Personalização ativa</p>
+                <p className="mt-1 text-xs text-slate-500">Abra o editor para preencher e revisar o preview sem alongar a página.</p>
+                <Button variant="outline" className="mt-4 w-full" onClick={() => setPersonalizationMobileOpen(true)}>
+                  Abrir editor de personalização
+                </Button>
+              </div>
+
+              {personalizationMobileOpen ? (
+                <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/55 backdrop-blur-sm lg:hidden">
+                  <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-4 shadow-2xl">
+                    <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200" />
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-bold text-[#10233f]">Editor de personalização</p>
+                        <p className="mt-1 text-sm text-slate-500">Configure nome, número e visualize antes de adicionar ao carrinho.</p>
+                      </div>
+                      <button type="button" onClick={() => setPersonalizationMobileOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-4">{personalizationPanel}</div>
+                  </div>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
       ) : null}
 
       <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4">
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
           <span className="text-slate-500">Preco final</span>
-          <span className="text-2xl font-extrabold text-[#102a5c]">R$ {finalPrice.toFixed(2).replace(".", ",")}</span>
+          <span className="text-2xl font-extrabold text-[#102a5c]">R$ {(Number(product.price) + (personalizationEnabled ? personalizationExtra : 0)).toFixed(2).replace(".", ",")}</span>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="hidden flex-col gap-3 sm:flex sm:flex-row">
         <Button size="lg" className="flex-1" onClick={handleAddToCart}>
           Adicionar ao Carrinho
         </Button>
-        <Button size="lg" variant="outline" onClick={handleBuyNow}>
+        <Button size="lg" variant="outline" className="sm:min-w-[180px]" onClick={handleBuyNow}>
           Comprar Agora
         </Button>
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-[#d9e2ef] bg-white/95 p-4 backdrop-blur sm:hidden">
+        <div className="mx-auto max-w-5xl space-y-3">
+          <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Total</p>
+            <p className="truncate text-lg font-extrabold text-[#102a5c]">R$ {(Number(product.price) + (personalizationEnabled ? personalizationExtra : 0)).toFixed(2).replace(".", ",")}</p>
+          </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button size="lg" variant="outline" className="w-full" onClick={handleBuyNow}>
+              Comprar agora
+            </Button>
+            <Button size="lg" className="w-full" onClick={handleAddToCart}>
+              Adicionar
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showMobileSizeSheet ? (
+        <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/55 backdrop-blur-sm sm:hidden">
+          <div className="w-full rounded-t-[2rem] bg-white p-4 shadow-2xl">
+            <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200" />
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-lg font-bold text-[#10233f]">Escolha o tamanho</p>
+                <p className="mt-1 text-sm text-slate-500">Selecione antes de adicionar ao carrinho.</p>
+              </div>
+              <button type="button" onClick={() => setShowMobileSizeSheet(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {sizes.map((size) => (
+                <Button
+                  key={size}
+                  variant={selectedSize === size ? "default" : "outline"}
+                  className="min-w-[64px]"
+                  onClick={() => {
+                    setSelectedSize(size)
+                    setShowMobileSizeSheet(false)
+                  }}
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   )
 }

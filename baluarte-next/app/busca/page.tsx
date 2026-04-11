@@ -1,9 +1,6 @@
-import Link from "next/link"
-import Image from "next/image"
-import { SearchX, Shirt } from "lucide-react"
+import { SearchX } from "lucide-react"
 import { fetchPublicModels, type Model } from "@/lib/api"
-import { resolveMediaUrl } from "@/lib/media"
-import { Card, CardContent } from "@/components/ui/card"
+import { ProductCard } from "@/components/product-card"
 
 type DisplayModel = Model & {
   image?: string
@@ -47,35 +44,18 @@ export default async function SearchPage({ searchParams }: Props) {
       </div>
 
       {displayProducts.length > 0 ? (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {displayProducts.map((product: DisplayModel) => {
-          const mediaUrl = resolveMediaUrl(product.thumbnailUrl || product.imageUrl || product.image)
-
           return (
-          <Link key={product.id} href={`/produto/${product.id}?team=${encodeURIComponent(product.teamSlug || "")}`}>
-            <Card className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
-              <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                {mediaUrl ? (
-                    <Image
-                      src={mediaUrl}
-                      alt={product.modelName || product.name || "Produto Baluarte"}
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                ) : (
-                  <Shirt className="h-12 w-12 text-[#0f274d]" />
-                )}
-              </div>
-              <CardContent className="p-4">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">{product.team?.name || product.teamSlug}</p>
-                <h3 className="line-clamp-2 font-[family-name:var(--font-heading)] text-base font-bold uppercase tracking-[-0.03em] text-slate-900 sm:text-lg">{product.modelName || product.name}</h3>
-                <p className="mt-3 border-t border-slate-100 pt-3 text-xl font-extrabold text-[#102a5c] sm:text-2xl">
-                  R$ {product.price.toFixed(2).replace(".", ",")}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+            <ProductCard
+              key={product.id}
+              href={`/produto/${product.id}?team=${encodeURIComponent(product.teamSlug || "")}`}
+              teamLabel={product.team?.name || product.teamSlug || "Baluarte"}
+              title={product.modelName || product.name || "Produto Baluarte"}
+              price={Number(product.price)}
+              originalPrice={product.originalPrice ?? null}
+              imageUrl={product.thumbnailUrl || product.imageUrl || product.image}
+            />
         )})}
       </div>
       ) : (

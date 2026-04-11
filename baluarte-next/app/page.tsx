@@ -1,13 +1,12 @@
 import Link from "next/link"
-import Image from "next/image"
 import { redirect } from "next/navigation"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
-import { fetchCategories, fetchPublicModels, type Category, type Model } from "@/lib/api"
+import { fetchCategories, fetchPublicModels, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
 import { resolveServerAuthSession } from "@/lib/auth"
 import { homeCategoryMap } from "@/lib/home-categories"
-import { resolveMediaUrl } from "@/lib/media"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ProductCard } from "@/components/product-card"
 
 type DisplayModel = Model & {
   image?: string
@@ -21,12 +20,24 @@ async function getData() {
       fetchCategories(),
       fetchPublicModels(),
     ])
+
+    const teamResponses = await Promise.all(
+      categoriesRes.data.map((category) =>
+        fetchTeamsByCategory(category.slug).catch(() => ({ data: [] as Team[] }))
+      )
+    )
+
+    const teams = teamResponses
+      .flatMap((response) => response.data)
+      .filter((team, index, array) => array.findIndex((item) => item.slug === team.slug) === index)
+
     return {
       categories: categoriesRes.data,
+      teams,
       products: modelsRes.data,
     }
   } catch {
-    return { categories: [], products: [] }
+    return { categories: [], teams: [], products: [] }
   }
 }
 
@@ -37,7 +48,7 @@ export default async function Home() {
     redirect("/admin")
   }
 
-  const { categories, products } = await getData()
+  const { categories, teams, products } = await getData()
 
   const displayCategories = categories.map((category: Category) => {
     const normalizedSlug = String(category.slug).toLowerCase()
@@ -57,6 +68,7 @@ export default async function Home() {
   })
 
   const displayProducts = products
+  const displayTeams = teams.slice(0, 8)
   const categoryIcons = [Trophy, Globe2, Sparkles, Shirt]
 
   return (
@@ -120,23 +132,23 @@ export default async function Home() {
             Ver catálogo <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           {displayCategories.map((category, index: number) => {
             const Icon = categoryIcons[index % categoryIcons.length]
 
             return (
             <Link key={category.slug} href={`/categorias/${category.slug}`}>
-              <Card className="group relative min-h-[240px] cursor-pointer overflow-hidden border-0 bg-slate-950 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/15">
+              <Card className="group relative min-h-[180px] cursor-pointer overflow-hidden border-0 bg-slate-950 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/15 sm:min-h-[240px]">
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
                   style={{ backgroundImage: `url('${category.image || homeCategoryMap[category.slug]?.image || ""}')` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/55 to-transparent" />
                 <div className="absolute left-0 top-0 h-1.5 w-full" style={{ backgroundColor: category.color || homeCategoryMap[category.slug]?.color || "#475569" }} />
-                <CardContent className="relative flex min-h-[220px] flex-col justify-end p-5">
-                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-sm"><Icon className="h-7 w-7" /></span>
+                <CardContent className="relative flex min-h-[180px] flex-col justify-end p-4 sm:min-h-[220px] sm:p-5">
+                  <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur-sm sm:mb-4 sm:h-14 sm:w-14"><Icon className="h-5 w-5 sm:h-7 sm:w-7" /></span>
                   <div>
-                    <h3 className="text-2xl font-bold uppercase tracking-[-0.03em] text-white transition-colors">
+                    <h3 className="text-lg font-bold uppercase tracking-[-0.03em] text-white transition-colors sm:text-2xl">
                       {category.name}
                     </h3>
                     <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75">Ver coleção →</p>
@@ -145,6 +157,34 @@ export default async function Home() {
               </Card>
             </Link>
           )})}
+        </div>
+      </section>
+
+      <section className="section-shell">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Times</p>
+            <h2 className="mt-3 text-3xl font-extrabold uppercase tracking-[-0.04em] text-slate-900">Clubes em destaque</h2>
+            <p className="mt-2 text-slate-500">Navegação direta para os times disponíveis no catálogo.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {displayTeams.map((team: Team) => (
+            <Link key={team.id} href={`/times/${team.slug}`}>
+              <Card className="cursor-pointer border border-[#d9e2ef] bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10 sm:p-6">
+                <CardContent className="p-0 text-center">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:mb-4 sm:h-14 sm:w-14">
+                    <ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" />
+                  </div>
+                  <h3 className="text-sm font-bold uppercase tracking-[-0.03em] text-slate-900 sm:text-lg">{team.name}</h3>
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c3222a]">
+                    Ver produtos <ChevronRight className="h-3.5 w-3.5" />
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -162,44 +202,19 @@ export default async function Home() {
         </div>
 
         {displayProducts.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           {displayProducts.slice(0, 4).map((product: DisplayModel) => {
-            const mediaUrl = resolveMediaUrl(product.thumbnailUrl || product.imageUrl || product.image)
-
             return (
-            <Link key={product.id} href={`/produto/${product.id}?team=${encodeURIComponent(product.teamSlug || "")}`}>
-              <Card className="group cursor-pointer overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-900/10">
-                <div className="relative aspect-square overflow-hidden bg-slate-100">
-                  {mediaUrl ? (
-                    <Image 
-                      src={mediaUrl} 
-                      alt={product.modelName} 
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[#0f274d]">
-                      <Shirt className="h-14 w-14" />
-                    </div>
-                  )}
-                  <div className="absolute left-3 top-3 rounded-full bg-[#c3222a] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white shadow-lg shadow-red-950/20">
-                    Seleção
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">{product.teamSlug}</p>
-                  <h3 className="mt-2 line-clamp-2 text-lg font-bold uppercase tracking-[-0.03em] text-slate-900 transition-colors group-hover:text-[#0f274d]">
-                    {product.modelName || product.name}
-                  </h3>
-                  <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-4">
-                    <span className="text-2xl font-extrabold text-[#102a5c]">
-                      R$ {Number(product.price).toFixed(2).replace(".", ",")}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+            <ProductCard
+              key={product.id}
+              href={`/produto/${product.id}?team=${encodeURIComponent(product.teamSlug || "")}`}
+              teamLabel={product.teamSlug || "Baluarte"}
+              title={product.modelName || product.name || "Produto Baluarte"}
+              price={Number(product.price)}
+              originalPrice={product.originalPrice ?? null}
+              imageUrl={product.thumbnailUrl || product.imageUrl || product.image}
+              badge="Seleção"
+            />
           )})}
         </div>
         ) : (
