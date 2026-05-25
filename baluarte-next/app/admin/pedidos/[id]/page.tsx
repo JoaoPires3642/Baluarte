@@ -1,11 +1,11 @@
-export const runtime = "edge";
 import Link from "next/link"
-import { MapPin, PackageSearch, UserRound } from "lucide-react"
+import { ChevronLeft, MapPin, PackageSearch, UserRound } from "lucide-react"
 import { fetchOrder, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { UpdateOrderStatus } from "@/components/update-order-status"
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -58,39 +58,39 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-6 py-8">
-      <div className="flex items-center justify-between">
+      <Link href="/admin/pedidos" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 transition-colors">
+        <ChevronLeft className="h-4 w-4" />
+        Voltar aos Pedidos
+      </Link>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Link href="/admin/pedidos" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Voltar aos Pedidos
-          </Link>
-          <div className="mt-2 rounded-[2rem] border border-[#d9e2ef] bg-white p-6 shadow-sm shadow-slate-900/5 sm:p-8">
-            <p className="eyebrow">Pedido</p>
-            <h1 className="mt-4 text-2xl font-bold">Pedido #{order.orderReference}</h1>
-          </div>
+          <p className="eyebrow">Pedido</p>
+          <h1 className="mt-1 text-xl font-bold sm:text-2xl">Pedido #{order.orderReference}</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge className={statusColors[order.status] || "bg-gray-500"}>
             {statusLabels[order.status] || order.status}
           </Badge>
-          <Button>Atualizar Status</Button>
+          <UpdateOrderStatus orderId={order.id} currentStatus={order.status} />
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><PackageSearch className="h-5 w-5 text-[#0f274d]" />Itens do Pedido</CardTitle>
+            <CardTitle className="inline-flex items-center gap-2"><PackageSearch className="h-5 w-5 shrink-0 text-[#0f274d]" />Itens do Pedido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {order.items?.map((item, idx) => (
-              <div key={idx} className="flex justify-between">
-                <div>
-                  <p className="font-medium">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Tamanho: {item.size} • Qty: {item.quantity}
+              <div key={idx} className="flex justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{item.name}</p>
+                  <p className="text-sm text-slate-500">
+                    Tam: {item.size} • Qtd: {item.quantity}
                   </p>
                 </div>
-                <p className="font-medium">
+                <p className="font-medium whitespace-nowrap">
                   R$ {(item.unitPrice * item.quantity).toFixed(2).replace(".", ",")}
                 </p>
               </div>
@@ -105,20 +105,20 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="inline-flex items-center gap-2"><UserRound className="h-5 w-5 text-[#0f274d]" />Informações do Cliente</CardTitle>
+            <CardTitle className="inline-flex items-center gap-2"><UserRound className="h-5 w-5 shrink-0 text-[#0f274d]" />Informações do Cliente</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium">cliente@email.com</p>
+              <p className="text-sm text-slate-500">Email</p>
+              <p className="font-medium break-all">cliente@email.com</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">CPF</p>
+              <p className="text-sm text-slate-500">CPF</p>
               <p className="font-medium">***.123.456-**</p>
             </div>
             {order.shipping?.address && (
               <div>
-                <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4 text-[#c3222a]" />Endereço de Entrega</p>
+                <p className="inline-flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4 shrink-0 text-[#c3222a]" />Endereço de Entrega</p>
                 <p className="font-medium">{order.shipping.address}</p>
               </div>
             )}

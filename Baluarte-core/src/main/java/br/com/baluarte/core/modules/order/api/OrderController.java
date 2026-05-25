@@ -1,14 +1,21 @@
 package br.com.baluarte.core.modules.order.api;
 
+import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
+import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -69,6 +76,21 @@ public class OrderController {
             items,
             new ShippingResponse(shippingAddress, null)
         ));
+    }
+
+    @PatchMapping("/{orderId}/status")
+    public ApiSuccessResponse<OrderResponse> updateOrderStatus(
+        @PathVariable String orderId,
+        @Valid @RequestBody UpdateOrderStatusRequest request
+    ) {
+        CheckoutOrder order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+
+        order.setStatus(request.status());
+        order.setUpdatedAt(Instant.now());
+        orderRepository.save(order);
+
+        return getOrder(orderId);
     }
 }
 

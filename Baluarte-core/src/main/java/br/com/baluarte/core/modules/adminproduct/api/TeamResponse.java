@@ -1,9 +1,8 @@
-package br.com.baluarte.core.modules.catalog.domain;
+package br.com.baluarte.core.modules.adminproduct.api;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record Team(
+public record TeamResponse(
     UUID id,
     String name,
     String slug,
@@ -11,7 +10,5 @@ public record Team(
     String categorySlug,
     String league,
     Integer displayOrder,
-    Boolean active,
-    LocalDateTime createdAt
-) {
-}
+    boolean active
+) {}

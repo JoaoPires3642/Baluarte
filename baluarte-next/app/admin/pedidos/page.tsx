@@ -1,6 +1,5 @@
-export const runtime = "edge";
 import Link from "next/link"
-import { ClipboardList } from "lucide-react"
+import { ClipboardList, ChevronRight, Search } from "lucide-react"
 import { fetchOrders, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,24 +47,23 @@ export default async function AdminOrdersPage() {
   return (
     <div className="space-y-6 py-8">
       <div className="flex items-center justify-between">
-        <div>
-          <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+        <div className="flex items-center gap-3">
+          <Link href="/admin" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">
             ← Voltar
           </Link>
-          <div className="mt-2 rounded-[2rem] border border-[#d9e2ef] bg-white p-6 shadow-sm shadow-slate-900/5 sm:p-8">
-            <p className="eyebrow">Admin pedidos</p>
-            <h1 className="mt-4 text-2xl font-bold">Pedidos</h1>
-            <p className="text-muted-foreground mt-2">Gerencie os pedidos da loja</p>
-          </div>
+          <h1 className="text-2xl font-bold">Pedidos</h1>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="inline-flex items-center gap-2"><ClipboardList className="h-5 w-5 text-[#0f274d]" />Lista de Pedidos</CardTitle>
+          <CardTitle className="inline-flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-[#0f274d]" />
+            Lista de Pedidos
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -82,7 +80,7 @@ export default async function AdminOrdersPage() {
                   <tr key={order.id} className="border-b">
                     <td className="py-3 font-medium">#{order.orderReference}</td>
                     <td className="py-3">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
-                    <td className="py-3 text-muted-foreground">
+                    <td className="py-3 text-slate-500">
                       {order.items?.length || 0} item(s)
                     </td>
                     <td className="py-3">R$ {order.total.toFixed(2).replace(".", ",")}</td>
@@ -93,13 +91,39 @@ export default async function AdminOrdersPage() {
                     </td>
                     <td className="py-3 text-right">
                       <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/pedidos/${order.id}`}>Ver Detalhes</Link>
+                        <Link href={`/admin/pedidos/${order.id}`}>Detalhes</Link>
                       </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="space-y-3 sm:hidden">
+            {displayOrders.map((order: Order) => (
+              <Link key={order.id} href={`/admin/pedidos/${order.id}`} className="block">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">#{order.orderReference}</span>
+                    <Badge className={statusColors[order.status] || "bg-gray-500"}>
+                      {statusLabels[order.status] || order.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm text-slate-500">
+                    <span>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</span>
+                    <span>{order.items?.length || 0} item(s)</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-lg font-bold">R$ {order.total.toFixed(2).replace(".", ",")}</span>
+                    <ChevronRight className="h-4 w-4 text-slate-300" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+            {displayOrders.length === 0 && (
+              <p className="py-8 text-center text-sm text-slate-500">Nenhum pedido encontrado</p>
+            )}
           </div>
         </CardContent>
       </Card>

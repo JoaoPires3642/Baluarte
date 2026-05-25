@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { AdminLayoutGuard } from "@/components/admin-layout-guard";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 
@@ -46,9 +47,9 @@ export default function RootLayout({
       <html lang="pt-BR" className={`${bodyFont.variable} h-full antialiased`}>
         <body className="min-h-screen flex flex-col">
           <Providers>
-            <Header />
+            <AdminLayoutGuard><Header /></AdminLayoutGuard>
             <main className="flex-1">{children}</main>
-            <Footer />
+            <AdminLayoutGuard><Footer /></AdminLayoutGuard>
           </Providers>
         </body>
       </html>

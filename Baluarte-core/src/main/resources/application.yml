@@ -16,6 +16,10 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 server:
   servlet:
     context-path: /
@@ -39,6 +43,8 @@ app:
     clerk-jwks-uri: ${APP_AUTH_CLERK_JWKS_URI:}
     dev-bypass-enabled: ${APP_AUTH_DEV_BYPASS_ENABLED:false}
     dev-bypass-key: ${APP_AUTH_DEV_BYPASS_KEY:}
+  media:
+    upload-dir: ${APP_MEDIA_UPLOAD_DIR:uploads}
   payment:
     active-provider: ${APP_PAYMENT_PROVIDER:mock}
     mercadopago:

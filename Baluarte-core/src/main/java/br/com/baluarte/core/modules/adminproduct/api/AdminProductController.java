@@ -3,11 +3,13 @@ package br.com.baluarte.core.modules.adminproduct.api;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductCommand;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductVariantCommand;
+import br.com.baluarte.core.modules.adminproduct.application.AdminProductValidationException;
 import br.com.baluarte.core.modules.adminproduct.application.DeactivateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.ListAdminProductsUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductCommand;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
+import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductVariant;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import jakarta.validation.Valid;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -26,17 +29,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/products")
 public class AdminProductController {
 
+    private final AdminProductRepository adminProductRepository;
     private final CreateAdminProductUseCase createAdminProductUseCase;
     private final UpdateAdminProductUseCase updateAdminProductUseCase;
     private final DeactivateAdminProductUseCase deactivateAdminProductUseCase;
     private final ListAdminProductsUseCase listAdminProductsUseCase;
 
     public AdminProductController(
+        AdminProductRepository adminProductRepository,
         CreateAdminProductUseCase createAdminProductUseCase,
         UpdateAdminProductUseCase updateAdminProductUseCase,
         DeactivateAdminProductUseCase deactivateAdminProductUseCase,
         ListAdminProductsUseCase listAdminProductsUseCase
     ) {
+        this.adminProductRepository = adminProductRepository;
         this.createAdminProductUseCase = createAdminProductUseCase;
         this.updateAdminProductUseCase = updateAdminProductUseCase;
         this.deactivateAdminProductUseCase = deactivateAdminProductUseCase;
@@ -91,6 +97,37 @@ public class AdminProductController {
         AdminProduct product = deactivateAdminProductUseCase.execute(productId);
 
         return ApiSuccessResponse.of(toResponse(product));
+    }
+
+    @PatchMapping("/{productId}/toggle-active")
+    public ApiSuccessResponse<AdminProductResponse> toggleProductActive(@PathVariable UUID productId) {
+        AdminProduct existing = adminProductRepository.findById(productId)
+            .orElseThrow(() -> new AdminProductValidationException(List.of("productId produto nao encontrado")));
+
+        AdminProduct toggled = new AdminProduct(
+            existing.id(),
+            existing.categoryId(),
+            existing.teamId(),
+            existing.categorySlug(),
+            existing.teamSlug(),
+            existing.modelName(),
+            existing.description(),
+            existing.price(),
+            existing.originalPrice(),
+            existing.imageUrl(),
+            existing.customizationEnabled(),
+            existing.customizationTemplatePng(),
+            existing.customizationTemplateMetadata(),
+            !existing.active(),
+            existing.available(),
+            existing.stockQuantity(),
+            existing.variants(),
+            existing.createdAt()
+        );
+
+        AdminProduct saved = adminProductRepository.save(toggled);
+
+        return ApiSuccessResponse.of(toResponse(saved));
     }
 
     private CreateAdminProductCommand toCreateCommand(CreateAdminProductRequest request) {

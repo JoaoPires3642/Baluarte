@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.baluarte.core.modules.catalog.domain.Category;
 import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -25,10 +26,10 @@ class ListPublicCategoriesUseCaseTest {
         ListPublicCategoriesUseCase useCase = new ListPublicCategoriesUseCase(categoryRepository);
 
         when(categoryRepository.findPublicCategories(1)).thenReturn(List.of(
-            new Category(UUID.randomUUID(), "Destaques", "destaques", 1)
+            new Category(UUID.randomUUID(), "Destaques", "destaques", 1, true, LocalDateTime.now())
         ));
         when(categoryRepository.findPublicCategories(100)).thenReturn(List.of(
-            new Category(UUID.randomUUID(), "Times", "times", 2)
+            new Category(UUID.randomUUID(), "Times", "times", 2, true, LocalDateTime.now())
         ));
 
         useCase.execute(0);

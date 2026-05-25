@@ -44,11 +44,14 @@ services:
       APP_SHIPPING_API_TOKEN: ${APP_SHIPPING_API_TOKEN:-}
       APP_SHIPPING_WEBHOOK_SECRET: ${APP_SHIPPING_WEBHOOK_SECRET:-}
       APP_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:8081,exp://*"
+      APP_MEDIA_UPLOAD_DIR: ${APP_MEDIA_UPLOAD_DIR:-/var/www/uploads}
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8080:8080"
+    volumes:
+      - uploads_data:/var/www/uploads
 
   web:
     build:
@@ -74,3 +77,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

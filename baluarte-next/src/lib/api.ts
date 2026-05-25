@@ -10,8 +10,10 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Erro na requisição" }))
-    throw new Error(error.message || `HTTP ${response.status}`)
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro na requisição") + details)
   }
 
   return response.json()
@@ -99,8 +101,10 @@ export async function fetchShippingQuotes(cep: string, state: string, itemsCount
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Erro na requisição" }))
-    throw new Error(error.message || `HTTP ${response.status}`)
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro na requisição") + details)
   }
 
   return response.json() as Promise<{ data: ShippingQuoteResponse }>
@@ -117,8 +121,10 @@ export async function createPayment(payload: PaymentRequest) {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Erro na requisição" }))
-    throw new Error(error.message || `HTTP ${response.status}`)
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro na requisição") + details)
   }
 
   return response.json() as Promise<{ data: PaymentResponse }>
@@ -154,7 +160,93 @@ export async function deleteAdminProduct(productId: string) {
   })
 }
 
+// Admin Categories
+export async function fetchAdminCategories() {
+  return fetchApi<{ data: Category[] }>("/admin/categories")
+}
+
+export async function createAdminCategory(category: { name: string; slug: string; displayOrder?: number }) {
+  return fetchApi<{ data: Category }>("/admin/categories", {
+    method: "POST",
+    body: JSON.stringify(category),
+  })
+}
+
+export async function updateAdminCategory(id: string, category: { name: string; slug: string; displayOrder?: number }) {
+  return fetchApi<{ data: Category }>(`/admin/categories/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(category),
+  })
+}
+
+export async function deleteAdminCategory(id: string) {
+  return fetchApi<{ data: void }>(`/admin/categories/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// Admin Teams
+export async function fetchAdminTeams() {
+  return fetchApi<{ data: Team[] }>("/admin/teams")
+}
+
+export async function createAdminTeam(team: {
+  name: string; slug: string; categoryId: string; league?: string; displayOrder?: number
+}) {
+  return fetchApi<{ data: Team }>("/admin/teams", {
+    method: "POST",
+    body: JSON.stringify(team),
+  })
+}
+
+export async function updateAdminTeam(id: string, team: {
+  name: string; slug: string; categoryId: string; league?: string; displayOrder?: number
+}) {
+  return fetchApi<{ data: Team }>(`/admin/teams/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(team),
+  })
+}
+
+export async function deleteAdminTeam(id: string) {
+  return fetchApi<{ data: void }>(`/admin/teams/${id}`, {
+    method: "DELETE",
+  })
+}
+
+// Admin Order Status
+export async function updateOrderStatus(orderId: string, status: string) {
+  return fetchApi<{ data: Order }>(`/orders/${orderId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  })
+}
+
+// Image Upload
+export async function uploadImage(file: File) {
+  const formData = new FormData()
+  formData.append("file", file)
+  const response = await fetch(`${API_BASE_URL}/admin/media/upload`, {
+    method: "POST",
+    body: formData,
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro no upload") + details)
+  }
+  return response.json() as Promise<{ data: { url: string; filename: string } }>
+}
+
 // Types
+export interface Category {
+  id: string
+  name: string
+  slug: string
+  displayOrder?: number
+  active?: boolean
+}
 export interface Category {
   id: string
   name: string
@@ -165,6 +257,11 @@ export interface Team {
   id: string
   name: string
   slug: string
+  categoryId?: string
+  categorySlug?: string
+  league?: string
+  displayOrder?: number
+  active?: boolean
 }
 
 export interface Model {

@@ -11,4 +11,6 @@ public interface SpringDataCategoryJpaRepository extends JpaRepository<CategoryJ
     List<CategoryJpaEntity> findByActiveTrueOrderByDisplayOrderAsc(Pageable pageable);
 
     Optional<CategoryJpaEntity> findBySlugAndActiveTrue(String slug);
+
+    Optional<CategoryJpaEntity> findBySlug(String slug);
 }

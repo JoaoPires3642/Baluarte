@@ -1,5 +1,5 @@
-export const runtime = "edge";
 import Link from "next/link"
+import { ChevronRight } from "lucide-react"
 import { fetchOrders, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,79 +50,78 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8 py-8">
-      <div className="rounded-[2rem] border border-[#d9e2ef] bg-white p-6 shadow-sm shadow-slate-900/5 sm:p-8">
+    <div className="space-y-6 py-6">
+      <div>
         <p className="eyebrow">Painel</p>
-        <h1 className="mt-4 text-3xl font-bold">Dashboard Admin</h1>
-        <p className="text-muted-foreground mt-2">Visão geral da sua loja</p>
+        <h1 className="mt-1 text-2xl font-bold">Dashboard</h1>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Produtos Ativos</p>
-            <p className="text-3xl font-bold text-[#0f274d]">{stats.totalProducts}</p>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-xs text-slate-500">Produtos Ativos</p>
+            <p className="mt-1 text-2xl font-bold text-[#0f274d]">{stats.totalProducts}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Pedidos Hoje</p>
-            <p className="text-3xl font-bold text-[#1657a3]">{stats.ordersToday}</p>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-xs text-slate-500">Pedidos Hoje</p>
+            <p className="mt-1 text-2xl font-bold text-[#1657a3]">{stats.ordersToday}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Faturamento</p>
-            <p className="text-3xl font-bold text-[#c3222a]">R$ {stats.revenue.toFixed(2).replace(".", ",")}</p>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-xs text-slate-500">Faturamento</p>
+            <p className="mt-1 text-2xl font-bold text-[#c3222a]">R$ {stats.revenue.toFixed(2).replace(".", ",")}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Estoque Baixo</p>
-            <p className="text-3xl font-bold text-[#c3222a]">{stats.lowStock}</p>
+          <CardContent className="p-4 sm:p-6">
+            <p className="text-xs text-slate-500">Estoque Baixo</p>
+            <p className="mt-1 text-2xl font-bold text-[#c3222a]">{stats.lowStock}</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Link href="/admin/produtos">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <CardTitle className="text-lg">Produtos</CardTitle>
-              <CardDescription>Gerenciar catálogo</CardDescription>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <CardTitle className="text-base sm:text-lg">Produtos</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Gerenciar catálogo</CardDescription>
             </CardContent>
           </Card>
         </Link>
         <Link href="/admin/pedidos">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <CardTitle className="text-lg">Pedidos</CardTitle>
-              <CardDescription>Ver todos os pedidos</CardDescription>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <CardTitle className="text-base sm:text-lg">Pedidos</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Ver todos os pedidos</CardDescription>
             </CardContent>
           </Card>
         </Link>
         <Link href="/admin/categorias">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardContent className="p-6 text-center">
-              <CardTitle className="text-lg">Categorias</CardTitle>
-              <CardDescription>Gerenciar categorias</CardDescription>
+            <CardContent className="p-4 sm:p-6 text-center">
+              <CardTitle className="text-base sm:text-lg">Categorias</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Gerenciar categorias</CardDescription>
             </CardContent>
           </Card>
         </Link>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Pedidos Recentes</CardTitle>
-            <CardDescription>Últimos pedidos da sua loja</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Pedidos Recentes</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Últimos pedidos da sua loja</CardDescription>
           </div>
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link href="/admin/pedidos">Ver Todos</Link>
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -136,8 +135,8 @@ export default async function AdminDashboard() {
               <tbody>
                 {displayOrders.slice(0, 5).map((order: Order) => (
                   <tr key={order.id} className="border-b">
-                    <td className="py-3">#{order.orderReference}</td>
-                    <td className="py-3">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
+                    <td className="py-3 font-medium">#{order.orderReference}</td>
+                    <td className="py-3 text-slate-500">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
                     <td className="py-3">R$ {order.total.toFixed(2).replace(".", ",")}</td>
                     <td className="py-3">
                       <Badge className={statusColors[order.status] || "bg-gray-500"}>
@@ -153,6 +152,27 @@ export default async function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="space-y-2 sm:hidden">
+            {displayOrders.slice(0, 5).map((order: Order) => (
+              <Link key={order.id} href={`/admin/pedidos/${order.id}`} className="block">
+                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">#{order.orderReference}</span>
+                      <Badge className={statusColors[order.status] || "bg-gray-500"}>
+                        {statusLabels[order.status] || order.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {new Date(order.createdAt).toLocaleDateString("pt-BR")} • R$ {order.total.toFixed(2).replace(".", ",")}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+                </div>
+              </Link>
+            ))}
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 package br.com.baluarte.core.modules.catalog.infrastructure;
 
+import br.com.baluarte.core.modules.catalog.domain.Team;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -42,4 +43,26 @@ public class TeamJpaEntity {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public static TeamJpaEntity fromDomain(Team team, CategoryJpaEntity category) {
+        TeamJpaEntity entity = new TeamJpaEntity();
+        entity.id = team.id() != null ? team.id() : UUID.randomUUID();
+        entity.category = category;
+        entity.name = team.name();
+        entity.slug = team.slug();
+        entity.league = team.league();
+        entity.displayOrder = team.displayOrder();
+        entity.active = team.active() != null ? team.active() : true;
+        entity.createdAt = team.createdAt() != null ? team.createdAt() : LocalDateTime.now();
+        return entity;
+    }
+
+    void updateFromDomain(Team team, CategoryJpaEntity category) {
+        this.category = category;
+        this.name = team.name();
+        this.slug = team.slug();
+        this.league = team.league();
+        this.displayOrder = team.displayOrder();
+        this.active = team.active() != null ? team.active() : true;
+    }
 }

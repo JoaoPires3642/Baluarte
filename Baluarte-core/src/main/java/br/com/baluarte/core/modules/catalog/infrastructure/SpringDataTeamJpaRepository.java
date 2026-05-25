@@ -16,4 +16,8 @@ public interface SpringDataTeamJpaRepository extends JpaRepository<TeamJpaEntity
     Optional<TeamJpaEntity> findBySlugAndCategorySlugAndCategoryActiveTrueAndActiveTrue(String slug, String categorySlug);
 
     Optional<TeamJpaEntity> findBySlug(String slug);
+
+    List<TeamJpaEntity> findByCategorySlug(String categorySlug);
+
+    List<TeamJpaEntity> findByActiveTrue();
 }
