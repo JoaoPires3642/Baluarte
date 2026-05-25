@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy } from "lucide-react"
 import { fetchModelsByTeam, fetchTeamsByCategory, type Model, type Team } from "@/lib/api"

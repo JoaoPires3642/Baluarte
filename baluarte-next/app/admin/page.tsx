@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import Link from "next/link"
 import { fetchOrders, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"

@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import Link from "next/link"
 import { MapPin, PackageSearch, UserRound } from "lucide-react"
 import { fetchOrder, type Order } from "@/lib/api"

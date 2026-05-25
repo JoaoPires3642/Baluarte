@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "baluarte",
+	"compatibility_date": "2026-05-25",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "baluarte"
+		}
+	],
+	"vars": {
+		"NEXT_PUBLIC_API_BASE_URL": "http://localhost:8080/api/v1",
+		"NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": ""
+	}
+}

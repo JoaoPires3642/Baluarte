@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import Link from "next/link"
 import { ClipboardList } from "lucide-react"
 import { fetchOrders, type Order } from "@/lib/api"
