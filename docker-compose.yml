@@ -53,6 +53,23 @@ services:
     volumes:
       - uploads_data:/var/www/uploads
 
+  frontend:
+    build:
+      context: ./baluarte-next
+    container_name: baluarte-next
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://core:8080/api/v1}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY:-}
+    depends_on:
+      - core
+    ports:
+      - "3000:3000"
+
   web:
     build:
       context: ./Baluarte-web
@@ -60,9 +77,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${PORT:-3000}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
-      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      PORT: ${PORT:-8081}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://core:8080}
+      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://core:8080}
       EXPO_PUBLIC_ENV: ${EXPO_PUBLIC_ENV:-development}
       EXPO_PUBLIC_USE_MOCK_CATEGORIES: ${EXPO_PUBLIC_USE_MOCK_CATEGORIES:-false}
       EXPO_PUBLIC_ADMIN_EMAILS: ${EXPO_PUBLIC_ADMIN_EMAILS:-}
@@ -73,7 +90,7 @@ services:
     depends_on:
       - core
     ports:
-      - "3000:3000"
+      - "8081:8081"
 
 volumes:
   postgres_data:
