@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
