@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import { SearchX } from "lucide-react"
 import { fetchPublicModels, type Model } from "@/lib/api"
 import { ProductCard } from "@/components/product-card"

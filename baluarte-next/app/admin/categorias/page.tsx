@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import Link from "next/link"
 import { FolderKanban, Layers3 } from "lucide-react"
 import { fetchCategories, type Category } from "@/lib/api"

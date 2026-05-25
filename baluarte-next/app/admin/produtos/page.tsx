@@ -1,3 +1,4 @@
+export const runtime = "edge";
 import Link from "next/link"
 import { PackagePlus, Search } from "lucide-react"
 import { fetchPublicModels, type Model } from "@/lib/api"
