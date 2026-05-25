@@ -190,6 +190,7 @@ export default function CheckoutPage() {
         isDefault: a.isDefault,
       }))
       list.push({
+        addressId: "",
         label: newAddr.label,
         cep: newAddr.cep.replace(/\D/g, ""),
         street: newAddr.street,
@@ -275,6 +276,7 @@ export default function CheckoutPage() {
           await syncAddresses([
             ...existing,
             {
+              addressId: "",
               label: addr.street.split(" ")[0] || "Endereço",
               cep: cep.replace(/\D/g, ""),
               street: addr.street,

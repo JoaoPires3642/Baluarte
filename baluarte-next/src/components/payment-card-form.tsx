@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,7 +24,6 @@ type Props = {
 export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props) {
   const [ready, setReady] = useState(false)
   const [cardholderName, setCardholderName] = useState("")
-  const formRef = useRef<HTMLFormElement>(null)
 
   const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
 
@@ -42,7 +41,7 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
   }, [publicKey])
 
   const handleSubmit = async () => {
-    if (!ready || !publicKey || !formRef.current) return
+    if (!ready || !publicKey) return
 
     const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" })
 
