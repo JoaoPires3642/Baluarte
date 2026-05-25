@@ -1,25 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { CreditCard, MapPinned, ShieldCheck, Truck } from "lucide-react"
+import { CreditCard, Loader2, MapPin, MapPinned, Plus, ShieldCheck, Truck } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
-import { fetchShippingQuotes, createPayment, type PaymentResponse, type ShippingQuote } from "@/lib/api"
+import { useUser } from "@clerk/nextjs"
+import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, type Address, type PaymentResponse, type ShippingQuote } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { PaymentPixPanel } from "@/components/payment-pix-panel"
+import { PaymentCardForm } from "@/components/payment-card-form"
 
 type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
+
+function formatCep(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8)
+  if (digits.length <= 5) return digits
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, total, clear } = useCart()
   const { showToast } = useToast()
+  const { isSignedIn } = useUser()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<CheckoutStep>(1)
   const [cep, setCep] = useState("")
@@ -28,6 +37,10 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix")
   const [paymentResult, setPaymentResult] = useState<PaymentResponse | null>(null)
   const [paymentError, setPaymentError] = useState("")
+
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [showNewAddress, setShowNewAddress] = useState(false)
 
   const [address, setAddress] = useState({
     street: "",
@@ -42,18 +55,175 @@ export default function CheckoutPage() {
     cpf: "",
   })
 
+  const [cepLoading, setCepLoading] = useState(false)
+  const [cardToken, setCardToken] = useState("")
+  const [cardPaymentMethodId, setCardPaymentMethodId] = useState("")
+  const [cardIssuerId, setCardIssuerId] = useState("")
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const [newAddr, setNewAddr] = useState({
+    label: "",
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    isDefault: false,
+  })
+
+  const loadAddresses = useCallback(async () => {
+    if (!isSignedIn) return
+    try {
+      const data = await fetchAddresses()
+      setAddresses(data)
+      const defaultAddr = data.find(a => a.isDefault) || data[0]
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.addressId)
+        setAddress({
+          street: defaultAddr.street,
+          number: defaultAddr.number,
+          neighborhood: defaultAddr.neighborhood,
+          city: defaultAddr.city,
+          state: defaultAddr.state,
+        })
+        setCep(defaultAddr.cep)
+      }
+    } catch {
+      // not signed in or error
+    }
+  }, [isSignedIn])
+
+  useEffect(() => {
+    loadAddresses()
+  }, [loadAddresses])
+
+  const selectAddress = (addr: Address) => {
+    setSelectedAddressId(addr.addressId)
+    setAddress({
+      street: addr.street,
+      number: addr.number,
+      neighborhood: addr.neighborhood,
+      city: addr.city,
+      state: addr.state,
+    })
+    setCep(addr.cep)
+    setShowNewAddress(false)
+    setShippingOptions([])
+    setSelectedShipping("")
+    const digits = addr.cep.replace(/\D/g, "")
+    if (digits.length === 8) {
+      triggerShippingQuote(digits, addr.state)
+    }
+  }
+
+  const handleCepBlur = async () => {
+    const digits = cep.replace(/\D/g, "")
+    if (digits.length !== 8) return
+
+    setCepLoading(true)
+    try {
+      const result = await lookupCep(digits)
+      setAddress(prev => ({
+        ...prev,
+        street: result.street || prev.street,
+        neighborhood: result.neighborhood || prev.neighborhood,
+        city: result.city || prev.city,
+        state: result.state || prev.state,
+      }))
+    } catch {
+      // ignore
+    } finally {
+      setCepLoading(false)
+    }
+  }
+
+  const triggerShippingQuote = useCallback(async (cepDigits: string, stateUf: string) => {
+    if (cepDigits.length < 8 || items.length === 0) return
+    setShippingLoading(true)
+    try {
+      const res = await fetchShippingQuotes(cepDigits, stateUf, items.length)
+      setShippingOptions(res.data.options || [])
+      if (res.data.options?.length > 0) {
+        setSelectedShipping(res.data.options[0].id)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setShippingLoading(false)
+    }
+  }, [items.length])
+
+  useEffect(() => {
+    const digits = cep.replace(/\D/g, "")
+    if (digits.length === 8 && address.street && address.state) {
+      const timer = setTimeout(() => triggerShippingQuote(digits, address.state), 600)
+      return () => clearTimeout(timer)
+    }
+  }, [cep, address.street, address.state, triggerShippingQuote])
+
+  const resetNewAddress = () => {
+    setNewAddr({ label: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
+    setShowNewAddress(false)
+  }
+
+  const handleSaveNewAddress = async () => {
+    if (!newAddr.label || !newAddr.cep || !newAddr.street || !newAddr.number || !newAddr.neighborhood || !newAddr.city || !newAddr.state) {
+      showToast("Preencha todos os campos obrigatórios", "error")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const list = addresses.map(a => ({
+        addressId: a.addressId,
+        label: a.label,
+        cep: a.cep,
+        street: a.street,
+        number: a.number,
+        complement: a.complement || "",
+        neighborhood: a.neighborhood,
+        city: a.city,
+        state: a.state,
+        isDefault: a.isDefault,
+      }))
+      list.push({
+        label: newAddr.label,
+        cep: newAddr.cep.replace(/\D/g, ""),
+        street: newAddr.street,
+        number: newAddr.number,
+        complement: newAddr.complement || "",
+        neighborhood: newAddr.neighborhood,
+        city: newAddr.city,
+        state: newAddr.state,
+        isDefault: newAddr.isDefault || list.length === 0,
+      })
+      const defaultAddr = list.find(a => a.isDefault)
+      await syncAddresses(list, defaultAddr?.addressId)
+      await loadAddresses()
+      resetNewAddress()
+      showToast("Endereço salvo!", "success")
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Erro ao salvar endereço", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleCepSearch = async () => {
-    if (cep.length < 8) {
+    const digits = cep.replace(/\D/g, "")
+    if (digits.length < 8) {
       showToast("Informe um CEP válido", "error")
       return
     }
     setLoading(true)
     try {
-      const res = await fetchShippingQuotes(cep, "", items.length)
+      const res = await fetchShippingQuotes(digits, address.state, items.length)
       setShippingOptions(res.data.options || [])
       if (res.data.options?.length > 0) {
         setSelectedShipping(res.data.options[0].id)
-        setStep(2)
         showToast("Frete calculado com sucesso!", "success")
       } else {
         showToast("CEP não encontrado", "error")
@@ -75,7 +245,8 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!address.street || !address.neighborhood || !address.city) {
+    const addr = showNewAddress && newAddr.street ? newAddr : address
+    if (!addr.street || !addr.neighborhood || !addr.city) {
       showToast("Preencha o endereço completo", "error")
       return
     }
@@ -86,6 +257,40 @@ export default function CheckoutPage() {
     setLoading(true)
     setPaymentError("")
     try {
+      // Save new address to profile if user is signed in and it's a new one
+      if (isSignedIn && !selectedAddressId && cep && addr.street) {
+        try {
+          const existing = addresses.map(a => ({
+            addressId: a.addressId,
+            label: a.label,
+            cep: a.cep,
+            street: a.street,
+            number: a.number,
+            complement: a.complement || "",
+            neighborhood: a.neighborhood,
+            city: a.city,
+            state: a.state,
+            isDefault: a.isDefault,
+          }))
+          await syncAddresses([
+            ...existing,
+            {
+              label: addr.street.split(" ")[0] || "Endereço",
+              cep: cep.replace(/\D/g, ""),
+              street: addr.street,
+              number: addr.number,
+              complement: "",
+              neighborhood: addr.neighborhood,
+              city: addr.city,
+              state: addr.state,
+              isDefault: existing.length === 0,
+            },
+          ])
+        } catch {
+          // non-critical - order still goes through
+        }
+      }
+
       const res = await createPayment({
         checkoutSessionId: `session_${Date.now()}`,
         idempotencyKey: `key_${Date.now()}`,
@@ -95,18 +300,24 @@ export default function CheckoutPage() {
           identification: { type: "CPF" as const, number: payer.cpf },
         },
         shippingAddress: {
-          cep,
-          street: address.street,
-          number: address.number,
-          neighborhood: address.neighborhood,
-          city: address.city,
-          state: address.state,
+          cep: cep.replace(/\D/g, ""),
+          street: addr.street,
+          number: addr.number,
+          neighborhood: addr.neighborhood,
+          city: addr.city,
+          state: addr.state,
         },
         shipping: {
           optionId: shipping.id,
           label: shipping.label,
           price: shipping.price,
         },
+        card: paymentMethod === "card" && cardToken ? {
+          token: cardToken,
+          paymentMethodId: cardPaymentMethodId,
+          issuerId: cardIssuerId || undefined,
+          installments: 1,
+        } : undefined,
         items: items.map((item) => ({
           productId: item.id,
           size: item.size,
@@ -120,19 +331,27 @@ export default function CheckoutPage() {
       if (paymentMethod === "pix" && res.data.pix) {
         showToast("PIX gerado com sucesso!", "success")
         setStep(3)
-      } else {
+      } else if (res.data.status === "approved" || res.data.status === "pending") {
         clear()
         showToast("Pedido realizado com sucesso!", "success")
         router.push(`/checkout/sucesso?order=${res.data.orderReference}`)
+      } else {
+        setPaymentError(`Pagamento ${res.data.status}: ${res.data.statusDetail}`)
+        showToast("Erro no pagamento", "error")
       }
     } catch {
-      const message = paymentMethod === "card"
-        ? "Pagamento com cartao ainda nao esta completo nesta versao. Use PIX para testar."
-        : "Erro ao processar pagamento"
-      setPaymentError(message)
-      showToast(message, "error")
+      setPaymentError("Erro ao processar pagamento")
+      showToast("Erro ao processar pagamento", "error")
     }
     setLoading(false)
+  }
+
+  const handleCardToken = (result: { token: string; paymentMethodId: string; issuerId: string | null; installments: number }) => {
+    setCardToken(result.token)
+    setCardPaymentMethodId(result.paymentMethodId)
+    setCardIssuerId(result.issuerId || "")
+    setPaymentError("")
+    handleSubmit()
   }
 
   const shippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
@@ -161,181 +380,261 @@ export default function CheckoutPage() {
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <Card className={step !== 1 ? "opacity-70" : ""}>
-            <CardHeader>
-              <CardTitle>Endereço de Entrega</CardTitle>
-              <CardDescription>Informe onde deseja receber seu pedido</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <MapPinned className="mt-3 hidden h-4 w-4 text-[#c3222a] sm:block" />
-                <Input
-                  placeholder="CEP"
-                  value={cep}
-                  onChange={(e) => setCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                />
-                <Button onClick={handleCepSearch} disabled={loading} className="w-full sm:w-auto">Buscar</Button>
-              </div>
+          {step === 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Endereço de Entrega</CardTitle>
+                <CardDescription>Informe onde deseja receber seu pedido</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {addresses.length > 0 && !showNewAddress && (
+                  <div className="space-y-2">
+                    <Label>Endereços salvos</Label>
+                    {addresses.map(addr => (
+                      <label
+                        key={addr.addressId}
+                        className={`flex items-start gap-3 rounded-2xl border p-3 text-sm cursor-pointer transition-colors ${
+                          selectedAddressId === addr.addressId
+                            ? "border-[#0f274d] bg-[#f4f7fb]"
+                            : "border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="saved-address"
+                          checked={selectedAddressId === addr.addressId}
+                          onChange={() => selectAddress(addr)}
+                          className="mt-1"
+                        />
+                        <span className="leading-5">
+                          <strong>{addr.label}</strong>: {addr.street}, {addr.number}
+                          {addr.complement ? ` - ${addr.complement}` : ""} - {addr.neighborhood}, {addr.city}/{addr.state} - CEP {addr.cep}
+                        </span>
+                      </label>
+                    ))}
+                    <Button variant="ghost" size="sm" onClick={() => { setShowNewAddress(true); setSelectedAddressId(null) }}>
+                      <Plus className="mr-1 h-3 w-3" /> Novo endereço
+                    </Button>
+                  </div>
+                )}
 
-              {shippingOptions.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Frete</Label>
-                  {shippingOptions.map((option) => (
-                    <label key={option.id} className="flex items-start gap-3 rounded-2xl border border-slate-200 p-3 text-sm sm:items-center">
-                      <input
-                        type="radio"
-                        name="shipping"
-                        checked={selectedShipping === option.id}
-                        onChange={() => setSelectedShipping(option.id)}
-                        className="mt-1 sm:mt-0"
-                      />
-                      <span className="leading-5">{option.label} - R$ {option.price.toFixed(2).replace(".", ",")} ({option.estimatedDays})</span>
-                    </label>
-                  ))}
-                </div>
+                {showNewAddress && (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => { setShowNewAddress(false); setSelectedAddressId(addresses.find(a => a.isDefault)?.addressId || addresses[0]?.addressId || null) }}>
+                      ← Voltar para endereços salvos
+                    </Button>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <Label>Identificação (ex: Casa, Trabalho)</Label>
+                        <Input value={newAddr.label} onChange={e => setNewAddr(p => ({ ...p, label: e.target.value }))} placeholder="Minha Casa" />
+                      </div>
+                      <div>
+                        <Label>CEP</Label>
+                        <div className="relative">
+                          <Input
+                            value={newAddr.cep}
+                            onChange={e => setNewAddr(p => ({ ...p, cep: formatCep(e.target.value) }))}
+                            onBlur={() => {
+                              const digits = newAddr.cep.replace(/\D/g, "")
+                              if (digits.length !== 8) return
+                              setCepLoading(true)
+                              lookupCep(digits).then(r => {
+                                setNewAddr(p => ({
+                                  ...p,
+                                  street: r.street || p.street,
+                                  neighborhood: r.neighborhood || p.neighborhood,
+                                  city: r.city || p.city,
+                                  state: r.state || p.state,
+                                }))
+                              }).catch(() => {}).finally(() => setCepLoading(false))
+                            }}
+                            maxLength={9}
+                            placeholder="00000-000"
+                          />
+                          {cepLoading && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />}
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Estado (UF)</Label>
+                        <Input value={newAddr.state} onChange={e => setNewAddr(p => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))} maxLength={2} placeholder="SP" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label>Rua</Label>
+                        <Input value={newAddr.street} onChange={e => setNewAddr(p => ({ ...p, street: e.target.value }))} placeholder="Rua..." />
+                      </div>
+                      <div>
+                        <Label>Número</Label>
+                        <Input value={newAddr.number} onChange={e => setNewAddr(p => ({ ...p, number: e.target.value }))} placeholder="123" />
+                      </div>
+                      <div>
+                        <Label>Complemento</Label>
+                        <Input value={newAddr.complement} onChange={e => setNewAddr(p => ({ ...p, complement: e.target.value }))} placeholder="Apto, Bloco..." />
+                      </div>
+                      <div>
+                        <Label>Bairro</Label>
+                        <Input value={newAddr.neighborhood} onChange={e => setNewAddr(p => ({ ...p, neighborhood: e.target.value }))} placeholder="Centro" />
+                      </div>
+                      <div>
+                        <Label>Cidade</Label>
+                        <Input value={newAddr.city} onChange={e => setNewAddr(p => ({ ...p, city: e.target.value }))} placeholder="São Paulo" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" checked={newAddr.isDefault} onChange={e => setNewAddr(p => ({ ...p, isDefault: e.target.checked }))} />
+                          Endereço padrão
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSaveNewAddress} disabled={saving}>
+                        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Salvar endereço
+                      </Button>
+                      <Button variant="outline" onClick={resetNewAddress}>Cancelar</Button>
+                    </div>
+                  </>
+                )}
+
+                {!showNewAddress && addresses.length === 0 && (
+                  <Button onClick={() => setShowNewAddress(true)}>
+                    <Plus className="mr-2 h-4 w-4" /> Novo Endereço
+                  </Button>
+                )}
+
+                {!showNewAddress && shippingOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Frete</Label>
+                    {shippingOptions.map((option) => (
+                      <label key={option.id} className="flex items-start gap-3 rounded-2xl border border-slate-200 p-3 text-sm sm:items-center">
+                        <input
+                          type="radio"
+                          name="shipping"
+                          checked={selectedShipping === option.id}
+                          onChange={() => setSelectedShipping(option.id)}
+                          className="mt-1 sm:mt-0"
+                        />
+                        <span className="leading-5">{option.label} - R$ {option.price.toFixed(2).replace(".", ",")} ({option.estimatedDays})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {!showNewAddress && shippingLoading && (
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Calculando frete...
+                  </div>
+                )}
+              </CardContent>
+              {!showNewAddress && (
+                <CardFooter className="justify-end">
+                  <Button variant="outline" onClick={() => setStep(2)} disabled={!selectedShipping} className="w-full sm:w-auto">
+                    Revisar pedido
+                  </Button>
+                </CardFooter>
               )}
+            </Card>
+          )}
 
-              <div className="space-y-2">
-                <Label>Endereço</Label>
-                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
-                  <Input
-                    placeholder="Rua"
-                    value={address.street}
-                    onChange={(e) => setAddress({ ...address, street: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Numero"
-                    value={address.number}
-                    onChange={(e) => setAddress({ ...address, number: e.target.value })}
-                  />
+          {step === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Revisao</CardTitle>
+                <CardDescription>Confira itens, endereco e frete antes do pagamento</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {items.map((item) => (
+                  <div key={`${item.id}-${item.size}`} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="min-w-0 text-muted-foreground">{item.quantity}x {item.name} ({item.size})</span>
+                    <span>R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}</span>
+                  </div>
+                ))}
+                <Separator />
+                {(() => {
+                  const a = showNewAddress && newAddr.street ? newAddr : address
+                  return (
+                    <div className="text-sm text-slate-600">
+                      <p>{a.street}, {a.number}</p>
+                      <p>{a.neighborhood}, {a.city} - {a.state}</p>
+                      <p>{cep}</p>
+                    </div>
+                  )
+                })()}
+              </CardContent>
+              <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+                <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto">Voltar</Button>
+                <Button onClick={() => setStep(3)} disabled={!selectedShipping} className="w-full sm:w-auto">Confirmar e pagar</Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {step === 3 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pagamento</CardTitle>
+                <CardDescription>Escolha como deseja pagar</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant={paymentMethod === "pix" ? "default" : "outline"}
+                    onClick={() => setPaymentMethod("pix")}
+                    className="w-full sm:w-auto"
+                  >
+                    <Truck className="h-4 w-4" /> PIX
+                  </Button>
+                  <Button
+                    variant={paymentMethod === "card" ? "default" : "outline"}
+                    onClick={() => setPaymentMethod("card")}
+                    className="w-full sm:w-auto"
+                  >
+                    <CreditCard className="h-4 w-4" /> Cartão
+                  </Button>
                 </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
+
+                <Separator />
+
+                {paymentMethod === "pix" ? (
+                  <PaymentPixPanel
+                    total={total + shippingCost}
+                    pix={paymentResult?.pix ?? null}
+                    loading={loading}
+                    error={paymentError}
+                    onGeneratePix={handleSubmit}
+                  />
+                ) : null}
+
                 <div className="space-y-2">
-                  <Label>Bairro</Label>
+                  <Label>Email</Label>
                   <Input
-                    placeholder="Bairro"
-                    value={address.neighborhood}
-                    onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })}
+                    placeholder="seu@email.com"
+                    value={payer.email}
+                    onChange={(e) => setPayer({ ...payer, email: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Cidade</Label>
+                  <Label>CPF</Label>
                   <Input
-                    placeholder="Cidade"
-                    value={address.city}
-                    onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                    placeholder="000.000.000-00"
+                    value={payer.cpf}
+                    onChange={(e) => setPayer({ ...payer, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Estado</Label>
-                  <Input
-                    placeholder="UF"
-                    value={address.state}
-                    onChange={(e) => setAddress({ ...address, state: e.target.value.toUpperCase().slice(0, 2) })}
+
+                {paymentMethod === "card" ? (
+                  <PaymentCardForm
+                    amount={total + shippingCost}
+                    cpf={payer.cpf}
+                    loading={loading}
+                    error={paymentError}
+                    onToken={handleCardToken}
                   />
-                </div>
-              </div>
-            </CardContent>
-             <CardFooter className="justify-end">
-               <Button onClick={handleCepSearch} disabled={loading} className="w-full sm:w-auto">
-                {loading ? "Buscando..." : shippingOptions.length > 0 ? "Atualizar frete" : "Continuar"}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <Card className={step < 2 ? "opacity-70" : ""}>
-            <CardHeader>
-              <CardTitle>Revisao</CardTitle>
-              <CardDescription>Confira itens, endereco e frete antes do pagamento</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {items.map((item) => (
-                <div key={`${item.id}-${item.size}`} className="flex items-start justify-between gap-3 text-sm">
-                  <span className="min-w-0 text-muted-foreground">{item.quantity}x {item.name} ({item.size})</span>
-                  <span>R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}</span>
-                </div>
-              ))}
-              <Separator />
-              <div className="text-sm text-slate-600">
-                <p>{address.street}, {address.number}</p>
-                <p>{address.neighborhood}, {address.city} - {address.state}</p>
-                <p>{cep}</p>
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
-              <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-auto">Voltar</Button>
-              <Button onClick={() => setStep(3)} disabled={!selectedShipping} className="w-full sm:w-auto">Confirmar e pagar</Button>
-            </CardFooter>
-          </Card>
-
-          <Card className={step < 3 ? "opacity-70" : ""}>
-            <CardHeader>
-              <CardTitle>Pagamento</CardTitle>
-              <CardDescription>Escolha como deseja pagar</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant={paymentMethod === "pix" ? "default" : "outline"}
-                  onClick={() => setPaymentMethod("pix")}
-                  className="w-full sm:w-auto"
-                >
-                  <Truck className="h-4 w-4" /> PIX
-                </Button>
-                <Button
-                  variant={paymentMethod === "card" ? "default" : "outline"}
-                  onClick={() => setPaymentMethod("card")}
-                  className="w-full sm:w-auto"
-                >
-                  <CreditCard className="h-4 w-4" /> Cartão
-                </Button>
-              </div>
-
-              <Separator />
-
-              {paymentMethod === "pix" ? (
-                <PaymentPixPanel
-                  total={total + shippingCost}
-                  pix={paymentResult?.pix ?? null}
-                  loading={loading}
-                  error={paymentError}
-                  onGeneratePix={handleSubmit}
-                />
-              ) : null}
-
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  placeholder="seu@email.com"
-                  value={payer.email}
-                  onChange={(e) => setPayer({ ...payer, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CPF</Label>
-                <Input
-                  placeholder="000.000.000-00"
-                  value={payer.cpf}
-                  onChange={(e) => setPayer({ ...payer, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
-                />
-              </div>
-
-              {paymentMethod === "card" ? (
-                <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                  Fluxo de cartao ainda sera alinhado ao `Baluarte-web`. Por enquanto, use PIX para testar o checkout.
-                </div>
-              ) : null}
-            </CardContent>
-            <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
-              <Button variant="outline" onClick={() => setStep(2)} className="w-full sm:w-auto">Voltar para revisao</Button>
-              {paymentMethod === "card" ? (
-                <Button onClick={handleSubmit} disabled={loading || !selectedShipping} className="w-full sm:w-auto">
-                  {loading ? "Processando..." : "Tentar pagamento"}
-                </Button>
-              ) : null}
-            </CardFooter>
-          </Card>
+                ) : null}
+              </CardContent>
+              <CardFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+                <Button variant="outline" onClick={() => setStep(2)} className="w-full sm:w-auto">Voltar para revisao</Button>
+              </CardFooter>
+            </Card>
+          )}
         </div>
 
         <div>
@@ -365,9 +664,11 @@ export default function CheckoutPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full" onClick={handleSubmit} disabled={loading || !selectedShipping || step < 3}>
-                {loading ? "Processando..." : "Finalizar Pedido"}
-              </Button>
+              {paymentMethod === "pix" || !paymentResult ? (
+                <Button className="w-full" onClick={handleSubmit} disabled={loading || !selectedShipping || step < 3}>
+                  {loading ? "Processando..." : "Finalizar Pedido"}
+                </Button>
+              ) : null}
             </CardFooter>
           </Card>
         </div>

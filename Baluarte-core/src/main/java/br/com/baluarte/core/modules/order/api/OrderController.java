@@ -26,14 +26,43 @@ public class OrderController {
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders() {
-        List<OrderResponse> data = List.of(
-            new OrderResponse("1", "BAL-2024-001", "delivered", "2024-01-15T10:00:00Z", 319.80,
-                List.of(new OrderItemResponse("1", "Camisa Flamengo 2024", "G", 1, 299.90)),
-                new ShippingResponse("Rua Example, 123", "BAL123456789")),
-            new OrderResponse("2", "BAL-2024-002", "processing", "2024-01-20T14:30:00Z", 579.80,
-                List.of(new OrderItemResponse("2", "Camisa Palmeiras 2024", "M", 2, 289.90)),
-                null)
-        );
+        List<CheckoutOrder> orders = orderRepository.findAll();
+        List<OrderResponse> data = orders.stream()
+            .map(order -> {
+                List<OrderItemResponse> items = order.getItems() != null
+                    ? order.getItems().stream()
+                        .map(item -> new OrderItemResponse(
+                            item.getProductId(),
+                            "Produto #" + item.getProductId(),
+                            item.getSize(),
+                            item.getQuantity(),
+                            item.getUnitPrice().doubleValue()
+                        ))
+                        .toList()
+                    : List.of();
+
+                String shippingAddress = order.getShippingStreet() != null
+                    ? String.format("%s, %s - %s, %s - %s",
+                        order.getShippingStreet(),
+                        order.getShippingNumber() != null ? order.getShippingNumber() : "s/n",
+                        order.getShippingNeighborhood() != null ? order.getShippingNeighborhood() : "",
+                        order.getShippingCity() != null ? order.getShippingCity() : "",
+                        order.getShippingState() != null ? order.getShippingState() : "")
+                    : null;
+
+                return new OrderResponse(
+                    order.getOrderId(),
+                    order.getOrderId(),
+                    order.getStatus(),
+                    order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
+                    order.getTotalAmount().doubleValue(),
+                    items,
+                    order.getShippingStreet() != null
+                        ? new ShippingResponse(shippingAddress, null)
+                        : null
+                );
+            })
+            .toList();
         return ApiSuccessResponse.of(data);
     }
 

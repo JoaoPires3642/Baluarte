@@ -123,7 +123,7 @@ export function Header() {
             {isSignedIn ? (
               <div className={`items-center gap-3 ${compactTabletHeader ? "hidden lg:flex" : "hidden sm:flex"}`}>
                 <Button variant="default" size="sm" className="px-5" asChild>
-                  <Link href="/pedidos">Minha Conta</Link>
+                  <Link href="/conta">Minha Conta</Link>
                 </Button>
                 <UserButton />
               </div>

@@ -95,7 +95,7 @@ export async function fetchShippingQuotes(cep: string, state: string, itemsCount
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      destination: { cep, state },
+      destination: { cep, street: "", number: "", neighborhood: "", city: "", state },
       itemsCount,
     }),
   })
@@ -343,6 +343,7 @@ export interface PaymentRequest {
   card?: {
     token: string
     paymentMethodId: string
+    issuerId?: string
     installments: number
   }
 }
@@ -431,4 +432,71 @@ export interface UpdateProductRequest {
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
   variants: Array<{ size: string; stockQuantity: number }>
+}
+
+export interface Address {
+  addressId: string
+  clerkUserId: string
+  label: string
+  cep: string
+  street: string
+  number: string
+  complement?: string
+  neighborhood: string
+  city: string
+  state: string
+  isDefault: boolean
+}
+
+export interface CepLookupResult {
+  cep: string
+  street: string
+  neighborhood: string
+  city: string
+  state: string
+}
+
+export async function lookupCep(cep: string): Promise<CepLookupResult> {
+  const res = await fetch(`/api/cep/lookup?cep=${cep}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error || "Erro ao consultar CEP")
+  }
+  return res.json()
+}
+
+export async function fetchAddresses(): Promise<Address[]> {
+  const res = await fetch("/api/profile/addresses")
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error || "Erro ao carregar endereços")
+  }
+  const json = await res.json()
+  return json.data || []
+}
+
+export async function syncAddresses(addresses: Array<{
+  addressId?: string
+  label: string
+  cep: string
+  street: string
+  number: string
+  complement?: string
+  neighborhood: string
+  city: string
+  state: string
+  isDefault: boolean
+}>, defaultAddressId?: string) {
+  const res = await fetch("/api/profile/addresses", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ addresses, defaultAddressId }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro ao salvar endereços") + details)
+  }
+  return res.json()
 }

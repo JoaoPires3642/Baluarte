@@ -90,38 +90,32 @@ public class ProfileAddressController {
             return null;
         }
 
-        if (isBlank(clerkUserId) || isBlank(clerkEmail) || !EMAIL_PATTERN.matcher(clerkEmail).matches()) {
+        if (isBlank(clerkUserId)) {
             logger.warn(
-                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=invalid-clerk-identity path={} userId={} email={}",
-                request.getRequestURI(),
-                clerkUserId,
-                clerkEmail
+                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=missing-clerk-user-id path={}",
+                request.getRequestURI()
             );
             return null;
         }
 
         String normalizedHeaderUserId = normalize(clerkUserId);
-        String normalizedHeaderEmail = normalize(clerkEmail);
         String normalizedTokenUserId = normalize(jwt.getSubject());
-        String normalizedTokenEmail = normalize(extractJwtEmail(jwt));
-        boolean hasTokenEmail = !normalizedTokenEmail.isBlank();
-        String resolvedIdentityEmail = hasTokenEmail ? normalizedTokenEmail : normalizedHeaderEmail;
 
-        if (
-            normalizedTokenUserId.isBlank() ||
-            !normalizedTokenUserId.equals(normalizedHeaderUserId) ||
-            (hasTokenEmail && !normalizedTokenEmail.equals(normalizedHeaderEmail))
-        ) {
+        if (normalizedTokenUserId.isBlank() || !normalizedTokenUserId.equals(normalizedHeaderUserId)) {
             logger.warn(
-                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=clerk-identity-mismatch path={} headerUserId={} tokenUserId={} headerEmail={} tokenEmail={}",
+                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=clerk-identity-mismatch path={} headerUserId={} tokenUserId={}",
                 request.getRequestURI(),
                 clerkUserId,
-                jwt.getSubject(),
-                clerkEmail,
-                extractJwtEmail(jwt)
+                jwt.getSubject()
             );
             return null;
         }
+
+        String normalizedHeaderEmail = normalize(clerkEmail);
+        String normalizedTokenEmail = normalize(extractJwtEmail(jwt));
+        String resolvedIdentityEmail = !normalizedTokenEmail.isBlank() ? normalizedTokenEmail
+            : !normalizedHeaderEmail.isBlank() ? normalizedHeaderEmail
+            : normalizedHeaderUserId + "@clerk.users";
 
         internalRoleResolver.resolveFromIdentity(normalizedTokenUserId, resolvedIdentityEmail);
         return new AuthenticatedIdentity(normalizedTokenUserId, resolvedIdentityEmail);

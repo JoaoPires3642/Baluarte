@@ -7,5 +7,6 @@ public interface CheckoutOrderRepository {
     Optional<CheckoutOrder> findById(String orderId);
     Optional<CheckoutOrder> findByCheckoutSessionId(String checkoutSessionId);
     List<CheckoutOrder> findByCustomerRef(String customerRef);
+    List<CheckoutOrder> findAll();
     CheckoutOrder save(CheckoutOrder order);
 }

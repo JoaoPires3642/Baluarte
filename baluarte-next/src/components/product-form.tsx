@@ -3,14 +3,14 @@
 import Image from "next/image"
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Sparkles, X } from "lucide-react"
+import { Check, Loader2, MapPin, Sparkles, Truck, X } from "lucide-react"
 import { useCart, type CartItem } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import type { ModelDetail } from "@/lib/api"
+import { fetchShippingQuotes, type ModelDetail, type ShippingQuote } from "@/lib/api"
 
 type ProductFormModel = ModelDetail & {
   sizes?: string[]
@@ -137,6 +137,40 @@ export function ProductForm({ product }: ProductFormProps) {
 
     addItem(item)
     router.push("/checkout")
+  }
+
+  const [showShippingCalc, setShowShippingCalc] = useState(false)
+  const [shippingCep, setShippingCep] = useState("")
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const [shippingOptions, setShippingOptions] = useState<ShippingQuote[]>([])
+  const [shippingError, setShippingError] = useState("")
+
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
+
+  const handleCalculateShipping = async () => {
+    const digits = shippingCep.replace(/\D/g, "")
+    if (digits.length !== 8) {
+      setShippingError("CEP inválido")
+      return
+    }
+
+    setShippingLoading(true)
+    setShippingError("")
+    setShippingOptions([])
+
+    try {
+      const state = ""
+      const res = await fetchShippingQuotes(digits, state, 1)
+      setShippingOptions(res.data.options)
+    } catch (err) {
+      setShippingError(err instanceof Error ? err.message : "Erro ao consultar frete")
+    } finally {
+      setShippingLoading(false)
+    }
   }
 
   const personalizationPanel = (
@@ -311,6 +345,65 @@ export function ProductForm({ product }: ProductFormProps) {
           <span className="text-slate-500">Preco final</span>
           <span className="text-2xl font-extrabold text-[#102a5c]">R$ {(Number(product.price) + (personalizationEnabled ? personalizationExtra : 0)).toFixed(2).replace(".", ",")}</span>
         </div>
+      </div>
+
+      <div className="rounded-[1.25rem] border border-slate-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setShowShippingCalc(!showShippingCalc)}
+          className="flex w-full items-center justify-between p-4 text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <Truck className="h-4 w-4 text-[#c3222a]" />
+            Calcular frete
+          </span>
+          <span className={`text-sm text-slate-400 transition-transform ${showShippingCalc ? "rotate-180" : ""}`}>▼</span>
+        </button>
+
+        {showShippingCalc && (
+          <div className="border-t border-slate-100 p-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="CEP"
+                  className="pl-9"
+                  value={shippingCep}
+                  onChange={e => setShippingCep(formatCep(e.target.value))}
+                  maxLength={9}
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleCalculateShipping}
+                disabled={shippingLoading}
+                className="shrink-0"
+              >
+                {shippingLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Calcular"}
+              </Button>
+            </div>
+
+            {shippingError && (
+              <p className="mt-2 text-xs text-red-500">{shippingError}</p>
+            )}
+
+            {shippingOptions.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {shippingOptions.map(opt => (
+                  <div key={opt.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{opt.label}</p>
+                      <p className="text-xs text-slate-500">{opt.estimatedDays}</p>
+                    </div>
+                    <span className="text-sm font-bold text-[#102a5c]">
+                      R$ {opt.price.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="hidden flex-col gap-3 sm:flex sm:flex-row">

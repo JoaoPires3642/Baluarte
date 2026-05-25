@@ -26,6 +26,13 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     }
 
     @Override
+    public List<CheckoutOrder> findAll() {
+        return jpaRepository.findAll().stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
     public List<CheckoutOrder> findByCustomerRef(String customerRef) {
         return jpaRepository.findByCustomerRef(customerRef).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
