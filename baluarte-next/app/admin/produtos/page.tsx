@@ -245,7 +245,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  const handleToggleActive = async (product: ProductData) => {
+  const handleToggleActive = async (product: AdminProduct) => {
     try {
       await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" })
       await loadData()

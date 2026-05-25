@@ -61,12 +61,12 @@ export default async function CategoriasPage() {
                     </div>
                   </div>
                 ) : null}
-                <Card className="p-4">
+                <div className="p-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">{cat.name}</h3>
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </div>
-                </Card>
+                </div>
               </Card>
             </Link>
           )
