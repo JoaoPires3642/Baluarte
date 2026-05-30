@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "npm --prefix baluarte-next ci && npm --prefix baluarte-next run build:pages"
+    "build": "node scripts/build-pages.mjs"
   },
   "dependencies": {
     "react-native-reanimated": "~4.1.1"
