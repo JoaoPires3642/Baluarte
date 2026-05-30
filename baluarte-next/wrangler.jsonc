@@ -16,10 +16,5 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "baluarte-next"
     }
-  ],
-  "vars": {
-    "NEXT_PUBLIC_API_BASE_URL": "https://api.example.com/api/v1",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY": "replace-with-cloudflare-env-var",
-    "NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY": "replace-with-cloudflare-env-var"
-  }
+  ]
 }

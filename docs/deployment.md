@@ -39,6 +39,10 @@ Secrets necessários no GitHub Actions:
 ```env
 CLOUDFLARE_ACCOUNT_ID=<account-id>
 CLOUDFLARE_API_TOKEN=<api-token-com-permissao-workers>
+NEXT_PUBLIC_API_BASE_URL=https://<backend-host>/api/v1
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<clerk-publishable-key>
+NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=<mercadopago-public-key>
+CLERK_SECRET_KEY=<clerk-secret-key>
 ```
 
 ### Comandos
