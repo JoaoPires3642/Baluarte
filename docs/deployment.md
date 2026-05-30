@@ -1,83 +1,140 @@
 # Deployment
 
-## Front-end web na Cloudflare Pages
+## Front-end web na Vercel
 
-O front-end web principal fica em `baluarte-next` e usa Next.js. O deploy de produção vem do Cloudflare Pages `baluarte`, conectado ao GitHub na branch `main`.
+O front-end web fica em `/Baluarte` (raiz do Next.js) e faz deploy automático via Vercel conectado ao GitHub na branch `main`.
 
-O build usa `@cloudflare/next-on-pages`. Algumas rotas públicas foram prerenderizadas para manter o bundle de Pages Functions abaixo do limite de 25 MiB.
+### Stack
 
-### Arquivos
+- **Next.js 16** (Turbopack, App Router)
+- **Clerk** (autenticação)
+- **Proxy (ex-middleware)** roda em Node.js runtime (`proxy.ts`, renomeado conforme Next.js 16)
 
-- `baluarte-next/wrangler.toml`: configuração do Cloudflare Pages para o root directory `baluarte-next`.
-- `baluarte-next/scripts/build.mjs`: wrapper de build local.
-- `baluarte-next/package.json`: scripts de build Next.js e Pages.
+### Estrutura
 
-### Variáveis da Cloudflare
+```
+Baluarte/          ← raiz do Next.js (detectada automaticamente pela Vercel)
+├── app/           ← rotas App Router
+├── proxy.ts       ← Clerk middleware
+├── src/           ← componentes, lib, API client
+└── .vercel/       ← link do projeto Vercel
+```
 
-Configure no painel do Cloudflare Pages.
+### Variáveis de ambiente
 
-Variáveis públicas usadas pelo front-end:
+Configure no dashboard da Vercel (`https://vercel.com/.../settings/environment-variables`).
+
+Públicas (prefixo `NEXT_PUBLIC_`):
 
 ```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_<...>
 NEXT_PUBLIC_API_BASE_URL=https://<backend-host>/api/v1
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=<clerk-publishable-key>
 NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=<mercadopago-public-key>
 ```
 
-Variáveis secretas usadas em rotas server-side do Next.js:
+Secretas:
 
 ```env
-CLERK_SECRET_KEY=<clerk-secret-key>
+CLERK_SECRET_KEY=sk_<...>
 ```
 
-Não coloque valores reais em arquivos versionados. Use variáveis/secrets do Cloudflare Pages para chaves privadas.
+Não coloque valores reais em `.env` versionado. Use o dashboard da Vercel para secrets.
 
-### Comandos
+### Fluxo de deploy
 
-Dentro de `baluarte-next`:
+1. Push para `main` → Vercel detecta automaticamente
+2. Build: `npm run build` → `next build`
+3. Deploy em: `https://baluarte-ozb5.vercel.app` (ou domínio customizado)
+4. Rotas estáticas (○) são servidas via CDN; rotas dinâmicas (ƒ) rodam em Serverless Functions
+
+### Comandos locais
 
 ```bash
+cd Baluarte
 npm run lint
 npm run build
 ```
 
-Se o computador desligar durante build, não insista em builds repetidos. Verifique temperatura, fonte/bateria, RAM e swap antes de rodar novamente.
+### Histórico de migração
 
-## Banco no Supabase
+- Anteriormente usava Cloudflare Pages com `@cloudflare/next-on-pages`
+- Migrado para Vercel após limite de 3 MiB em Workers free
+- `middleware.ts` renomeado para `proxy.ts` (convenção Next.js 16)
+- Monorepo eliminado: `baluarte-next/` movido para raiz do repositório
 
-O backend `Baluarte-core` é Spring Boot com PostgreSQL, JPA e Flyway. O Supabase entra como Postgres gerenciado; as migrations existentes em `Baluarte-core/src/main/resources/db/migration` continuam sendo aplicadas pelo Flyway.
+## Backend Spring Boot
+
+O backend `Baluarte-core` é Spring Boot com PostgreSQL, JPA e Flyway.
+
+### Deploy
+
+O backend precisa de um runtime compatível com Java 21 (Railway, Fly.io, ou VPS). A Vercel **não** suporta Java — o backend não roda nela.
 
 ### Variáveis do backend
 
-Configure no ambiente onde o backend Spring Boot for rodar:
-
 ```env
 SPRING_PROFILES_ACTIVE=prod
-DB_URL=jdbc:postgresql://<supabase-host>:5432/postgres
-DB_USERNAME=postgres.<project-ref>
-DB_PASSWORD=<database-password>
-APP_CORS_ALLOWED_ORIGINS=https://<dominio-front-cloudflare>
+DB_URL=jdbc:postgresql://<host>:5432/<database>
+DB_USERNAME=<user>
+DB_PASSWORD=<password>
+APP_AUTH_CLERK_ISSUER=https://<clerk-domain>.clerk.accounts.dev
+APP_AUTH_CLERK_JWKS_URI=https://<clerk-domain>.clerk.accounts.dev/.well-known/jwks.json
+APP_AUTH_ADMIN_EMAILS=admin@baluarte.com
+APP_CORS_ALLOWED_ORIGINS=https://baluarte-ozb5.vercel.app
 ```
 
-Para Supabase, prefira o Session Pooler na porta `5432` para aplicação Spring/Flyway. Use conexão direta apenas se seu ambiente tiver suporte IPv6 ou add-on IPv4.
+## Banco de dados
 
-### Validação
+O PostgreSQL usado pelo backend.
 
-Depois do deploy do backend, valide:
+### Provedores
+
+| Provedor | Tipo | Ideal para |
+|----------|------|------------|
+| **Neon** | Serverless Postgres | Vercel + preview branches |
+| Supabase | Postgres gerenciado | Já usado anteriormente |
+
+> **Neon** é a escolha natural com Vercel: oferece serverless Postgres com pooling, free tier (0.5 GB), branching para preview deployments, e integração nativa com Vercel.
+
+## Build nativo (GraalVM)
+
+O backend pode ser compilado para **native image** com GraalVM, reduzindo startup para <0.5s e RAM para ~60MB. Necessário para tiers com 256MB.
+
+### Docker (graalvm-native)
+
+```bash
+cd Baluarte-core
+docker build -t baluarte-core-native .
+```
+
+O Dockerfile faz build multi-estágio:
+1. **Maven + JDK 21**: compila o JAR
+2. **GraalVM native-image**: gera binário estático a partir do JAR
+3. **Alpine 3.21**: copia o binário (apenas 1 layer, ~70MB)
+
+### Local (requer GraalVM SDK instalado)
+
+```bash
+cd Baluarte-core
+./mvnw -Pnative native:compile -DskipTests
+./target/baluarte-core
+```
+
+### Variáveis de ambiente (native)
+
+As mesmas do backend JVM. O binário lê `application.yml` do classpath embutido e resolve `${VAR:default}` normalmente.
+
+## Validação
+
+Após deploy do backend:
 
 ```bash
 curl https://<backend-host>/actuator/health
 ```
 
-Depois do deploy do front-end, valide no navegador:
+Após deploy do front-end, validar no navegador:
 
 - carregamento da home;
-- login Clerk;
+- login Clerk (sign-in / sign-up);
 - chamadas para `NEXT_PUBLIC_API_BASE_URL`;
-- fluxo de checkout, se as credenciais de pagamento estiverem configuradas.
-
-## Observações
-
-- Cloudflare Pages vai hospedar o Next.js, mas o backend Spring Boot precisa estar hospedado em outro runtime compatível com Java 21.
-- Supabase hospeda o banco Postgres, não o backend Java.
-- Atualize `APP_CORS_ALLOWED_ORIGINS` com o domínio final da Cloudflare antes de produção.
+- fluxo de checkout (se credenciais de pagamento configuradas).
