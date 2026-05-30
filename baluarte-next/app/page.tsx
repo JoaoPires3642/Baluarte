@@ -1,9 +1,6 @@
-export const runtime = "edge";
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
 import { fetchCategories, fetchPublicModels, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
-import { resolveServerAuthSession } from "@/lib/auth"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -43,12 +40,6 @@ async function getData() {
 }
 
 export default async function Home() {
-  const authSession = await resolveServerAuthSession()
-
-  if (authSession.isAdmin) {
-    redirect("/admin")
-  }
-
   const { categories, teams, products } = await getData()
 
   const displayCategories = categories.map((category: Category) => {

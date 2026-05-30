@@ -4,7 +4,6 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { AdminLayoutGuard } from "@/components/admin-layout-guard";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 
 const bodyFont = Inter({
@@ -43,16 +42,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="pt-BR" className={`${bodyFont.variable} h-full antialiased`}>
-        <body className="min-h-screen flex flex-col">
-          <Providers>
-            <AdminLayoutGuard><Header /></AdminLayoutGuard>
-            <main className="flex-1">{children}</main>
-            <AdminLayoutGuard><Footer /></AdminLayoutGuard>
-          </Providers>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="pt-BR" className={`${bodyFont.variable} h-full antialiased`}>
+      <body className="min-h-screen flex flex-col">
+        <Providers>
+          <AdminLayoutGuard><Header /></AdminLayoutGuard>
+          <main className="flex-1">{children}</main>
+          <AdminLayoutGuard><Footer /></AdminLayoutGuard>
+        </Providers>
+      </body>
+    </html>
   );
 }

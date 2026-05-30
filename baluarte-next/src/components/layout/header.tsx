@@ -4,7 +4,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
-import { SignInButton, SignOutButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs"
 import { Heart, Menu, ShieldCheck, ShoppingBag, UserRound, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,7 +17,6 @@ export function Header() {
     () => true,
     () => false
   )
-  const { isSignedIn } = useUser()
   const { items } = useCart()
   const { items: wishlistItems } = useWishlist()
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
@@ -105,29 +103,14 @@ export function Header() {
               </Button>
             </Link>
 
-            {!isSignedIn ? (
-              <div className={`items-center gap-2 ${compactTabletHeader ? "hidden lg:flex" : "hidden sm:flex"}`}>
-                <SignInButton mode="redirect">
-                  <Button variant="outline" size="sm" className="px-5">
-                    Entrar
-                  </Button>
-                </SignInButton>
-                <SignUpButton mode="redirect">
-                  <Button variant="destructive" size="sm" className="px-5 shadow-md shadow-red-900/15">
-                    Criar conta
-                  </Button>
-                </SignUpButton>
-              </div>
-            ) : null}
-
-            {isSignedIn ? (
-              <div className={`items-center gap-3 ${compactTabletHeader ? "hidden lg:flex" : "hidden sm:flex"}`}>
-                <Button variant="default" size="sm" className="px-5" asChild>
-                  <Link href="/conta">Minha Conta</Link>
-                </Button>
-                <UserButton />
-              </div>
-            ) : null}
+            <div className={`items-center gap-2 ${compactTabletHeader ? "hidden lg:flex" : "hidden sm:flex"}`}>
+              <Button variant="outline" size="sm" className="px-5" asChild>
+                <Link href="/sign-in">Entrar</Link>
+              </Button>
+              <Button variant="destructive" size="sm" className="px-5 shadow-md shadow-red-900/15" asChild>
+                <Link href="/sign-up">Criar conta</Link>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -192,36 +175,14 @@ export function Header() {
                 </div>
               </div>
 
-              {isSignedIn ? (
-                <div className="space-y-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Conta</p>
-                  <div className="grid gap-2">
-                    <Link href="/pedidos" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">
-                      Minha conta
-                    </Link>
-                    <SignOutButton>
-                      <button type="button" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-[#f1d4d6] bg-[#fff6f6] px-4 py-3 text-left font-semibold text-[#c3222a]">
-                        Sair
-                      </button>
-                    </SignOutButton>
-                  </div>
-                </div>
-              ) : null}
-
-              {!isSignedIn ? (
-                <div className="grid gap-2">
-                  <SignInButton mode="redirect">
-                    <Button variant="outline" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                      Entrar
-                    </Button>
-                  </SignInButton>
-                  <SignUpButton mode="redirect">
-                    <Button variant="destructive" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                      Criar conta
-                    </Button>
-                  </SignUpButton>
-                </div>
-              ) : null}
+              <div className="grid gap-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>Entrar</Link>
+                </Button>
+                <Button variant="destructive" className="w-full" asChild>
+                  <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>Criar conta</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>,

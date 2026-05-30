@@ -1,4 +1,3 @@
-export const runtime = "edge";
 import Link from "next/link"
 import { fetchCategories, fetchTeamsByCategory, type Team, type Category } from "@/lib/api"
 import { ShieldCheck, ChevronRight } from "lucide-react"

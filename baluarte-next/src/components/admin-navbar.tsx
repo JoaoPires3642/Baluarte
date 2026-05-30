@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown } from "lucide-react"
-import { SignOutButton, UserButton, useUser } from "@clerk/nextjs"
 import { useState } from "react"
 
 const NAV_ITEMS = [
@@ -16,7 +15,6 @@ const NAV_ITEMS = [
 
 export function AdminNavbar() {
   const pathname = usePathname()
-  const { user } = useUser()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -67,7 +65,6 @@ export function AdminNavbar() {
             <span className="text-xs font-medium">Menu</span>
             <ChevronDown className={`h-4 w-4 transition-transform ${mobileOpen ? "rotate-180" : ""}`} />
           </button>
-          <UserButton />
         </div>
       </div>
 

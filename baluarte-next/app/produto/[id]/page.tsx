@@ -1,4 +1,5 @@
 export const runtime = "edge";
+
 import { notFound } from "next/navigation"
 import { fetchModelDetail, fetchProductById, type ModelDetail } from "@/lib/api"
 import { ProductPageView } from "@/components/product-page-view"

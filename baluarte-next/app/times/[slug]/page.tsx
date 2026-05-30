@@ -1,4 +1,5 @@
 export const runtime = "edge";
+
 import Link from "next/link"
 import { ShieldCheck } from "lucide-react"
 import { fetchModelsByTeam, type Model } from "@/lib/api"
