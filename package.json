@@ -1,8 +1,3 @@
 {
-  "scripts": {
-    "build": "node scripts/build-pages.mjs"
-  },
-  "dependencies": {
-    "react-native-reanimated": "~4.1.1"
-  }
+  "private": true
 }
