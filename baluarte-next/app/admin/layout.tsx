@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { auth } from "@clerk/nextjs/server"
 import { AdminNavbar } from "@/components/admin-navbar"
 import { resolveServerAuthSession } from "@/lib/auth"
@@ -23,9 +24,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <p className="mt-2 text-sm text-slate-500">
             Sua conta não tem permissão de administrador.
           </p>
-          <a href="/" className="mt-4 inline-block text-sm font-medium text-red-600 hover:underline">
+          <Link href="/" className="mt-4 inline-block text-sm font-medium text-red-600 hover:underline">
             Voltar para a loja
-          </a>
+          </Link>
         </div>
       </div>
     )

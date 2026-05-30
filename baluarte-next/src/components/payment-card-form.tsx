@@ -22,7 +22,9 @@ type Props = {
 }
 
 export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props) {
-  const [ready, setReady] = useState(false)
+  const [ready, setReady] = useState(() => (
+    typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
+  ))
   const [cardholderName, setCardholderName] = useState("")
 
   const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
@@ -30,7 +32,6 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
   useEffect(() => {
     if (!publicKey) return
     if (window.MercadoPago) {
-      setReady(true)
       return
     }
     const script = document.createElement("script")
