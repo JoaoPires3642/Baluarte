@@ -70,6 +70,18 @@ venv/
 test-results/
 playwright-report/
 
+# Yarn PnP (if used)
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# TypeScript incremental
+*.tsbuildinfo
+
 # Docker local overrides
 docker-compose.override.yml
 Baluarte-web/REFATORACAO-ETAPAS.md
