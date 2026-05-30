@@ -17,8 +17,8 @@ RUN native-image \
     --no-fallback \
     baluarte-core
 
-FROM alpine:3.21
-RUN apk --no-cache add ca-certificates tzdata
+FROM debian:bookworm-slim
+RUN apt-get update -qq && apt-get install -y -qq ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=native /app/baluarte-core .
 EXPOSE 8080
