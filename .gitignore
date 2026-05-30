@@ -43,6 +43,9 @@ pnpm-debug.log*
 dist/
 build/
 .next/
+.open-next/
+.vercel/
+.wrangler/
 out/
 coverage/
 

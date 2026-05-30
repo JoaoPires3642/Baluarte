@@ -1,20 +1,22 @@
 # Deployment
 
-## Front-end web na Cloudflare Pages
+## Front-end web na Cloudflare Workers
 
-O front-end web principal fica em `baluarte-next` e usa Next.js. O deploy de produção vem da branch `main` pelo projeto Cloudflare Pages `baluarte`.
+O front-end web principal fica em `baluarte-next` e usa Next.js. O deploy de produção recomendado usa Cloudflare Workers com OpenNext.
+
+Cloudflare Pages foi testado, mas o build gerado por `@cloudflare/next-on-pages` ultrapassou o limite de 25 MiB para Functions neste app. Por isso, não use Pages como destino principal deste front-end.
 
 ### Arquivos
 
-- `baluarte-next/wrangler.jsonc`: configuração do Cloudflare Pages e diretório de output.
-- `baluarte-next/scripts/build.mjs`: usa `next build` localmente e `@cloudflare/next-on-pages` quando `CF_PAGES=true`.
-- `baluarte-next/package.json`: script `build` usado localmente, no Docker e no Pages.
-- `wrangler.jsonc`: configuração na raiz para o projeto Cloudflare Pages conectado ao Git.
-- `package.json`: script `build` na raiz que delega o build para `baluarte-next`.
+- `baluarte-next/wrangler.jsonc`: configuração do Worker.
+- `baluarte-next/open-next.config.ts`: configuração do OpenNext para Cloudflare.
+- `baluarte-next/scripts/build.mjs`: wrapper de build local.
+- `baluarte-next/package.json`: scripts de build, preview e deploy.
+- `.github/workflows/deploy-cloudflare-worker.yml`: deploy automático para Workers em push na `main`.
 
 ### Variáveis da Cloudflare
 
-Configure no painel da Cloudflare Pages.
+Configure no Worker da Cloudflare e nos secrets do GitHub Actions.
 
 Variáveis públicas usadas pelo front-end:
 
@@ -30,7 +32,14 @@ Variáveis secretas usadas em rotas server-side do Next.js:
 CLERK_SECRET_KEY=<clerk-secret-key>
 ```
 
-Não coloque valores reais em `wrangler.jsonc` se forem sensíveis. Use variáveis/secrets do Cloudflare Pages para chaves privadas.
+Não coloque valores reais em `wrangler.jsonc` se forem sensíveis. Use secrets da Cloudflare e do GitHub Actions para chaves privadas.
+
+Secrets necessários no GitHub Actions:
+
+```env
+CLOUDFLARE_ACCOUNT_ID=<account-id>
+CLOUDFLARE_API_TOKEN=<api-token-com-permissao-workers>
+```
 
 ### Comandos
 
@@ -39,6 +48,7 @@ Dentro de `baluarte-next`:
 ```bash
 npm run lint
 npm run build
+npm run deploy:cloudflare
 ```
 
 Se o computador desligar durante build, não insista em builds repetidos. Verifique temperatura, fonte/bateria, RAM e swap antes de rodar novamente.
@@ -78,6 +88,6 @@ Depois do deploy do front-end, valide no navegador:
 
 ## Observações
 
-- Cloudflare Pages vai hospedar o Next.js, mas o backend Spring Boot precisa estar hospedado em outro runtime compatível com Java 21.
+- Cloudflare Workers vai hospedar o Next.js, mas o backend Spring Boot precisa estar hospedado em outro runtime compatível com Java 21.
 - Supabase hospeda o banco Postgres, não o backend Java.
 - Atualize `APP_CORS_ALLOWED_ORIGINS` com o domínio final da Cloudflare antes de produção.

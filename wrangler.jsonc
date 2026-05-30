@@ -1,9 +1,0 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "baluarte",
-  "pages_build_output_dir": "baluarte-next/.vercel/output/static",
-  "compatibility_date": "2026-05-30",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
-}

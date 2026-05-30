@@ -1,7 +1,4 @@
 {
-  "scripts": {
-    "build": "npm --prefix baluarte-next ci && npm --prefix baluarte-next run build"
-  },
   "dependencies": {
     "react-native-reanimated": "~4.1.1"
   }
