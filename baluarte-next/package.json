@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/build.mjs",
+    "build:pages": "BALUARTE_NEXT_ON_PAGES_BUILD=1 npx @cloudflare/next-on-pages@1.13.16",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
