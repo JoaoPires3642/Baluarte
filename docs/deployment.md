@@ -7,8 +7,10 @@ O front-end web principal fica em `baluarte-next` e usa Next.js. O deploy de pro
 ### Arquivos
 
 - `baluarte-next/wrangler.jsonc`: configuração do Cloudflare Pages e diretório de output.
-- `baluarte-next/scripts/build.js`: usa `next build` localmente e `@cloudflare/next-on-pages` quando `CF_PAGES=true`.
+- `baluarte-next/scripts/build.mjs`: usa `next build` localmente e `@cloudflare/next-on-pages` quando `CF_PAGES=true`.
 - `baluarte-next/package.json`: script `build` usado localmente, no Docker e no Pages.
+- `wrangler.jsonc`: configuração na raiz para o projeto Cloudflare Pages conectado ao Git.
+- `package.json`: script `build` na raiz que delega o build para `baluarte-next`.
 
 ### Variáveis da Cloudflare
 
