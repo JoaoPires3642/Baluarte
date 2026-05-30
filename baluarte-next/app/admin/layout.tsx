@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server"
 import { AdminNavbar } from "@/components/admin-navbar"
 import { resolveServerAuthSession } from "@/lib/auth"
 
+export const runtime = "edge"
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth()
 
