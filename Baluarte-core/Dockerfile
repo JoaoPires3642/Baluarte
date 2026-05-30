@@ -19,7 +19,7 @@ RUN native-image \
 
 FROM debian:bookworm-slim
 RUN apt-get update -qq && apt-get install -y -qq ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY --from=native /app/baluarte-core .
+COPY --from=native /app/baluarte-core /usr/local/bin/baluarte-core
+RUN chmod +x /usr/local/bin/baluarte-core
 EXPOSE 8080
-ENTRYPOINT ["./baluarte-core"]
+ENTRYPOINT ["/usr/local/bin/baluarte-core"]
