@@ -1,7 +1,7 @@
-import { auth } from "@clerk/nextjs/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -12,7 +12,11 @@ async function getAuthHeaders() {
   const token = await getToken()
   if (!token) return null
 
-  const email = (sessionClaims?.email as string) || (sessionClaims?.email_address as string) || `${userId}@clerk.users`
+  const user = await currentUser()
+  const email = user?.emailAddresses?.[0]?.emailAddress?.trim().toLowerCase()
+    || (sessionClaims?.email as string)
+    || (sessionClaims?.email_address as string)
+    || `${userId}@clerk.users`
 
   return {
     "Content-Type": "application/json",
