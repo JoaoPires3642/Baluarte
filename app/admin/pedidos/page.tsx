@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { ClipboardList, ChevronRight, Search } from "lucide-react"
 import { type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -27,11 +28,26 @@ const statusColors: Record<string, string> = {
   pending_payment: "bg-yellow-500",
 }
 
-async function getOrders() {
+async function getOrders(): Promise<Order[]> {
   try {
-    const res = await fetch("/api/admin/orders", { cache: "no-store" })
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return []
+
+    const user = await currentUser()
+    const email = user?.emailAddresses?.[0]?.emailAddress
+
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Clerk-User-Id": userId,
+        ...(email && { "X-Clerk-Email": email }),
+      },
+      cache: "no-store",
+    })
     if (!res.ok) return []
-    return (await res.json() as { data: Order[] }).data
+    const payload = await res.json() as { data: Order[] }
+    return payload.data
   } catch {
     return []
   }

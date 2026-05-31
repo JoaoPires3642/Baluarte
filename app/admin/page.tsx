@@ -15,6 +15,7 @@ const statusLabels: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  pending_payment: "Aguardando Pagamento",
 }
 
 const statusColors: Record<string, string> = {
@@ -24,15 +25,31 @@ const statusColors: Record<string, string> = {
   shipped: "bg-orange-500",
   delivered: "bg-green-500",
   cancelled: "bg-red-500",
+  pending_payment: "bg-yellow-500",
 }
 
 const LOW_STOCK_THRESHOLD = 5
 
 async function getOrders(): Promise<Order[]> {
   try {
-    const res = await fetch("/api/admin/orders", { cache: "no-store" })
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return []
+
+    const user = await currentUser()
+    const email = user?.emailAddresses?.[0]?.emailAddress
+
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Clerk-User-Id": userId,
+        ...(email && { "X-Clerk-Email": email }),
+      },
+      cache: "no-store",
+    })
     if (!res.ok) return []
-    return (await res.json() as { data: Order[] }).data
+    const payload = await res.json() as { data: Order[] }
+    return payload.data
   } catch {
     return []
   }
