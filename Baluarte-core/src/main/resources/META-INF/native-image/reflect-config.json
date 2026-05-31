@@ -2,5 +2,35 @@
   {
     "name": "[Ljava.util.UUID;",
     "unsafeAllocated": true
+  },
+  {
+    "name": "br.com.baluarte.core.shared.api.ApiSuccessResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.shared.error.ApiErrorPayload",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.shared.error.ApiErrorResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.profile.api.ProfileAddressResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.profile.api.ProfileAddressSyncRequest",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.profile.api.ProfileAddressUpsertRequest",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
   }
 ]

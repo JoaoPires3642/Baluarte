@@ -27,21 +27,37 @@ async function getAuthHeaders() {
 }
 
 export async function GET() {
-  const headers = await getAuthHeaders()
-  if (!headers) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
+  try {
+    const headers = await getAuthHeaders()
+    if (!headers) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+    }
 
-  return proxyProfileAddresses("GET", headers)
+    return proxyProfileAddresses("GET", headers)
+  } catch (err) {
+    console.error("Profile addresses auth error:", err)
+    return NextResponse.json(
+      { error: { code: "AUTH_ERROR", message: "Erro ao validar autenticação" } },
+      { status: 500 }
+    )
+  }
 }
 
 export async function PUT(request: NextRequest) {
-  const headers = await getAuthHeaders()
-  if (!headers) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
+  try {
+    const headers = await getAuthHeaders()
+    if (!headers) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+    }
 
-  return proxyProfileAddresses("PUT", headers, await request.text())
+    return proxyProfileAddresses("PUT", headers, await request.text())
+  } catch (err) {
+    console.error("Profile addresses auth error:", err)
+    return NextResponse.json(
+      { error: { code: "AUTH_ERROR", message: "Erro ao validar autenticação" } },
+      { status: 500 }
+    )
+  }
 }
 
 async function proxyProfileAddresses(method: "GET" | "PUT", headers: Record<string, string>, body?: string) {

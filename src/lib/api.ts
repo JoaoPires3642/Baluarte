@@ -448,6 +448,20 @@ export interface Address {
   isDefault: boolean
 }
 
+type AddressApiResponse = Omit<Address, "addressId" | "clerkUserId"> & {
+  id?: string
+  addressId?: string
+  clerkUserId?: string
+}
+
+function normalizeAddress(address: AddressApiResponse): Address {
+  return {
+    ...address,
+    addressId: address.addressId || address.id || "",
+    clerkUserId: address.clerkUserId || "",
+  }
+}
+
 export interface CepLookupResult {
   cep: string
   street: string
@@ -469,10 +483,11 @@ export async function fetchAddresses(): Promise<Address[]> {
   const res = await fetch("/api/profile/addresses")
   if (!res.ok) {
     const body = await res.json().catch(() => null)
-    throw new Error(body?.error || "Erro ao carregar endereços")
+    const errPayload = body?.error
+    throw new Error(errPayload?.message || errPayload || "Erro ao carregar endereços")
   }
   const json = await res.json()
-  return json.data || []
+  return (json.data || []).map(normalizeAddress)
 }
 
 export async function syncAddresses(addresses: Array<{
@@ -490,7 +505,13 @@ export async function syncAddresses(addresses: Array<{
   const res = await fetch("/api/profile/addresses", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ addresses, defaultAddressId }),
+    body: JSON.stringify({
+      addresses: addresses.map(({ addressId, ...address }) => ({
+        ...address,
+        id: addressId,
+      })),
+      defaultAddressId,
+    }),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => null)
@@ -498,5 +519,9 @@ export async function syncAddresses(addresses: Array<{
     const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
     throw new Error((errPayload?.message || "Erro ao salvar endereços") + details)
   }
-  return res.json()
+  const json = await res.json()
+  return {
+    ...json,
+    data: (json.data || []).map(normalizeAddress),
+  }
 }
