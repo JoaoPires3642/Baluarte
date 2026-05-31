@@ -16,6 +16,10 @@ const TABS = [
   { key: "enderecos", label: "Endereços", icon: MapPin },
 ]
 
+function createAddressId() {
+  return crypto.randomUUID()
+}
+
 function formatCep(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 8)
   if (digits.length <= 5) return digits
@@ -110,7 +114,7 @@ export default function AccountPage() {
       }))
 
       const newItem = {
-        addressId: editingId || undefined,
+        addressId: editingId || createAddressId(),
         label: form.label,
         cep: form.cep.replace(/\D/g, ""),
         street: form.street,
@@ -126,8 +130,15 @@ export default function AccountPage() {
         ? addressList.map(a => a.addressId === editingId ? newItem : a)
         : [...addressList, newItem]
 
-      const defaultAddr = updatedList.find(a => a.isDefault)
-      await syncAddresses(updatedList, defaultAddr?.addressId)
+      const defaultAddressId = newItem.isDefault
+        ? newItem.addressId
+        : updatedList.find(a => a.isDefault)?.addressId
+      const normalizedList = updatedList.map(a => ({
+        ...a,
+        isDefault: a.addressId === defaultAddressId,
+      }))
+
+      await syncAddresses(normalizedList, defaultAddressId)
       await loadAddresses()
       resetForm()
     } catch (err) {

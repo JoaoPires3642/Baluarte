@@ -32,17 +32,8 @@ async function getOrders() {
   }
 }
 
-const fallbackOrders: Order[] = [
-  { id: "1", orderReference: "BAL-001", status: "pending", createdAt: "2024-01-20T10:00:00Z", total: 299.9, items: [{ productId: "1", name: "Camisa Flamengo", size: "G", quantity: 1, unitPrice: 299.9 }] },
-  { id: "2", orderReference: "BAL-002", status: "paid", createdAt: "2024-01-19T14:30:00Z", total: 199.9, items: [{ productId: "2", name: "Camisa Palmeiras", size: "M", quantity: 1, unitPrice: 199.9 }] },
-  { id: "3", orderReference: "BAL-003", status: "shipped", createdAt: "2024-01-18T09:15:00Z", total: 599.9, items: [{ productId: "3", name: "Camisa Corinthians", size: "P", quantity: 2, unitPrice: 299.9 }] },
-  { id: "4", orderReference: "BAL-004", status: "delivered", createdAt: "2024-01-15T16:00:00Z", total: 149.9, items: [{ productId: "4", name: "Camisa São Paulo", size: "GG", quantity: 1, unitPrice: 149.9 }] },
-  { id: "5", orderReference: "BAL-005", status: "cancelled", createdAt: "2024-01-14T11:00:00Z", total: 89.9, items: [{ productId: "5", name: "Camisa Vasco", size: "G", quantity: 1, unitPrice: 89.9 }] },
-]
-
 export default async function AdminOrdersPage() {
   const orders = await getOrders()
-  const displayOrders = orders.length > 0 ? orders : fallbackOrders
 
   return (
     <div className="space-y-6 py-8">
@@ -63,7 +54,7 @@ export default async function AdminOrdersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="hidden sm:block overflow-x-auto">
+          {orders.length > 0 && <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -76,7 +67,7 @@ export default async function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {displayOrders.map((order: Order) => (
+                {orders.map((order: Order) => (
                   <tr key={order.id} className="border-b">
                     <td className="py-3 font-medium">#{order.orderReference}</td>
                     <td className="py-3">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
@@ -98,10 +89,16 @@ export default async function AdminOrdersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
+
+          {orders.length === 0 && (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Nenhum pedido registrado ainda.
+            </p>
+          )}
 
           <div className="space-y-3 sm:hidden">
-            {displayOrders.map((order: Order) => (
+            {orders.map((order: Order) => (
               <Link key={order.id} href={`/admin/pedidos/${order.id}`} className="block">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50">
                   <div className="flex items-center justify-between">
@@ -121,9 +118,6 @@ export default async function AdminOrdersPage() {
                 </div>
               </Link>
             ))}
-            {displayOrders.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-500">Nenhum pedido encontrado</p>
-            )}
           </div>
         </CardContent>
       </Card>

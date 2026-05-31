@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
+import { notFound } from "next/navigation"
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -40,23 +41,13 @@ async function getOrder(id: string) {
   }
 }
 
-const fallbackOrder: Order = {
-  id: "1",
-  orderReference: "BAL-001",
-  status: "processing",
-  createdAt: "2024-01-20T10:30:00Z",
-  total: 319.8,
-  items: [
-    { productId: "1", name: "Camisa Flamengo 2024 Home", size: "G", quantity: 1, unitPrice: 299.9 },
-  ],
-  shipping: {
-    address: "Rua Example, 123 - Centro, Rio de Janeiro - RJ",
-  },
-}
-
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params
-  const order = await getOrder(id) ?? fallbackOrder
+  const order = await getOrder(id)
+
+  if (!order) {
+    notFound()
+  }
 
   return (
     <div className="space-y-6 py-8">
@@ -110,19 +101,14 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             <CardTitle className="inline-flex items-center gap-2"><UserRound className="h-5 w-5 shrink-0 text-[#0f274d]" />Informações do Cliente</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-slate-500">Email</p>
-              <p className="font-medium break-all">cliente@email.com</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">CPF</p>
-              <p className="font-medium">***.123.456-**</p>
-            </div>
             {order.shipping?.address && (
               <div>
                 <p className="inline-flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4 shrink-0 text-[#c3222a]" />Endereço de Entrega</p>
                 <p className="font-medium">{order.shipping.address}</p>
               </div>
+            )}
+            {!order.shipping?.address && (
+              <p className="text-sm text-slate-500">Nenhuma informação de entrega disponível para este pedido.</p>
             )}
           </CardContent>
         </Card>

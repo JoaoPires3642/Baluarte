@@ -18,6 +18,10 @@ import { PaymentCardForm } from "@/components/payment-card-form"
 type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
 
+function createAddressId() {
+  return crypto.randomUUID()
+}
+
 function formatCep(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 8)
   if (digits.length <= 5) return digits
@@ -189,8 +193,10 @@ export default function CheckoutPage() {
         state: a.state,
         isDefault: a.isDefault,
       }))
+      const newAddressId = createAddressId()
+      const shouldUseNewAddressAsDefault = newAddr.isDefault || list.length === 0
       list.push({
-        addressId: "",
+        addressId: newAddressId,
         label: newAddr.label,
         cep: newAddr.cep.replace(/\D/g, ""),
         street: newAddr.street,
@@ -199,10 +205,17 @@ export default function CheckoutPage() {
         neighborhood: newAddr.neighborhood,
         city: newAddr.city,
         state: newAddr.state,
-        isDefault: newAddr.isDefault || list.length === 0,
+        isDefault: shouldUseNewAddressAsDefault,
       })
-      const defaultAddr = list.find(a => a.isDefault)
-      await syncAddresses(list, defaultAddr?.addressId)
+      const defaultAddressId = shouldUseNewAddressAsDefault
+        ? newAddressId
+        : list.find(a => a.isDefault)?.addressId
+      const normalizedList = list.map(a => ({
+        ...a,
+        isDefault: a.addressId === defaultAddressId,
+      }))
+
+      await syncAddresses(normalizedList, defaultAddressId)
       await loadAddresses()
       resetNewAddress()
       showToast("Endereço salvo!", "success")

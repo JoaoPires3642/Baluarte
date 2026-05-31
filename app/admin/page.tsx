@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import { fetchOrders, type Order } from "@/lib/api"
+import { fetchAdminProducts, fetchOrders, type AdminProduct, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,21 +32,30 @@ async function getOrders() {
   }
 }
 
-const fallbackOrders: Order[] = [
-  { id: "1", orderReference: "BAL-001", status: "pending", createdAt: "2024-01-20", total: 299.9, items: [] },
-  { id: "2", orderReference: "BAL-002", status: "paid", createdAt: "2024-01-19", total: 199.9, items: [] },
-  { id: "3", orderReference: "BAL-003", status: "shipped", createdAt: "2024-01-18", total: 599.9, items: [] },
-]
+async function getProducts() {
+  try {
+    const res = await fetchAdminProducts()
+    return res.data
+  } catch {
+    return []
+  }
+}
+
+function isToday(date: string) {
+  const value = new Date(date)
+  const today = new Date()
+  return value.toDateString() === today.toDateString()
+}
 
 export default async function AdminDashboard() {
-  const orders = await getOrders()
-  const displayOrders = orders.length > 0 ? orders : fallbackOrders
+  const [orders, products] = await Promise.all([getOrders(), getProducts()])
+  const todayOrders = orders.filter(order => isToday(order.createdAt))
 
   const stats = {
-    totalProducts: 156,
-    ordersToday: displayOrders.length,
-    revenue: displayOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
-    lowStock: 8,
+    totalProducts: products.filter((product: AdminProduct) => product.active).length,
+    ordersToday: todayOrders.length,
+    revenue: todayOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
+    lowStock: products.filter((product: AdminProduct) => product.active && product.stockQuantity <= 5).length,
   }
 
   return (
@@ -121,7 +130,7 @@ export default async function AdminDashboard() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="hidden sm:block overflow-x-auto">
+          {orders.length > 0 && <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
@@ -133,7 +142,7 @@ export default async function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {displayOrders.slice(0, 5).map((order: Order) => (
+                {orders.slice(0, 5).map((order: Order) => (
                   <tr key={order.id} className="border-b">
                     <td className="py-3 font-medium">#{order.orderReference}</td>
                     <td className="py-3 text-slate-500">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
@@ -152,10 +161,16 @@ export default async function AdminDashboard() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
+
+          {orders.length === 0 && (
+            <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+              Nenhum pedido registrado ainda.
+            </p>
+          )}
 
           <div className="space-y-2 sm:hidden">
-            {displayOrders.slice(0, 5).map((order: Order) => (
+            {orders.slice(0, 5).map((order: Order) => (
               <Link key={order.id} href={`/admin/pedidos/${order.id}`} className="block">
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 p-3 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50">
                   <div className="min-w-0 flex-1">
