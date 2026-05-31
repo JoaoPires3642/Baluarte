@@ -1,10 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
 
 type CardTokenResult = {
   token: string
@@ -13,17 +11,19 @@ type CardTokenResult = {
   installments: number
 }
 
+export type PaymentCardFormRef = {
+  createToken: () => Promise<CardTokenResult | null>
+}
+
 type Props = {
   amount: number
   cpf: string
-  loading: boolean
   error: string
-  onToken: (result: CardTokenResult) => void
 }
 
 const MERCADOPAGO_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "APP_USR-37373074-8635-4700-bd4a-bdd82a4f5ba8"
 
-export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props) {
+export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function PaymentCardForm({ amount, cpf, error }, ref) {
   const [ready, setReady] = useState(() => (
     typeof window !== "undefined" && Boolean(MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
   ))
@@ -56,8 +56,8 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
     document.head.appendChild(script)
   }, [publicKey])
 
-  const handleSubmit = async () => {
-    if (!ready || !publicKey) return
+  const createToken = async () => {
+    if (!ready || !publicKey || configError) return null
 
     const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" })
 
@@ -65,7 +65,7 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
     const expDate = (document.getElementById("cardExpiration") as HTMLInputElement)?.value?.split("/")
     const cvv = (document.getElementById("cardCvv") as HTMLInputElement)?.value
 
-    if (!cardNumber || !expDate || expDate.length !== 2 || !cvv || !cardholderName) return
+    if (!cardNumber || !expDate || expDate.length !== 2 || !cvv || !cardholderName) return null
 
     try {
       const tokenBody: Record<string, unknown> = {
@@ -80,16 +80,18 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
         tokenBody.identificationNumber = cpf.replace(/\D/g, "")
       }
       const tokenData = await mp.fields.createCardToken(tokenBody)
-      onToken({
+      return {
         token: tokenData.id as string,
         paymentMethodId: (tokenData.payment_method_id as string) || "",
         issuerId: (tokenData.issuer_id as string) || null,
         installments: 1,
-      })
+      }
     } catch {
-      // parent handles error
+      return null
     }
   }
+
+  useImperativeHandle(ref, () => ({ createToken }))
 
   return (
     <div className="space-y-4">
@@ -126,15 +128,7 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
 
       {(error || configError) && <p className="text-sm text-red-600">{error || configError}</p>}
 
-      <Button
-        type="button"
-        className="w-full"
-        disabled={loading || !ready || !cardholderName || Boolean(configError)}
-        onClick={handleSubmit}
-      >
-        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        {!ready ? "Carregando meio de pagamento..." : "Pagar com cartão"}
-      </Button>
+      {!ready && !configError ? <p className="text-sm text-slate-500">Carregando meio de pagamento...</p> : null}
     </div>
   )
-}
+})

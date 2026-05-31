@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CreditCard, Loader2, MapPin, MapPinned, Plus, Truck } from "lucide-react"
 import { useCart } from "@/context/cart-context"
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { PaymentPixModal } from "@/components/payment-pix-modal"
-import { PaymentCardForm } from "@/components/payment-card-form"
+import { PaymentCardForm, type PaymentCardFormRef } from "@/components/payment-card-form"
 
 type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
@@ -34,6 +34,7 @@ export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const { showToast } = useToast()
   const { isSignedIn } = useUser()
+  const cardFormRef = useRef<PaymentCardFormRef>(null)
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<CheckoutStep>(1)
   const [cep, setCep] = useState("")
@@ -64,9 +65,6 @@ export default function CheckoutPage() {
   })
 
   const [cepLoading, setCepLoading] = useState(false)
-  const [cardToken, setCardToken] = useState("")
-  const [cardPaymentMethodId, setCardPaymentMethodId] = useState("")
-  const [cardIssuerId, setCardIssuerId] = useState("")
   const [shippingLoading, setShippingLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -297,15 +295,10 @@ export default function CheckoutPage() {
     const shipping = shippingOptions.find((s) => s.id === selectedShipping)
     if (!shipping) return
 
-    const cardData = cardOverride || (cardToken ? {
-      token: cardToken,
-      paymentMethodId: cardPaymentMethodId,
-      issuerId: cardIssuerId || null,
-      installments: 1,
-    } : null)
+    const cardData = cardOverride || (paymentMethod === "card" ? await cardFormRef.current?.createToken() : null)
 
     if (paymentMethod === "card" && !cardData) {
-      showToast("Preencha os dados do cartão", "error")
+      showToast("Preencha os dados do cartão corretamente", "error")
       return
     }
 
@@ -408,14 +401,6 @@ export default function CheckoutPage() {
       showToast("Erro ao processar pagamento", "error")
     }
     setLoading(false)
-  }
-
-  const handleCardToken = (result: CardTokenResult) => {
-    setCardToken(result.token)
-    setCardPaymentMethodId(result.paymentMethodId)
-    setCardIssuerId(result.issuerId || "")
-    setPaymentError("")
-    handleSubmit(result)
   }
 
   const shippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
@@ -691,11 +676,10 @@ export default function CheckoutPage() {
 
                 {paymentMethod === "card" ? (
                   <PaymentCardForm
+                    ref={cardFormRef}
                     amount={total + shippingCost}
                     cpf={payer.cpf}
-                    loading={loading}
                     error={paymentError}
-                    onToken={handleCardToken}
                   />
                 ) : null}
               </CardContent>
