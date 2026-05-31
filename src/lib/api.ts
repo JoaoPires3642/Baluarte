@@ -243,12 +243,21 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 // Image Upload
-export async function uploadImage(file: File, extraHeaders?: Record<string, string>) {
+export async function uploadImage(
+  file: File,
+  auth?: { token: string; userId: string; email?: string }
+) {
   const formData = new FormData()
   formData.append("file", file)
-  const response = await fetch("/api/admin/media/upload", {
+  const headers: Record<string, string> = {}
+  if (auth) {
+    headers["Authorization"] = `Bearer ${auth.token}`
+    headers["X-Clerk-User-Id"] = auth.userId
+    if (auth.email) headers["X-Clerk-Email"] = auth.email
+  }
+  const response = await fetch(`${API_BASE_URL}/admin/media/upload`, {
     method: "POST",
-    headers: extraHeaders,
+    headers,
     body: formData,
   })
   if (!response.ok) {

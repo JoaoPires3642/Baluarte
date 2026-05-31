@@ -465,9 +465,9 @@ export default function AdminProductsPage() {
                     setUploadingImage(true)
                     try {
                       const res = await uploadImage(file, {
-                        "X-Clerk-Session-Token": token,
-                        ...(userId ? { "X-Clerk-User-Id": userId } : {}),
-                        ...(userEmail ? { "X-Clerk-Email": userEmail } : {}),
+                        token,
+                        userId: userId || "",
+                        email: userEmail,
                       })
                       setForm(f => ({ ...f, imageUrl: res.data.url }))
                     } catch (err: unknown) {
@@ -489,9 +489,9 @@ export default function AdminProductsPage() {
                     setUploadingImage(true)
                     try {
                       const res = await uploadImage(file, {
-                        "X-Clerk-Session-Token": token,
-                        ...(userId ? { "X-Clerk-User-Id": userId } : {}),
-                        ...(userEmail ? { "X-Clerk-Email": userEmail } : {}),
+                        token,
+                        userId: userId || "",
+                        email: userEmail,
                       })
                       setForm(f => ({ ...f, imageUrl: res.data.url }))
                     } catch (err: unknown) {

@@ -1,6 +1,8 @@
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useCallback } from "react"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+
 export function useAdminApi() {
   const { getToken, userId } = useAuth()
   const { user } = useUser()
@@ -10,13 +12,13 @@ export function useAdminApi() {
     const token = await getToken()
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(token ? { "X-Clerk-Session-Token": token } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(userId ? { "X-Clerk-User-Id": userId } : {}),
       ...(email ? { "X-Clerk-Email": email } : {}),
       ...(options?.headers as Record<string, string>),
     }
 
-    const response = await fetch(`/api/admin${path}`, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
       headers,
     })
