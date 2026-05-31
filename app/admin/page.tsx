@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
-import { fetchAdminProducts, fetchOrders, type AdminProduct, type Order } from "@/lib/api"
+import { AlertTriangle, ChevronRight } from "lucide-react"
+import { fetchAdminProducts, fetchOrders, type AdminProduct, type Order, type Variant } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,8 @@ const statusColors: Record<string, string> = {
   delivered: "bg-green-500",
   cancelled: "bg-red-500",
 }
+
+const LOW_STOCK_THRESHOLD = 5
 
 async function getOrders() {
   try {
@@ -47,15 +49,43 @@ function isToday(date: string) {
   return value.toDateString() === today.toDateString()
 }
 
+type LowStockVariant = {
+  productId: string
+  productName: string
+  size: string
+  stockQuantity: number
+}
+
+function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
+  const result: LowStockVariant[] = []
+  for (const product of products) {
+    if (!product.active) continue
+    for (const variant of product.variants) {
+      if (variant.available && variant.stockQuantity <= LOW_STOCK_THRESHOLD) {
+        result.push({
+          productId: product.id,
+          productName: product.modelName,
+          size: variant.size,
+          stockQuantity: variant.stockQuantity,
+        })
+      }
+    }
+  }
+  return result
+}
+
 export default async function AdminDashboard() {
   const [orders, products] = await Promise.all([getOrders(), getProducts()])
   const todayOrders = orders.filter(order => isToday(order.createdAt))
 
+  const activeProducts = products.filter((p: AdminProduct) => p.active)
+  const lowStockVariants = getLowStockVariants(products)
+
   const stats = {
-    totalProducts: products.filter((product: AdminProduct) => product.active).length,
+    totalProducts: activeProducts.length,
     ordersToday: todayOrders.length,
     revenue: todayOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
-    lowStock: products.filter((product: AdminProduct) => product.active && product.stockQuantity <= 5).length,
+    lowStock: lowStockVariants.length,
   }
 
   return (
@@ -84,12 +114,14 @@ export default async function AdminDashboard() {
             <p className="mt-1 text-2xl font-bold text-[#c3222a]">R$ {stats.revenue.toFixed(2).replace(".", ",")}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 sm:p-6">
-            <p className="text-xs text-slate-500">Estoque Baixo</p>
-            <p className="mt-1 text-2xl font-bold text-[#c3222a]">{stats.lowStock}</p>
-          </CardContent>
-        </Card>
+        <Link href={lowStockVariants.length > 0 ? "/admin/produtos" : "#"}>
+          <Card className={`h-full ${lowStockVariants.length > 0 ? "hover:shadow-lg transition-shadow cursor-pointer" : ""}`}>
+            <CardContent className="p-4 sm:p-6">
+              <p className="text-xs text-slate-500">Estoque Baixo</p>
+              <p className="mt-1 text-2xl font-bold text-[#c3222a]">{stats.lowStock}</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -118,6 +150,46 @@ export default async function AdminDashboard() {
           </Card>
         </Link>
       </div>
+
+      {lowStockVariants.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <div>
+              <CardTitle className="text-base sm:text-lg">Variantes com Estoque Baixo</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Produtos com variações abaixo de {LOW_STOCK_THRESHOLD} unidades
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="pb-3 text-left text-sm font-medium">Produto</th>
+                    <th className="pb-3 text-left text-sm font-medium">Tamanho</th>
+                    <th className="pb-3 text-right text-sm font-medium">Estoque</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStockVariants.map((item) => (
+                    <tr key={`${item.productId}-${item.size}`} className="border-b">
+                      <td className="py-3 font-medium">
+                        <Link href={`/admin/produtos/${item.productId}`} className="hover:underline">
+                          {item.productName}
+                        </Link>
+                      </td>
+                      <td className="py-3">{item.size}</td>
+                      <td className="py-3 text-right font-semibold text-red-600">{item.stockQuantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
