@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { AlertTriangle, ChevronRight } from "lucide-react"
-import { fetchOrders, type AdminProduct, type Order, type Variant } from "@/lib/api"
+import { type AdminProduct, type Order, type Variant } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,10 +28,19 @@ const statusColors: Record<string, string> = {
 
 const LOW_STOCK_THRESHOLD = 5
 
-async function getOrders() {
+async function getOrders(): Promise<Order[]> {
   try {
-    const res = await fetchOrders()
-    return res.data
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return []
+
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      cache: "no-store",
+    })
+    if (!res.ok) return []
+    const payload = await res.json() as { data: Order[] }
+    return payload.data
   } catch {
     return []
   }
