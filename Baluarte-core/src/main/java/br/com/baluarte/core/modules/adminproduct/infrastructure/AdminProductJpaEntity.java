@@ -26,11 +26,11 @@ public class AdminProductJpaEntity {
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", nullable = false)
     private br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "team_id", nullable = false)
     private br.com.baluarte.core.modules.catalog.infrastructure.TeamJpaEntity team;
 
