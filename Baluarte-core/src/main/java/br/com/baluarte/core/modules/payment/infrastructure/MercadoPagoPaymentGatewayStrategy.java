@@ -82,6 +82,11 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     }
 
     private Map<String, Object> buildOrderRequest(CreatePaymentCommand command) {
+        if (!"pix".equals(command.method()) && (command.cardToken() == null || command.cardToken().isBlank()
+            || command.cardPaymentMethodId() == null || command.cardPaymentMethodId().isBlank())) {
+            throw new PaymentValidationException("Dados do cartao Mercado Pago incompletos");
+        }
+
         Map<String, Object> paymentMethod = "pix".equals(command.method())
             ? Map.of("id", "pix", "type", "bank_transfer")
             : Map.of(

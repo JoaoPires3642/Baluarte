@@ -17,6 +17,7 @@ import { PaymentCardForm } from "@/components/payment-card-form"
 
 type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
+type CardTokenResult = { token: string; paymentMethodId: string; issuerId: string | null; installments: number }
 
 function createAddressId() {
   return crypto.randomUUID()
@@ -270,7 +271,7 @@ export default function CheckoutPage() {
     setLoading(false)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (cardOverride?: CardTokenResult) => {
     if (!isSignedIn) {
       showToast("Faça login para finalizar o pedido", "error")
       router.push("/sign-in?redirect_url=/checkout")
@@ -295,6 +296,18 @@ export default function CheckoutPage() {
 
     const shipping = shippingOptions.find((s) => s.id === selectedShipping)
     if (!shipping) return
+
+    const cardData = cardOverride || (cardToken ? {
+      token: cardToken,
+      paymentMethodId: cardPaymentMethodId,
+      issuerId: cardIssuerId || null,
+      installments: 1,
+    } : null)
+
+    if (paymentMethod === "card" && !cardData) {
+      showToast("Preencha os dados do cartão", "error")
+      return
+    }
 
     setLoading(true)
     setPaymentError("")
@@ -359,11 +372,11 @@ export default function CheckoutPage() {
           label: shipping.label,
           price: shipping.price,
         },
-        card: paymentMethod === "card" && cardToken ? {
-          token: cardToken,
-          paymentMethodId: cardPaymentMethodId,
-          issuerId: cardIssuerId || undefined,
-          installments: 1,
+        card: paymentMethod === "card" && cardData ? {
+          token: cardData.token,
+          paymentMethodId: cardData.paymentMethodId,
+          issuerId: cardData.issuerId || undefined,
+          installments: cardData.installments,
         } : undefined,
         items: items.map((item) => ({
           productId: item.id,
@@ -397,12 +410,12 @@ export default function CheckoutPage() {
     setLoading(false)
   }
 
-  const handleCardToken = (result: { token: string; paymentMethodId: string; issuerId: string | null; installments: number }) => {
+  const handleCardToken = (result: CardTokenResult) => {
     setCardToken(result.token)
     setCardPaymentMethodId(result.paymentMethodId)
     setCardIssuerId(result.issuerId || "")
     setPaymentError("")
-    handleSubmit()
+    handleSubmit(result)
   }
 
   const shippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
@@ -718,7 +731,7 @@ export default function CheckoutPage() {
             </CardContent>
             <CardFooter>
               {paymentMethod === "pix" || !paymentResult ? (
-                <Button className="w-full" onClick={handleSubmit} disabled={loading || !selectedShipping || step < 3}>
+                <Button className="w-full" onClick={() => handleSubmit()} disabled={loading || !selectedShipping || step < 3}>
                   {loading ? "Processando..." : "Finalizar Pedido"}
                 </Button>
               ) : null}
