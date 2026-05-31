@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.order.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
+import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
@@ -9,7 +10,6 @@ import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import jakarta.validation.Valid;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -32,17 +32,16 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private static final long PIX_EXPIRATION_MINUTES = 10;
-
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
+    private final PixOrderExpirationService pixOrderExpirationService;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders() {
         List<OrderResponse> data = orderRepository.findAll().stream()
-            .map(order -> toResponse(expireIfNeeded(order)))
+            .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
             .toList();
         return ApiSuccessResponse.of(data);
     }
@@ -54,7 +53,7 @@ public class OrderController {
     ) {
         String userId = resolveUserId(authorizationHeader, clerkUserId);
         return ApiSuccessResponse.of(orderRepository.findByClerkUserId(userId).stream()
-            .map(order -> toResponse(expireIfNeeded(order)))
+            .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
             .toList());
     }
 
@@ -65,7 +64,7 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
         }
 
-        return ApiSuccessResponse.of(toResponse(expireIfNeeded(order)));
+        return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
     }
 
     @GetMapping("/my/{orderId}")
@@ -78,7 +77,7 @@ public class OrderController {
         CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
-        return ApiSuccessResponse.of(toResponse(expireIfNeeded(order)));
+        return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
     }
 
     @PatchMapping("/{orderId}/status")
@@ -100,27 +99,6 @@ public class OrderController {
         }
 
         return getOrder(orderId);
-    }
-
-    private CheckoutOrder expireIfNeeded(CheckoutOrder order) {
-        if (!"pending_payment".equals(order.getStatus())) {
-            return order;
-        }
-
-        if (order.getCreatedAt() == null) {
-            return order;
-        }
-
-        Instant now = Instant.now();
-        Duration elapsed = Duration.between(order.getCreatedAt(), now);
-        if (elapsed.toMinutes() >= PIX_EXPIRATION_MINUTES) {
-            order.setStatus("cancelled");
-            order.setUpdatedAt(now);
-            orderRepository.save(order);
-            releaseOrderStock(order);
-        }
-
-        return order;
     }
 
     private void releaseOrderStock(CheckoutOrder order) {
