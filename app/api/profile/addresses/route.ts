@@ -10,6 +10,8 @@ async function getAuthHeaders() {
   if (!userId) return null
 
   const token = await getToken()
+  if (!token) return null
+
   const email = (sessionClaims?.email as string) || (sessionClaims?.email_address as string) || `${userId}@clerk.users`
 
   return {
@@ -26,12 +28,7 @@ export async function GET() {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
-  const res = await fetch(`${API_BASE}/profile/addresses`, { headers })
-  const data = await res.text()
-  return new NextResponse(data, {
-    status: res.status,
-    headers: { "Content-Type": "application/json" },
-  })
+  return proxyProfileAddresses("GET", headers)
 }
 
 export async function PUT(request: NextRequest) {
@@ -40,16 +37,22 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
-  const body = await request.text()
-  const res = await fetch(`${API_BASE}/profile/addresses`, {
-    method: "PUT",
-    headers,
-    body,
-  })
+  return proxyProfileAddresses("PUT", headers, await request.text())
+}
 
-  const data = await res.text()
-  return new NextResponse(data, {
-    status: res.status,
-    headers: { "Content-Type": "application/json" },
-  })
+async function proxyProfileAddresses(method: "GET" | "PUT", headers: Record<string, string>, body?: string) {
+  try {
+    const res = await fetch(`${API_BASE}/profile/addresses`, { method, headers, body })
+    const data = await res.text()
+    return new NextResponse(data, {
+      status: res.status,
+      headers: { "Content-Type": "application/json" },
+    })
+  } catch (err) {
+    console.error("Profile addresses API proxy error:", err)
+    return NextResponse.json(
+      { error: { code: "PROXY_ERROR", message: "Erro ao conectar com o backend" } },
+      { status: 502 }
+    )
+  }
 }
