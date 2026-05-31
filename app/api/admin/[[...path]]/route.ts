@@ -32,6 +32,7 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
 
   let token = req.headers.get("X-Clerk-Session-Token") || null
   let resolvedUserId = req.headers.get("X-Clerk-User-Id") || null
+  let resolvedEmail = req.headers.get("X-Clerk-Email") || null
 
   if (!token || !resolvedUserId) {
     const { userId, getToken } = await auth()
@@ -48,6 +49,10 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
     }
   }
 
+  if (!resolvedEmail && token) {
+    resolvedEmail = extractEmailFromJwt(token)
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   }
@@ -55,9 +60,8 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
   if (resolvedUserId && token) {
     headers["X-Clerk-User-Id"] = resolvedUserId
     headers["Authorization"] = `Bearer ${token}`
-    const email = extractEmailFromJwt(token)
-    if (email) {
-      headers["X-Clerk-Email"] = email
+    if (resolvedEmail) {
+      headers["X-Clerk-Email"] = resolvedEmail
     }
   }
 

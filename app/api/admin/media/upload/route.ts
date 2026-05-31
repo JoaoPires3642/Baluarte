@@ -8,6 +8,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/
 export async function POST(req: NextRequest) {
   let token = req.headers.get("X-Clerk-Session-Token") || null
   let resolvedUserId = req.headers.get("X-Clerk-User-Id") || null
+  let resolvedEmail = req.headers.get("X-Clerk-Email") || null
 
   if (!token || !resolvedUserId) {
     const { userId, getToken } = await auth()
@@ -43,7 +44,9 @@ export async function POST(req: NextRequest) {
   const backendForm = new FormData()
   backendForm.append("file", file)
 
-  const email = extractEmailFromJwt(token)
+  if (!resolvedEmail) {
+    resolvedEmail = extractEmailFromJwt(token)
+  }
 
   try {
     const response = await fetch(`${API_BASE}/admin/media/upload`, {
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
       headers: {
         Authorization: `Bearer ${token}`,
         "X-Clerk-User-Id": resolvedUserId,
-        ...(email ? { "X-Clerk-Email": email } : {}),
+        ...(resolvedEmail ? { "X-Clerk-Email": resolvedEmail } : {}),
       },
       body: backendForm,
     })

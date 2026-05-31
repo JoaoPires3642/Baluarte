@@ -1,8 +1,10 @@
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { useCallback } from "react"
 
 export function useAdminApi() {
   const { getToken, userId } = useAuth()
+  const { user } = useUser()
+  const email = user?.primaryEmailAddress?.emailAddress
 
   const authedFetch = useCallback(async (path: string, options?: RequestInit) => {
     const token = await getToken()
@@ -10,6 +12,7 @@ export function useAdminApi() {
       "Content-Type": "application/json",
       ...(token ? { "X-Clerk-Session-Token": token } : {}),
       ...(userId ? { "X-Clerk-User-Id": userId } : {}),
+      ...(email ? { "X-Clerk-Email": email } : {}),
       ...(options?.headers as Record<string, string>),
     }
 
@@ -26,7 +29,7 @@ export function useAdminApi() {
     }
 
     return response.json()
-  }, [getToken, userId])
+  }, [getToken, userId, email])
 
   return { authedFetch }
 }
