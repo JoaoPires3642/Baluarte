@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -93,6 +94,21 @@ public class GlobalExceptionHandler {
             HttpStatus.BAD_REQUEST,
             "VALIDATION_ERROR",
             exception.getMessage(),
+            List.of(),
+            request
+        );
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatus(
+        ResponseStatusException exception,
+        HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.valueOf(exception.getStatusCode().value());
+        return buildResponse(
+            status,
+            status.name(),
+            exception.getReason() != null ? exception.getReason() : status.getReasonPhrase(),
             List.of(),
             request
         );

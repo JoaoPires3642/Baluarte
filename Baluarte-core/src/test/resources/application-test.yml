@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///baluarte_test
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+  auth:
+    clerk-issuer: https://clerk.example
+    clerk-jwks-uri: https://clerk.example/.well-known/jwks.json
+    dev-bypass-enabled: false
+  payment:
+    active-provider: mock

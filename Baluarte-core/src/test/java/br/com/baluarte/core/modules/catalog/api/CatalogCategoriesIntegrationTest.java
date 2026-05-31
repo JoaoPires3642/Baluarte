@@ -40,8 +40,9 @@ class CatalogCategoriesIntegrationTest {
         mockMvc.perform(get("/api/v1/catalog/categories/internacionais/teams"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isArray())
-            .andExpect(jsonPath("$.data.length()").value(1))
-            .andExpect(jsonPath("$.data[0].slug").value("real-madrid"));
+            .andExpect(jsonPath("$.data.length()").value(8))
+            .andExpect(jsonPath("$.data[0].slug").value("real-madrid"))
+            .andExpect(jsonPath("$.data[1].slug").value("barcelona"));
     }
 
     @Test

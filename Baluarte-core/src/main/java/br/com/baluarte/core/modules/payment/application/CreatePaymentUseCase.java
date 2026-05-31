@@ -59,8 +59,8 @@ public class CreatePaymentUseCase {
             .reduce(BigDecimal.ZERO, BigDecimal::add)
             .add(request.shipping().price());
 
-        String orderId = "ord-" + UUID.randomUUID().toString();
-        String paymentId = "pay-" + UUID.randomUUID().toString();
+        String orderId = UUID.randomUUID().toString();
+        String paymentId = UUID.randomUUID().toString();
 
         CheckoutOrder order = new CheckoutOrder(
             orderId,
@@ -84,7 +84,7 @@ public class CreatePaymentUseCase {
         );
         order.setItems(resolvedItems.stream()
             .map(item -> new CheckoutOrderItem(
-                "item-" + UUID.randomUUID(),
+                UUID.randomUUID().toString(),
                 orderId,
                 item.productId(),
                 item.productName(),
