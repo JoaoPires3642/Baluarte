@@ -52,4 +52,4 @@ app:
       access-token: ${APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN:}
       public-key: ${APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY:}
       payer-email: ${APP_PAYMENT_MERCADOPAGO_PAYER_EMAIL:}
-      payer-first-name: ${APP_PAYMENT_MERCADOPAGO_PAYER_FIRST_NAME:APRO}
+      payer-first-name: ${APP_PAYMENT_MERCADOPAGO_PAYER_FIRST_NAME:}
