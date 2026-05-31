@@ -400,7 +400,7 @@ export interface PaymentResponse {
 export interface Order {
   id: string
   orderReference: string
-  status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled"
+  status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "pending_payment"
   createdAt: string
   total: number
   items: Array<{
@@ -414,6 +414,12 @@ export interface Order {
     recipientName?: string
     address: string
     trackingCode?: string
+  }
+  payment?: {
+    method: string
+    pixQrCode?: string
+    pixQrCodeBase64?: string
+    pixCopyPasteCode?: string
   }
 }
 

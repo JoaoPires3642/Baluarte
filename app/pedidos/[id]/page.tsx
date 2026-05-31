@@ -5,6 +5,7 @@ import { MapPin, PackageSearch } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { PixOrderBanner } from "@/components/pix-order-banner"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -36,6 +37,7 @@ type Order = {
   total: number
   items: Array<{ productId: string; name: string; size: string; quantity: number; unitPrice: number }>
   shipping?: { recipientName?: string; address: string; trackingCode?: string }
+  payment?: { method: string; pixQrCode?: string; pixQrCodeBase64?: string; pixCopyPasteCode?: string }
 }
 
 type Props = {
@@ -90,6 +92,16 @@ export default async function OrderDetailPage({ params }: Props) {
           {statusLabels[order.status] || order.status}
         </Badge>
       </div>
+
+      {order.status === "pending_payment" && order.payment?.method === "pix" && order.payment.pixQrCodeBase64 && (
+        <div className="mb-6">
+          <PixOrderBanner
+            qrCodeBase64={order.payment.pixQrCodeBase64}
+            copyPasteCode={order.payment.pixCopyPasteCode}
+            expiresAt={new Date(new Date(order.createdAt).getTime() + 10 * 60000).toISOString()}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

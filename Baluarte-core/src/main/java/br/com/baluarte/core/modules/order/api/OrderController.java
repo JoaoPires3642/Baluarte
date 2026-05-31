@@ -3,11 +3,15 @@ package br.com.baluarte.core.modules.order.api;
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
+import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -25,12 +29,17 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class OrderController {
 
+    private static final long PIX_EXPIRATION_MINUTES = 10;
+
     private final CheckoutOrderRepository orderRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders() {
-        List<OrderResponse> data = orderRepository.findAll().stream().map(this::toResponse).toList();
+        List<OrderResponse> data = orderRepository.findAll().stream()
+            .map(order -> toResponse(expireIfNeeded(order)))
+            .toList();
         return ApiSuccessResponse.of(data);
     }
 
@@ -41,7 +50,7 @@ public class OrderController {
     ) {
         String userId = resolveUserId(authorizationHeader, clerkUserId);
         return ApiSuccessResponse.of(orderRepository.findByClerkUserId(userId).stream()
-            .map(this::toResponse)
+            .map(order -> toResponse(expireIfNeeded(order)))
             .toList());
     }
 
@@ -52,7 +61,7 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
         }
 
-        return ApiSuccessResponse.of(toResponse(order));
+        return ApiSuccessResponse.of(toResponse(expireIfNeeded(order)));
     }
 
     @GetMapping("/my/{orderId}")
@@ -65,7 +74,7 @@ public class OrderController {
         CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
-        return ApiSuccessResponse.of(toResponse(order));
+        return ApiSuccessResponse.of(toResponse(expireIfNeeded(order)));
     }
 
     @PatchMapping("/{orderId}/status")
@@ -81,6 +90,26 @@ public class OrderController {
         orderRepository.save(order);
 
         return getOrder(orderId);
+    }
+
+    private CheckoutOrder expireIfNeeded(CheckoutOrder order) {
+        if (!"pending_payment".equals(order.getStatus())) {
+            return order;
+        }
+
+        if (order.getCreatedAt() == null) {
+            return order;
+        }
+
+        Instant now = Instant.now();
+        Duration elapsed = Duration.between(order.getCreatedAt(), now);
+        if (elapsed.toMinutes() >= PIX_EXPIRATION_MINUTES) {
+            order.setStatus("cancelled");
+            order.setUpdatedAt(now);
+            orderRepository.save(order);
+        }
+
+        return order;
     }
 
     private String resolveUserId(String authorizationHeader, String clerkUserId) {
@@ -122,6 +151,20 @@ public class OrderController {
                 order.getShippingState() != null ? order.getShippingState() : "")
             : null;
 
+        PaymentResponse payment = null;
+        if ("pending_payment".equals(order.getStatus())) {
+            Optional<PaymentTransaction> tx = paymentTransactionRepository.findByOrderId(order.getOrderId());
+            if (tx.isPresent() && "pix".equals(tx.get().getMethod())) {
+                PaymentTransaction p = tx.get();
+                payment = new PaymentResponse(
+                    p.getMethod(),
+                    p.getPixQrCode(),
+                    p.getPixQrCodeBase64(),
+                    p.getPixQrCode()
+                );
+            }
+        }
+
         return new OrderResponse(
             order.getOrderId(),
             order.getOrderId(),
@@ -129,7 +172,8 @@ public class OrderController {
             order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
             order.getTotalAmount().doubleValue(),
             items,
-            new ShippingResponse(order.getRecipientName(), shippingAddress, order.getTrackingCode())
+            new ShippingResponse(order.getRecipientName(), shippingAddress, order.getTrackingCode()),
+            payment
         );
     }
 }
@@ -141,7 +185,8 @@ record OrderResponse(
     String createdAt,
     Double total,
     List<OrderItemResponse> items,
-    ShippingResponse shipping
+    ShippingResponse shipping,
+    PaymentResponse payment
 ) {}
 
 record OrderItemResponse(
@@ -156,4 +201,11 @@ record ShippingResponse(
     String recipientName,
     String address,
     String trackingCode
+) {}
+
+record PaymentResponse(
+    String method,
+    String pixQrCode,
+    String pixQrCodeBase64,
+    String pixCopyPasteCode
 ) {}

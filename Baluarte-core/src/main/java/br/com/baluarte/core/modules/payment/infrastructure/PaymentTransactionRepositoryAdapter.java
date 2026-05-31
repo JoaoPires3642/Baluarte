@@ -25,6 +25,11 @@ public class PaymentTransactionRepositoryAdapter implements PaymentTransactionRe
     }
 
     @Override
+    public Optional<PaymentTransaction> findByOrderId(String orderId) {
+        return jpaRepository.findByOrderId(orderId).map(PaymentTransactionJpaEntity::toDomain);
+    }
+
+    @Override
     public PaymentTransaction save(PaymentTransaction transaction) {
         PaymentTransactionJpaEntity entity = PaymentTransactionJpaEntity.create(
                 transaction.getPaymentId(),
