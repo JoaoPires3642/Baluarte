@@ -49,12 +49,11 @@ class CheckoutShippingQuoteIntegrationTest {
     }
 
     @Test
-    void shouldReturnValidationErrorWhenDestinationIsIncomplete() throws Exception {
+    void shouldReturnValidationErrorWhenCepIsMissing() throws Exception {
         String payload = """
             {
               "destination": {
-                "cep": "01001-000",
-                "street": "",
+                "street": "Rua A",
                 "number": "100",
                 "neighborhood": "Centro",
                 "city": "Sao Paulo",
