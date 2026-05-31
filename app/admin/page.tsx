@@ -182,7 +182,7 @@ export default async function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="max-h-72 overflow-y-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
