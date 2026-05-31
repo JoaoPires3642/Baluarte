@@ -51,3 +51,4 @@ app:
       base-url: ${APP_PAYMENT_MERCADOPAGO_BASE_URL:https://api.mercadopago.com}
       access-token: ${APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN:}
       public-key: ${APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY:}
+      payer-first-name: ${APP_PAYMENT_MERCADOPAGO_PAYER_FIRST_NAME:APRO}

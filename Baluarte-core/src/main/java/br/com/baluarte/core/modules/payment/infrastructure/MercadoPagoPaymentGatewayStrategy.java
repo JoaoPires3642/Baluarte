@@ -6,6 +6,8 @@ import br.com.baluarte.core.modules.payment.application.PaymentGatewayStrategy;
 import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,13 +22,16 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     private final RestClient restClient;
     private final String baseUrl;
     private final String accessToken;
+    private final String payerFirstName;
 
     public MercadoPagoPaymentGatewayStrategy(
         @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
-        @Value("${app.payment.mercadopago.access-token:}") String accessToken
+        @Value("${app.payment.mercadopago.access-token:}") String accessToken,
+        @Value("${app.payment.mercadopago.payer-first-name:APRO}") String payerFirstName
     ) {
         this.baseUrl = baseUrl;
         this.accessToken = accessToken;
+        this.payerFirstName = payerFirstName;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(30000);
@@ -58,10 +63,10 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
                 .body(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
-                    throw new PaymentValidationException("Mercado Pago order request failed: " + resp.getStatusCode());
+                    throw new PaymentValidationException("Mercado Pago order request failed: " + resp.getStatusCode() + " - " + responseBody(resp));
                 })
                 .onStatus(HttpStatusCode::is5xxServerError, (req, resp) -> {
-                    throw new PaymentValidationException("Mercado Pago server error: " + resp.getStatusCode());
+                    throw new PaymentValidationException("Mercado Pago server error: " + resp.getStatusCode() + " - " + responseBody(resp));
                 })
                 .body(Map.class);
 
@@ -86,22 +91,32 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
         Map<String, Object> payment = "pix".equals(command.method())
             ? Map.of(
                 "amount", formatAmount(command.amount()),
-                "payment_method", paymentMethod,
-                "expiration_time", "PT10M"
+                "payment_method", paymentMethod
             )
             : Map.of(
                 "amount", formatAmount(command.amount()),
                 "payment_method", paymentMethod
             );
 
-        return Map.of(
-            "type", "online",
-            "total_amount", formatAmount(command.amount()),
-            "external_reference", command.checkoutSessionId(),
-            "processing_mode", "automatic",
-            "payer", Map.of("email", command.payerEmail()),
-            "transactions", Map.of("payments", List.of(payment))
-        );
+        Map<String, Object> payer = new LinkedHashMap<>();
+        payer.put("email", command.payerEmail());
+        payer.put("first_name", payerFirstName.isBlank() ? command.recipientName() : payerFirstName);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("type", "online");
+        body.put("external_reference", command.checkoutSessionId());
+        body.put("total_amount", formatAmount(command.amount()));
+        body.put("payer", payer);
+        body.put("transactions", Map.of("payments", List.of(payment)));
+        return body;
+    }
+
+    private String responseBody(org.springframework.http.client.ClientHttpResponse response) {
+        try {
+            return new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception exception) {
+            return "<empty>";
+        }
     }
 
     private String formatAmount(BigDecimal amount) {
