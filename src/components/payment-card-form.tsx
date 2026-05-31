@@ -21,14 +21,16 @@ type Props = {
   onToken: (result: CardTokenResult) => void
 }
 
+const MERCADOPAGO_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "APP_USR-37373074-8635-4700-bd4a-bdd82a4f5ba8"
+
 export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props) {
   const [ready, setReady] = useState(() => (
-    typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
+    typeof window !== "undefined" && Boolean(MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
   ))
   const [sdkError, setSdkError] = useState("")
   const [cardholderName, setCardholderName] = useState("")
 
-  const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+  const publicKey = MERCADOPAGO_PUBLIC_KEY
   const configError = !publicKey ? "Chave pública do Mercado Pago não configurada" : sdkError
 
   useEffect(() => {
