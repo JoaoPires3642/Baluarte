@@ -30,17 +30,15 @@ const statusColors: Record<string, string> = {
 
 async function getOrders() {
   try {
-    const { userId, getToken } = await auth()
+    const { getToken } = await auth()
     const token = await getToken()
-    if (!userId || !token) return []
-
+    if (!token) return []
     const res = await fetch(`${API_BASE_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     })
     if (!res.ok) return []
-    const payload = await res.json() as { data: Order[] }
-    return payload.data
+    return (await res.json() as { data: Order[] }).data
   } catch {
     return []
   }
