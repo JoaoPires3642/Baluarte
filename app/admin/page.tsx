@@ -195,7 +195,7 @@ export default async function AdminDashboard() {
                   {lowStockVariants.map((item) => (
                     <tr key={`${item.productId}-${item.size}`} className="border-b">
                       <td className="py-3 font-medium">
-                        <Link href={`/admin/produtos/${item.productId}`} className="hover:underline">
+                        <Link href={`/admin/produtos?editId=${item.productId}`} className="hover:underline">
                           {item.productName}
                         </Link>
                       </td>

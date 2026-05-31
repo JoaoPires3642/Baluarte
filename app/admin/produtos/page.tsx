@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { Camera, Check, ChevronLeft, ChevronRight, Eye, EyeOff, FolderOpen, PackagePlus, Pencil, Search, Trash2, X } from "lucide-react"
 import { fetchCategories, fetchTeamsByCategory, uploadImage, type Category, type Team, type AdminProduct } from "@/lib/api"
@@ -146,6 +147,20 @@ export default function AdminProductsPage() {
   }, [authedFetch])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (loading || products.length === 0) return
+    const editId = searchParams.get("editId")
+    if (!editId) return
+    const product = products.find(p => p.id === editId)
+    if (product) {
+      openEdit(product)
+      router.replace("/admin/produtos")
+    }
+  }, [loading, products, searchParams, router])
 
   const openCreate = () => {
     setEditingId(null)
