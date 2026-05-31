@@ -125,7 +125,7 @@ public class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "INTERNAL_SERVER_ERROR",
-            "An unexpected error occurred",
+            exception.getMessage() != null ? exception.getMessage() : "An unexpected error occurred",
             List.of(),
             request
         );
