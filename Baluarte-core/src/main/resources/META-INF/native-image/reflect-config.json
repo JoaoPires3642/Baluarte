@@ -19,6 +19,16 @@
     "allPublicMethods": true
   },
   {
+    "name": "br.com.baluarte.core.modules.auth.api.AuthSessionResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.admin.api.AdminSessionResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
     "name": "br.com.baluarte.core.modules.profile.api.ProfileAddressResponse",
     "allDeclaredConstructors": true,
     "allPublicMethods": true
