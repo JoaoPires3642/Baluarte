@@ -13,30 +13,27 @@ type DisplayModel = Model & {
 }
 
 async function getData() {
-  try {
-    const [categoriesRes, modelsRes] = await Promise.all([
-      fetchCategories(),
-      fetchPublicModels(),
-    ])
+  const categoriesRes = await fetchCategories().catch(() => null)
+  const modelsRes = await fetchPublicModels().catch(() => null)
 
-    const teamResponses = await Promise.all(
-      categoriesRes.data.map((category) =>
-        fetchTeamsByCategory(category.slug).catch(() => ({ data: [] as Team[] }))
-      )
-    )
-
-    const teams = teamResponses
-      .flatMap((response) => response.data)
-      .filter((team, index, array) => array.findIndex((item) => item.slug === team.slug) === index)
-
-    return {
-      categories: categoriesRes.data,
-      teams,
-      products: modelsRes.data,
-    }
-  } catch {
+  if (!categoriesRes && !modelsRes) {
     return { categories: [], teams: [], products: [] }
   }
+
+  const categories = categoriesRes?.data ?? []
+  const products = modelsRes?.data ?? []
+
+  const teamResponses = await Promise.all(
+    categories.map((category) =>
+      fetchTeamsByCategory(category.slug).catch(() => ({ data: [] as Team[] }))
+    )
+  )
+
+  const teams = teamResponses
+    .flatMap((response) => response.data)
+    .filter((team, index, array) => array.findIndex((item) => item.slug === team.slug) === index)
+
+  return { categories, teams, products }
 }
 
 export default async function Home() {
