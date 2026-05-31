@@ -25,6 +25,21 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "customer_ref", length = 120)
     private String customerRef;
 
+    @Column(name = "clerk_user_id", length = 120)
+    private String clerkUserId;
+
+    @Column(name = "payer_email", length = 160)
+    private String payerEmail;
+
+    @Column(name = "payer_document_type", length = 10)
+    private String payerDocumentType;
+
+    @Column(name = "payer_document_number", length = 20)
+    private String payerDocumentNumber;
+
+    @Column(name = "recipient_name", length = 120)
+    private String recipientName;
+
     @Column(name = "status", nullable = false, length = 40)
     private String status;
 
@@ -43,6 +58,9 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "shipping_number", nullable = false, length = 20)
     private String shippingNumber;
 
+    @Column(name = "shipping_complement", length = 120)
+    private String shippingComplement;
+
     @Column(name = "shipping_neighborhood", nullable = false, length = 120)
     private String shippingNeighborhood;
 
@@ -55,6 +73,9 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "payment_reference", length = 80)
     private String paymentReference;
 
+    @Column(name = "tracking_code", length = 80)
+    private String trackingCode;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -64,32 +85,46 @@ public class CheckoutOrderJpaEntity {
     @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CheckoutOrderItemJpaEntity> items = new ArrayList<>();
 
-    public static CheckoutOrderJpaEntity create(String orderId, String checkoutSessionId, String customerRef,
-            BigDecimal totalAmount, BigDecimal shippingPrice, String cep, String street,
-            String number, String neighborhood, String city, String state) {
+    public static CheckoutOrderJpaEntity create(CheckoutOrder order) {
         CheckoutOrderJpaEntity entity = new CheckoutOrderJpaEntity();
-        entity.orderId = orderId;
-        entity.checkoutSessionId = checkoutSessionId;
-        entity.customerRef = customerRef;
-        entity.status = "pending";
-        entity.totalAmount = totalAmount;
-        entity.shippingPrice = shippingPrice;
-        entity.shippingCep = cep;
-        entity.shippingStreet = street;
-        entity.shippingNumber = number;
-        entity.shippingNeighborhood = neighborhood;
-        entity.shippingCity = city;
-        entity.shippingState = state.toUpperCase();
+        entity.apply(order);
         entity.createdAt = LocalDateTime.now();
         entity.updatedAt = entity.createdAt;
         return entity;
     }
 
+    public void apply(CheckoutOrder order) {
+        this.orderId = order.getOrderId();
+        this.checkoutSessionId = order.getCheckoutSessionId();
+        this.customerRef = order.getCustomerRef();
+        this.clerkUserId = order.getClerkUserId();
+        this.payerEmail = order.getPayerEmail();
+        this.payerDocumentType = order.getPayerDocumentType();
+        this.payerDocumentNumber = order.getPayerDocumentNumber();
+        this.recipientName = order.getRecipientName();
+        this.status = order.getStatus();
+        this.totalAmount = order.getTotalAmount();
+        this.shippingPrice = order.getShippingPrice();
+        this.shippingCep = order.getShippingCep();
+        this.shippingStreet = order.getShippingStreet();
+        this.shippingNumber = order.getShippingNumber();
+        this.shippingComplement = order.getShippingComplement();
+        this.shippingNeighborhood = order.getShippingNeighborhood();
+        this.shippingCity = order.getShippingCity();
+        this.shippingState = order.getShippingState().toUpperCase();
+        this.paymentReference = order.getPaymentReference();
+        this.trackingCode = order.getTrackingCode();
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public CheckoutOrder toDomain() {
-        CheckoutOrder order = new CheckoutOrder(orderId, checkoutSessionId, customerRef, status, totalAmount,
-                shippingPrice, shippingCep, shippingStreet, shippingNumber, shippingNeighborhood,
+        CheckoutOrder order = new CheckoutOrder(orderId, checkoutSessionId, customerRef, clerkUserId,
+                payerEmail, payerDocumentType, payerDocumentNumber, recipientName, status, totalAmount,
+                shippingPrice, shippingCep, shippingStreet, shippingNumber, shippingComplement, shippingNeighborhood,
                 shippingCity, shippingState);
         order.setPaymentReference(paymentReference);
+        order.setTrackingCode(trackingCode);
+        order.setItems(items.stream().map(CheckoutOrderItemJpaEntity::toDomain).toList());
         order.setCreatedAt(createdAt.toInstant(java.time.ZoneOffset.UTC));
         order.setUpdatedAt(updatedAt.toInstant(java.time.ZoneOffset.UTC));
         return order;

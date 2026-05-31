@@ -47,8 +47,10 @@ export default function CheckoutPage() {
   const [showNewAddress, setShowNewAddress] = useState(false)
 
   const [address, setAddress] = useState({
+    recipientName: "",
     street: "",
     number: "",
+    complement: "",
     neighborhood: "",
     city: "",
     state: "",
@@ -68,6 +70,7 @@ export default function CheckoutPage() {
 
   const [newAddr, setNewAddr] = useState({
     label: "",
+    recipientName: "",
     cep: "",
     street: "",
     number: "",
@@ -88,7 +91,9 @@ export default function CheckoutPage() {
         setSelectedAddressId(defaultAddr.addressId)
         setAddress({
           street: defaultAddr.street,
+          recipientName: defaultAddr.recipientName || "",
           number: defaultAddr.number,
+          complement: defaultAddr.complement || "",
           neighborhood: defaultAddr.neighborhood,
           city: defaultAddr.city,
           state: defaultAddr.state,
@@ -108,7 +113,9 @@ export default function CheckoutPage() {
     setSelectedAddressId(addr.addressId)
     setAddress({
       street: addr.street,
+      recipientName: addr.recipientName || "",
       number: addr.number,
+      complement: addr.complement || "",
       neighborhood: addr.neighborhood,
       city: addr.city,
       state: addr.state,
@@ -169,12 +176,12 @@ export default function CheckoutPage() {
   }, [cep, address.street, address.state, triggerShippingQuote])
 
   const resetNewAddress = () => {
-    setNewAddr({ label: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
+    setNewAddr({ label: "", recipientName: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
     setShowNewAddress(false)
   }
 
   const handleSaveNewAddress = async () => {
-    if (!newAddr.label || !newAddr.cep || !newAddr.street || !newAddr.number || !newAddr.neighborhood || !newAddr.city || !newAddr.state) {
+    if (!newAddr.label || !newAddr.recipientName || !newAddr.cep || !newAddr.street || !newAddr.number || !newAddr.neighborhood || !newAddr.city || !newAddr.state) {
       showToast("Preencha todos os campos obrigatórios", "error")
       return
     }
@@ -183,6 +190,7 @@ export default function CheckoutPage() {
     try {
       const list = addresses.map(a => ({
         addressId: a.addressId,
+        recipientName: a.recipientName || "",
         label: a.label,
         cep: a.cep,
         street: a.street,
@@ -197,6 +205,7 @@ export default function CheckoutPage() {
       const shouldUseNewAddressAsDefault = newAddr.isDefault || list.length === 0
       list.push({
         addressId: newAddressId,
+        recipientName: newAddr.recipientName,
         label: newAddr.label,
         cep: newAddr.cep.replace(/\D/g, ""),
         street: newAddr.street,
@@ -249,6 +258,12 @@ export default function CheckoutPage() {
   }
 
   const handleSubmit = async () => {
+    if (!isSignedIn) {
+      showToast("Faça login para finalizar o pedido", "error")
+      router.push("/sign-in?redirect_url=/checkout")
+      return
+    }
+
     if (!selectedShipping || items.length === 0) {
       showToast("Adicione itens ao carrinho", "error")
       return
@@ -260,7 +275,7 @@ export default function CheckoutPage() {
     }
 
     const addr = showNewAddress && newAddr.street ? newAddr : address
-    if (!addr.street || !addr.neighborhood || !addr.city) {
+    if (!addr.recipientName || !addr.street || !addr.neighborhood || !addr.city) {
       showToast("Preencha o endereço completo", "error")
       return
     }
@@ -276,6 +291,7 @@ export default function CheckoutPage() {
         try {
           const existing = addresses.map(a => ({
             addressId: a.addressId,
+            recipientName: a.recipientName || "",
             label: a.label,
             cep: a.cep,
             street: a.street,
@@ -290,6 +306,7 @@ export default function CheckoutPage() {
             ...existing,
             {
               addressId: "",
+              recipientName: addr.recipientName,
               label: addr.street.split(" ")[0] || "Endereço",
               cep: cep.replace(/\D/g, ""),
               street: addr.street,
@@ -315,9 +332,11 @@ export default function CheckoutPage() {
           identification: { type: "CPF" as const, number: payer.cpf },
         },
         shippingAddress: {
+          recipientName: addr.recipientName,
           cep: cep.replace(/\D/g, ""),
           street: addr.street,
           number: addr.number,
+          complement: addr.complement || undefined,
           neighborhood: addr.neighborhood,
           city: addr.city,
           state: addr.state,
@@ -442,6 +461,10 @@ export default function CheckoutPage() {
                       <div className="sm:col-span-2">
                         <Label>Identificação (ex: Casa, Trabalho)</Label>
                         <Input value={newAddr.label} onChange={e => setNewAddr(p => ({ ...p, label: e.target.value }))} placeholder="Minha Casa" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label>Nome do destinatário</Label>
+                        <Input value={newAddr.recipientName} onChange={e => setNewAddr(p => ({ ...p, recipientName: e.target.value }))} placeholder="Nome de quem vai receber" />
                       </div>
                       <div>
                         <Label>CEP</Label>

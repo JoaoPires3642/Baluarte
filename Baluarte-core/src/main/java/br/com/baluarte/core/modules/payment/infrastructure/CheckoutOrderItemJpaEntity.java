@@ -21,6 +21,9 @@ public class CheckoutOrderItemJpaEntity {
     @Column(name = "product_id", nullable = false, length = 80)
     private String productId;
 
+    @Column(name = "product_name", length = 160)
+    private String productName;
+
     @Column(name = "size", nullable = false, length = 4)
     private String size;
 
@@ -37,14 +40,30 @@ public class CheckoutOrderItemJpaEntity {
     private int customNumberDigits;
 
     public static CheckoutOrderItemJpaEntity create(String orderItemId, String orderId,
-            String productId, String size, int quantity, BigDecimal unitPrice) {
+            String productId, String productName, String size, int quantity, BigDecimal unitPrice) {
         CheckoutOrderItemJpaEntity entity = new CheckoutOrderItemJpaEntity();
         entity.orderItemId = orderItemId;
         entity.orderId = orderId;
         entity.productId = productId;
+        entity.productName = productName;
         entity.size = size;
         entity.quantity = quantity;
         entity.unitPrice = unitPrice;
         return entity;
+    }
+
+    br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem toDomain() {
+        br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem item = new br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem(
+            orderItemId,
+            orderId,
+            productId,
+            productName,
+            size,
+            quantity,
+            unitPrice
+        );
+        item.setCustomNamesCount(customNamesCount);
+        item.setCustomNumberDigits(customNumberDigits);
+        return item;
     }
 }

@@ -10,9 +10,14 @@ import org.springframework.stereotype.Repository;
 public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
     private final SpringDataCheckoutOrderJpaRepository jpaRepository;
+    private final SpringDataCheckoutOrderItemJpaRepository itemRepository;
 
-    public CheckoutOrderRepositoryAdapter(SpringDataCheckoutOrderJpaRepository jpaRepository) {
+    public CheckoutOrderRepositoryAdapter(
+        SpringDataCheckoutOrderJpaRepository jpaRepository,
+        SpringDataCheckoutOrderItemJpaRepository itemRepository
+    ) {
         this.jpaRepository = jpaRepository;
+        this.itemRepository = itemRepository;
     }
 
     @Override
@@ -39,21 +44,39 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
             .toList();
     }
 
+    public List<CheckoutOrder> findByClerkUserId(String clerkUserId) {
+        return jpaRepository.findByClerkUserIdOrderByCreatedAtDesc(clerkUserId).stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    public Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId) {
+        return jpaRepository.findByOrderIdAndClerkUserId(orderId, clerkUserId).map(CheckoutOrderJpaEntity::toDomain);
+    }
+
     @Override
     public CheckoutOrder save(CheckoutOrder order) {
-        CheckoutOrderJpaEntity entity = CheckoutOrderJpaEntity.create(
-                order.getOrderId(),
-                order.getCheckoutSessionId(),
-                order.getCustomerRef(),
-                order.getTotalAmount(),
-                order.getShippingPrice(),
-                order.getShippingCep(),
-                order.getShippingStreet(),
-                order.getShippingNumber(),
-                order.getShippingNeighborhood(),
-                order.getShippingCity(),
-                order.getShippingState()
-        );
-        return jpaRepository.save(entity).toDomain();
+        CheckoutOrderJpaEntity entity = jpaRepository.findById(order.getOrderId())
+            .orElseGet(() -> CheckoutOrderJpaEntity.create(order));
+        entity.apply(order);
+        CheckoutOrder saved = jpaRepository.save(entity).toDomain();
+
+        if (order.getItems() != null) {
+            itemRepository.deleteAll(itemRepository.findByOrderId(order.getOrderId()));
+            itemRepository.saveAll(order.getItems().stream()
+                .map(item -> CheckoutOrderItemJpaEntity.create(
+                    item.getOrderItemId(),
+                    order.getOrderId(),
+                    item.getProductId(),
+                    item.getProductName(),
+                    item.getSize(),
+                    item.getQuantity(),
+                    item.getUnitPrice()
+                ))
+                .toList());
+        }
+
+        saved.setItems(order.getItems());
+        return saved;
     }
 }

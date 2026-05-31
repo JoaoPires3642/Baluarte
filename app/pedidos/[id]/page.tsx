@@ -3,7 +3,7 @@ export const runtime = "edge";
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { MapPin, PackageSearch } from "lucide-react"
-import { fetchOrder } from "@/lib/api"
+import { fetchMyOrder } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -32,7 +32,7 @@ type Props = {
 
 async function getOrder(id: string) {
   try {
-    const res = await fetchOrder(id)
+    const res = await fetchMyOrder(id)
     return res.data
   } catch {
     return null

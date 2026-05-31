@@ -9,16 +9,23 @@ public class CheckoutOrder {
     private String orderId;
     private String checkoutSessionId;
     private String customerRef;
+    private String clerkUserId;
+    private String payerEmail;
+    private String payerDocumentType;
+    private String payerDocumentNumber;
+    private String recipientName;
     private String status;
     private BigDecimal totalAmount;
     private BigDecimal shippingPrice;
     private String shippingCep;
     private String shippingStreet;
     private String shippingNumber;
+    private String shippingComplement;
     private String shippingNeighborhood;
     private String shippingCity;
     private String shippingState;
     private String paymentReference;
+    private String trackingCode;
     private Instant createdAt;
     private Instant updatedAt;
     private List<CheckoutOrderItem> items;
@@ -29,12 +36,18 @@ public class CheckoutOrder {
         String orderId,
         String checkoutSessionId,
         String customerRef,
+        String clerkUserId,
+        String payerEmail,
+        String payerDocumentType,
+        String payerDocumentNumber,
+        String recipientName,
         String status,
         BigDecimal totalAmount,
         BigDecimal shippingPrice,
         String shippingCep,
         String shippingStreet,
         String shippingNumber,
+        String shippingComplement,
         String shippingNeighborhood,
         String shippingCity,
         String shippingState
@@ -42,12 +55,18 @@ public class CheckoutOrder {
         this.orderId = orderId;
         this.checkoutSessionId = checkoutSessionId;
         this.customerRef = customerRef;
+        this.clerkUserId = clerkUserId;
+        this.payerEmail = payerEmail;
+        this.payerDocumentType = payerDocumentType;
+        this.payerDocumentNumber = payerDocumentNumber;
+        this.recipientName = recipientName;
         this.status = status;
         this.totalAmount = totalAmount;
         this.shippingPrice = shippingPrice;
         this.shippingCep = shippingCep;
         this.shippingStreet = shippingStreet;
         this.shippingNumber = shippingNumber;
+        this.shippingComplement = shippingComplement;
         this.shippingNeighborhood = shippingNeighborhood;
         this.shippingCity = shippingCity;
         this.shippingState = shippingState;
@@ -61,6 +80,16 @@ public class CheckoutOrder {
     public void setCheckoutSessionId(String checkoutSessionId) { this.checkoutSessionId = checkoutSessionId; }
     public String getCustomerRef() { return customerRef; }
     public void setCustomerRef(String customerRef) { this.customerRef = customerRef; }
+    public String getClerkUserId() { return clerkUserId; }
+    public void setClerkUserId(String clerkUserId) { this.clerkUserId = clerkUserId; }
+    public String getPayerEmail() { return payerEmail; }
+    public void setPayerEmail(String payerEmail) { this.payerEmail = payerEmail; }
+    public String getPayerDocumentType() { return payerDocumentType; }
+    public void setPayerDocumentType(String payerDocumentType) { this.payerDocumentType = payerDocumentType; }
+    public String getPayerDocumentNumber() { return payerDocumentNumber; }
+    public void setPayerDocumentNumber(String payerDocumentNumber) { this.payerDocumentNumber = payerDocumentNumber; }
+    public String getRecipientName() { return recipientName; }
+    public void setRecipientName(String recipientName) { this.recipientName = recipientName; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public BigDecimal getTotalAmount() { return totalAmount; }
@@ -73,6 +102,8 @@ public class CheckoutOrder {
     public void setShippingStreet(String shippingStreet) { this.shippingStreet = shippingStreet; }
     public String getShippingNumber() { return shippingNumber; }
     public void setShippingNumber(String shippingNumber) { this.shippingNumber = shippingNumber; }
+    public String getShippingComplement() { return shippingComplement; }
+    public void setShippingComplement(String shippingComplement) { this.shippingComplement = shippingComplement; }
     public String getShippingNeighborhood() { return shippingNeighborhood; }
     public void setShippingNeighborhood(String shippingNeighborhood) { this.shippingNeighborhood = shippingNeighborhood; }
     public String getShippingCity() { return shippingCity; }
@@ -81,6 +112,8 @@ public class CheckoutOrder {
     public void setShippingState(String shippingState) { this.shippingState = shippingState; }
     public String getPaymentReference() { return paymentReference; }
     public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
+    public String getTrackingCode() { return trackingCode; }
+    public void setTrackingCode(String trackingCode) { this.trackingCode = trackingCode; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

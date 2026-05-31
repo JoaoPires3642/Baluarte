@@ -1,15 +1,24 @@
 export const runtime = "edge";
 import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@clerk/nextjs/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 export async function POST(request: NextRequest) {
   try {
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) {
+      return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Não autenticado" } }, { status: 401 })
+    }
+
     const body = await request.text()
     const response = await fetch(`${API_BASE_URL}/payment/requests`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "X-Clerk-User-Id": userId,
       },
       body,
       cache: "no-store",

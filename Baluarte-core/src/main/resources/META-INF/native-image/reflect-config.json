@@ -29,6 +29,46 @@
     "allPublicMethods": true
   },
   {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$Payer",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$Identification",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$ShippingAddress",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$ShippingSelection",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$Item",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentRequest$Card",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "br.com.baluarte.core.modules.payment.api.CreatePaymentResponse",
+    "allDeclaredConstructors": true,
+    "allPublicMethods": true
+  },
+  {
     "name": "br.com.baluarte.core.modules.profile.api.ProfileAddressResponse",
     "allDeclaredConstructors": true,
     "allPublicMethods": true

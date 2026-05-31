@@ -26,6 +26,9 @@ public class ProfileAddressJpaEntity {
     @Column(name = "label", nullable = false, length = 80)
     private String label;
 
+    @Column(name = "recipient_name", length = 120)
+    private String recipientName;
+
     @Column(name = "cep", nullable = false, length = 9)
     private String cep;
 
@@ -68,6 +71,7 @@ public class ProfileAddressJpaEntity {
 
     public void apply(ProfileAddressUpsertRequest request, boolean defaultAddress) {
         this.label = trimOrEmpty(request.label());
+        this.recipientName = trimToNull(request.recipientName());
         this.cep = trimOrEmpty(request.cep());
         this.street = trimOrEmpty(request.street());
         this.number = trimOrEmpty(request.number());

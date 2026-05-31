@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { fetchOrders, type Order } from "@/lib/api"
+import { fetchMyOrders, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +24,7 @@ const statusColors: Record<string, string> = {
 
 async function getOrders() {
   try {
-    const res = await fetchOrders()
+    const res = await fetchMyOrders()
     return res.data
   } catch {
     return []

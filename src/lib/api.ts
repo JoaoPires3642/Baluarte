@@ -82,9 +82,29 @@ export async function fetchOrders() {
   return fetchApi<{ data: Order[] }>("/orders")
 }
 
+export async function fetchMyOrders() {
+  const response = await fetch("/api/orders", { cache: "no-store" })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    throw new Error(errPayload?.message || "Erro ao carregar pedidos")
+  }
+  return response.json() as Promise<{ data: Order[] }>
+}
+
 // Order Detail - GET /orders/{orderId}
 export async function fetchOrder(orderId: string) {
   return fetchApi<{ data: Order }>(`/orders/${orderId}`)
+}
+
+export async function fetchMyOrder(orderId: string) {
+  const response = await fetch(`/api/orders/${orderId}`, { cache: "no-store" })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    throw new Error(errPayload?.message || "Erro ao carregar pedido")
+  }
+  return response.json() as Promise<{ data: Order }>
 }
 
 // Shipping Quotes - POST /checkout/shipping/quotes
@@ -322,9 +342,11 @@ export interface PaymentRequest {
     identification: { type: "CPF" | "CNPJ"; number: string }
   }
   shippingAddress: {
+    recipientName: string
     cep: string
     street: string
     number: string
+    complement?: string
     neighborhood: string
     city: string
     state: string
@@ -377,6 +399,7 @@ export interface Order {
     unitPrice: number
   }>
   shipping?: {
+    recipientName?: string
     address: string
     trackingCode?: string
   }
@@ -437,6 +460,7 @@ export interface UpdateProductRequest {
 export interface Address {
   addressId: string
   clerkUserId: string
+  recipientName?: string
   label: string
   cep: string
   street: string
@@ -493,6 +517,7 @@ export async function fetchAddresses(): Promise<Address[]> {
 export async function syncAddresses(addresses: Array<{
   addressId?: string
   label: string
+  recipientName?: string
   cep: string
   street: string
   number: string

@@ -92,6 +92,7 @@ public class ProfileAddressService {
     private static ProfileAddressResponse toResponse(ProfileAddressJpaEntity entity) {
         return new ProfileAddressResponse(
             entity.getAddressId(),
+            entity.getRecipientName(),
             entity.getLabel(),
             entity.getCep(),
             entity.getStreet(),

@@ -7,6 +7,7 @@ public class CheckoutOrderItem {
     private String orderItemId;
     private String orderId;
     private String productId;
+    private String productName;
     private String size;
     private int quantity;
     private BigDecimal unitPrice;
@@ -19,6 +20,7 @@ public class CheckoutOrderItem {
         String orderItemId,
         String orderId,
         String productId,
+        String productName,
         String size,
         int quantity,
         BigDecimal unitPrice
@@ -26,6 +28,7 @@ public class CheckoutOrderItem {
         this.orderItemId = orderItemId;
         this.orderId = orderId;
         this.productId = productId;
+        this.productName = productName;
         this.size = size;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
@@ -37,6 +40,8 @@ public class CheckoutOrderItem {
     public void setOrderId(String orderId) { this.orderId = orderId; }
     public String getProductId() { return productId; }
     public void setProductId(String productId) { this.productId = productId; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
     public String getSize() { return size; }
     public void setSize(String size) { this.size = size; }
     public int getQuantity() { return quantity; }

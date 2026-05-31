@@ -1,16 +1,22 @@
 package br.com.baluarte.core.modules.payment.application;
 
+import br.com.baluarte.core.modules.adminproduct.infrastructure.AdminProductJpaEntity;
+import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductJpaRepository;
+import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
 import br.com.baluarte.core.modules.payment.api.CreatePaymentRequest;
 import br.com.baluarte.core.modules.payment.api.CreatePaymentResponse;
 import br.com.baluarte.core.modules.payment.api.CreatePaymentResponse.PixPayload;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
+import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CreatePaymentUseCase {
@@ -18,18 +24,25 @@ public class CreatePaymentUseCase {
     private final PaymentGateway paymentGateway;
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository transactionRepository;
+    private final SpringDataAdminProductJpaRepository productRepository;
+    private final SpringDataAdminProductVariantJpaRepository variantRepository;
 
     public CreatePaymentUseCase(
         PaymentGateway paymentGateway,
         CheckoutOrderRepository orderRepository,
-        PaymentTransactionRepository transactionRepository
+        PaymentTransactionRepository transactionRepository,
+        SpringDataAdminProductJpaRepository productRepository,
+        SpringDataAdminProductVariantJpaRepository variantRepository
     ) {
         this.paymentGateway = paymentGateway;
         this.orderRepository = orderRepository;
         this.transactionRepository = transactionRepository;
+        this.productRepository = productRepository;
+        this.variantRepository = variantRepository;
     }
 
-    public CreatePaymentResponse execute(CreatePaymentRequest request, String provider) {
+    @Transactional
+    public CreatePaymentResponse execute(CreatePaymentRequest request, String provider, String clerkUserId) {
         Optional<PaymentTransaction> existingTx = 
             transactionRepository.findByIdempotencyKey(request.idempotencyKey());
         
@@ -38,9 +51,12 @@ public class CreatePaymentUseCase {
             return mapToResponse(tx, provider, request.method());
         }
 
-        BigDecimal totalAmount = request.items().stream()
+        List<ResolvedItem> resolvedItems = request.items().stream()
+            .map(this::resolveAndReserveItem)
+            .toList();
+        BigDecimal totalAmount = resolvedItems.stream()
             .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
-            .reduce(BigDecimal.ZERO, (a, b) -> a.add(b))
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
             .add(request.shipping().price());
 
         String orderId = "ord-" + UUID.randomUUID().toString();
@@ -50,16 +66,33 @@ public class CreatePaymentUseCase {
             orderId,
             request.checkoutSessionId(),
             request.payer().email(),
-            "pending",
+            clerkUserId,
+            request.payer().email(),
+            request.payer().identification().type(),
+            request.payer().identification().number(),
+            request.shippingAddress().recipientName(),
+            "pending_payment",
             totalAmount,
             request.shipping().price(),
             request.shippingAddress().cep(),
             request.shippingAddress().street(),
             request.shippingAddress().number(),
+            request.shippingAddress().complement(),
             request.shippingAddress().neighborhood(),
             request.shippingAddress().city(),
             request.shippingAddress().state()
         );
+        order.setItems(resolvedItems.stream()
+            .map(item -> new CheckoutOrderItem(
+                "item-" + UUID.randomUUID(),
+                orderId,
+                item.productId(),
+                item.productName(),
+                item.size(),
+                item.quantity(),
+                item.unitPrice()
+            ))
+            .toList());
         orderRepository.save(order);
 
         CreatePaymentCommand command = new CreatePaymentCommand(
@@ -69,9 +102,12 @@ public class CreatePaymentUseCase {
             request.payer().email(),
             request.payer().identification().type(),
             request.payer().identification().number(),
+            clerkUserId,
+            request.shippingAddress().recipientName(),
             request.shippingAddress().cep(),
             request.shippingAddress().street(),
             request.shippingAddress().number(),
+            request.shippingAddress().complement(),
             request.shippingAddress().neighborhood(),
             request.shippingAddress().city(),
             request.shippingAddress().state(),
@@ -84,6 +120,9 @@ public class CreatePaymentUseCase {
         );
 
         PaymentGatewayResult result = paymentGateway.create(command);
+        if ("rejected".equalsIgnoreCase(result.status())) {
+            resolvedItems.forEach(item -> variantRepository.releaseStock(parseProductId(item.productId()), item.size(), item.quantity()));
+        }
 
         PaymentTransaction transaction = new PaymentTransaction(
             paymentId,
@@ -104,11 +143,45 @@ public class CreatePaymentUseCase {
         transactionRepository.save(transaction);
 
         order.setPaymentReference(paymentId);
-        order.setStatus("pending");
+        order.setStatus(resolveOrderStatus(result.status()));
         orderRepository.save(order);
 
         return mapToResponse(transaction, provider, request.method());
     }
+
+    private String resolveOrderStatus(String paymentStatus) {
+        if ("approved".equalsIgnoreCase(paymentStatus)) {
+            return "paid";
+        }
+        if ("rejected".equalsIgnoreCase(paymentStatus)) {
+            return "cancelled";
+        }
+        return "pending_payment";
+    }
+
+    private ResolvedItem resolveAndReserveItem(CreatePaymentRequest.Item item) {
+        UUID productId = parseProductId(item.productId());
+        AdminProductJpaEntity product = productRepository.findById(productId)
+            .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()) && Boolean.TRUE.equals(candidate.getAvailable()))
+            .orElseThrow(() -> new PaymentValidationException("Produto indisponivel"));
+
+        int updatedRows = variantRepository.reserveStock(productId, item.size(), item.quantity());
+        if (updatedRows == 0) {
+            throw new PaymentValidationException("Estoque insuficiente para " + product.getModelName() + " tamanho " + item.size());
+        }
+
+        return new ResolvedItem(product.getId().toString(), product.getModelName(), item.size().toUpperCase(), item.quantity(), product.getPrice());
+    }
+
+    private UUID parseProductId(String productId) {
+        try {
+            return UUID.fromString(productId);
+        } catch (IllegalArgumentException exception) {
+            throw new PaymentValidationException("Produto invalido");
+        }
+    }
+
+    private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice) {}
 
     private CreatePaymentResponse mapToResponse(PaymentTransaction tx, String provider, String method) {
         PixPayload pix = null;

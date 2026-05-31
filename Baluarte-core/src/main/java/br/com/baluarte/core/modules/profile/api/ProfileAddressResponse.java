@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.profile.api;
 
 public record ProfileAddressResponse(
     String id,
+    String recipientName,
     String label,
     String cep,
     String street,

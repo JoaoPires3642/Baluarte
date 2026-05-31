@@ -4,15 +4,18 @@ import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
+import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,88 +26,46 @@ import org.springframework.web.server.ResponseStatusException;
 public class OrderController {
 
     private final CheckoutOrderRepository orderRepository;
+    private final ClerkJwtVerifier clerkJwtVerifier;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders() {
-        List<CheckoutOrder> orders = orderRepository.findAll();
-        List<OrderResponse> data = orders.stream()
-            .map(order -> {
-                List<OrderItemResponse> items = order.getItems() != null
-                    ? order.getItems().stream()
-                        .map(item -> new OrderItemResponse(
-                            item.getProductId(),
-                            "Produto #" + item.getProductId(),
-                            item.getSize(),
-                            item.getQuantity(),
-                            item.getUnitPrice().doubleValue()
-                        ))
-                        .toList()
-                    : List.of();
-
-                String shippingAddress = order.getShippingStreet() != null
-                    ? String.format("%s, %s - %s, %s - %s",
-                        order.getShippingStreet(),
-                        order.getShippingNumber() != null ? order.getShippingNumber() : "s/n",
-                        order.getShippingNeighborhood() != null ? order.getShippingNeighborhood() : "",
-                        order.getShippingCity() != null ? order.getShippingCity() : "",
-                        order.getShippingState() != null ? order.getShippingState() : "")
-                    : null;
-
-                return new OrderResponse(
-                    order.getOrderId(),
-                    order.getOrderId(),
-                    order.getStatus(),
-                    order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
-                    order.getTotalAmount().doubleValue(),
-                    items,
-                    order.getShippingStreet() != null
-                        ? new ShippingResponse(shippingAddress, null)
-                        : null
-                );
-            })
-            .toList();
+        List<OrderResponse> data = orderRepository.findAll().stream().map(this::toResponse).toList();
         return ApiSuccessResponse.of(data);
+    }
+
+    @GetMapping("/my")
+    public ApiSuccessResponse<List<OrderResponse>> listMyOrders(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+    ) {
+        String userId = resolveUserId(authorizationHeader, clerkUserId);
+        return ApiSuccessResponse.of(orderRepository.findByClerkUserId(userId).stream()
+            .map(this::toResponse)
+            .toList());
     }
 
     @GetMapping("/{orderId}")
     public ApiSuccessResponse<OrderResponse> getOrder(@PathVariable String orderId) {
         CheckoutOrder order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
-            return ApiSuccessResponse.of(new OrderResponse(
-                orderId, "BAL-" + orderId, "processing", "2024-01-20T10:00:00Z", 319.80,
-                List.of(new OrderItemResponse("1", "Camisa Flamengo 2024", "G", 1, 299.90)),
-                new ShippingResponse("Rua Example, 123 - Centro, Rio de Janeiro - RJ", null)
-            ));
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
         }
-        
-        List<OrderItemResponse> items = order.getItems() != null 
-            ? order.getItems().stream()
-                .map(item -> new OrderItemResponse(
-                    item.getProductId(),
-                    "Produto #" + item.getProductId(),
-                    item.getSize(),
-                    item.getQuantity(),
-                    item.getUnitPrice().doubleValue()
-                ))
-                .toList()
-            : List.of();
 
-        String shippingAddress = String.format("%s, %s - %s, %s - %s",
-            order.getShippingStreet(),
-            order.getShippingNumber(),
-            order.getShippingNeighborhood(),
-            order.getShippingCity(),
-            order.getShippingState());
+        return ApiSuccessResponse.of(toResponse(order));
+    }
 
-        return ApiSuccessResponse.of(new OrderResponse(
-            order.getOrderId(),
-            order.getOrderId(),
-            order.getStatus(),
-            order.getCreatedAt().toString(),
-            order.getTotalAmount().doubleValue(),
-            items,
-            new ShippingResponse(shippingAddress, null)
-        ));
+    @GetMapping("/my/{orderId}")
+    public ApiSuccessResponse<OrderResponse> getMyOrder(
+        @PathVariable String orderId,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+    ) {
+        String userId = resolveUserId(authorizationHeader, clerkUserId);
+        CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+
+        return ApiSuccessResponse.of(toResponse(order));
     }
 
     @PatchMapping("/{orderId}/status")
@@ -120,6 +81,56 @@ public class OrderController {
         orderRepository.save(order);
 
         return getOrder(orderId);
+    }
+
+    private String resolveUserId(String authorizationHeader, String clerkUserId) {
+        Jwt jwt = clerkJwtVerifier.verify(extractBearerToken(authorizationHeader));
+        if (jwt == null || clerkUserId == null || !clerkUserId.equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        return jwt.getSubject();
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        String token = authorizationHeader.substring("Bearer ".length()).trim();
+        return token.isBlank() ? null : token;
+    }
+
+    private OrderResponse toResponse(CheckoutOrder order) {
+        List<OrderItemResponse> items = order.getItems() != null
+            ? order.getItems().stream()
+                .map(item -> new OrderItemResponse(
+                    item.getProductId(),
+                    item.getProductName() != null ? item.getProductName() : "Produto #" + item.getProductId(),
+                    item.getSize(),
+                    item.getQuantity(),
+                    item.getUnitPrice().doubleValue()
+                ))
+                .toList()
+            : List.of();
+
+        String shippingAddress = order.getShippingStreet() != null
+            ? String.format("%s, %s%s - %s, %s - %s",
+                order.getShippingStreet(),
+                order.getShippingNumber() != null ? order.getShippingNumber() : "s/n",
+                order.getShippingComplement() != null && !order.getShippingComplement().isBlank() ? " - " + order.getShippingComplement() : "",
+                order.getShippingNeighborhood() != null ? order.getShippingNeighborhood() : "",
+                order.getShippingCity() != null ? order.getShippingCity() : "",
+                order.getShippingState() != null ? order.getShippingState() : "")
+            : null;
+
+        return new OrderResponse(
+            order.getOrderId(),
+            order.getOrderId(),
+            order.getStatus(),
+            order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
+            order.getTotalAmount().doubleValue(),
+            items,
+            new ShippingResponse(order.getRecipientName(), shippingAddress, order.getTrackingCode())
+        );
     }
 }
 
@@ -142,6 +153,7 @@ record OrderItemResponse(
 ) {}
 
 record ShippingResponse(
+    String recipientName,
     String address,
     String trackingCode
 ) {}

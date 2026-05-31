@@ -23,9 +23,11 @@ public record CreatePaymentRequest(
     public record Identification(@NotBlank String type, @NotBlank String number) {}
 
     public record ShippingAddress(
+        @NotBlank String recipientName,
         @NotBlank @Pattern(regexp = "^[0-9]{5}-?[0-9]{3}$") String cep,
         @NotBlank String street,
         @NotBlank String number,
+        String complement,
         @NotBlank String neighborhood,
         @NotBlank String city,
         @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$") String state
@@ -37,7 +39,7 @@ public record CreatePaymentRequest(
         @NotBlank String productId,
         @NotBlank String size,
         @Min(1) int quantity,
-        @NotNull @DecimalMin("0.00") BigDecimal unitPrice,
+        BigDecimal unitPrice,
         List<@NotBlank String> customNames,
         @Pattern(regexp = "^[0-9]{0,2}$") String customNumber
     ) {}

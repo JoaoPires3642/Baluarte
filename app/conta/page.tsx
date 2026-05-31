@@ -38,6 +38,7 @@ export default function AccountPage() {
 
   const [form, setForm] = useState({
     label: "",
+    recipientName: "",
     cep: "",
     street: "",
     number: "",
@@ -66,7 +67,7 @@ export default function AccountPage() {
   }, [isLoaded, isSignedIn, loadAddresses])
 
   const resetForm = () => {
-    setForm({ label: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
+    setForm({ label: "", recipientName: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
     setEditingId(null)
     setShowForm(false)
   }
@@ -102,6 +103,7 @@ export default function AccountPage() {
     try {
       const addressList = addresses.map(a => ({
         addressId: a.addressId,
+        recipientName: a.recipientName || "",
         label: a.label,
         cep: a.cep,
         street: a.street,
@@ -115,6 +117,7 @@ export default function AccountPage() {
 
       const newItem = {
         addressId: editingId || createAddressId(),
+        recipientName: form.recipientName,
         label: form.label,
         cep: form.cep.replace(/\D/g, ""),
         street: form.street,
@@ -156,6 +159,7 @@ export default function AccountPage() {
         .filter(a => a.addressId !== id)
         .map(a => ({
           addressId: a.addressId,
+          recipientName: a.recipientName || "",
           label: a.label,
           cep: a.cep,
           street: a.street,
@@ -179,6 +183,7 @@ export default function AccountPage() {
   const handleEdit = (addr: Address) => {
     setForm({
       label: addr.label,
+      recipientName: addr.recipientName || "",
       cep: addr.cep,
       street: addr.street,
       number: addr.number,
@@ -264,6 +269,10 @@ export default function AccountPage() {
                     <div className="sm:col-span-2">
                       <Label>Identificação (ex: Casa, Trabalho)</Label>
                       <Input value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="Minha Casa" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Nome do destinatário</Label>
+                      <Input value={form.recipientName} onChange={e => setForm(p => ({ ...p, recipientName: e.target.value }))} placeholder="Nome de quem vai receber" />
                     </div>
                     <div>
                       <Label>CEP</Label>

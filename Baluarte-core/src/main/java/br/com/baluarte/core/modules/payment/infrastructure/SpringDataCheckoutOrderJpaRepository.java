@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<CheckoutOrderJpaEntity, String> {
     Optional<CheckoutOrderJpaEntity> findByCheckoutSessionId(String checkoutSessionId);
     List<CheckoutOrderJpaEntity> findByCustomerRef(String customerRef);
+    List<CheckoutOrderJpaEntity> findByClerkUserIdOrderByCreatedAtDesc(String clerkUserId);
+    Optional<CheckoutOrderJpaEntity> findByOrderIdAndClerkUserId(String orderId, String clerkUserId);
 }
