@@ -1,12 +1,12 @@
-export const runtime = "edge";
-
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
 import { MapPin, PackageSearch } from "lucide-react"
-import { fetchMyOrder } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -15,6 +15,7 @@ const statusLabels: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  pending_payment: "Aguardando Pagamento",
 }
 
 const statusColors: Record<string, string> = {
@@ -24,16 +25,36 @@ const statusColors: Record<string, string> = {
   shipped: "bg-orange-500",
   delivered: "bg-green-500",
   cancelled: "bg-red-500",
+  pending_payment: "bg-yellow-500",
+}
+
+type Order = {
+  id: string
+  orderReference: string
+  status: string
+  createdAt: string
+  total: number
+  items: Array<{ productId: string; name: string; size: string; quantity: number; unitPrice: number }>
+  shipping?: { recipientName?: string; address: string; trackingCode?: string }
 }
 
 type Props = {
   params: Promise<{ id: string }>
 }
 
-async function getOrder(id: string) {
+async function getOrder(id: string): Promise<Order | null> {
   try {
-    const res = await fetchMyOrder(id)
-    return res.data
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return null
+
+    const res = await fetch(`${API_BASE_URL}/orders/my/${id}`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    const payload = await res.json() as { data: Order }
+    return payload.data
   } catch {
     return null
   }

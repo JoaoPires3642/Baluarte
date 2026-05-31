@@ -1,10 +1,10 @@
-export const dynamic = "force-dynamic"
-
 import Link from "next/link"
-import { fetchMyOrders, type Order } from "@/lib/api"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -26,10 +26,28 @@ const statusColors: Record<string, string> = {
   pending_payment: "bg-yellow-500",
 }
 
-async function getOrders() {
+type Order = {
+  id: string
+  orderReference: string
+  status: string
+  createdAt: string
+  total: number
+  items: Array<{ productId: string; name: string; size: string; quantity: number; unitPrice: number }>
+}
+
+async function getOrders(): Promise<Order[]> {
   try {
-    const res = await fetchMyOrders()
-    return res.data
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return []
+
+    const res = await fetch(`${API_BASE_URL}/orders/my`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      cache: "no-store",
+    })
+    if (!res.ok) return []
+    const payload = await res.json() as { data: Order[] }
+    return payload.data
   } catch {
     return []
   }
