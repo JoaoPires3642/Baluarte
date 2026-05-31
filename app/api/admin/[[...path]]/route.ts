@@ -31,13 +31,24 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
   const pathStr = path && path.length > 0 ? `/${path.join("/")}` : ""
   const url = `${API_BASE}${pathStr}${req.nextUrl.search}`
 
-  const token = await getToken()
+  let token = await getToken()
+  let resolvedUserId = userId
+
+  if (!token || !resolvedUserId) {
+    const sessionCookie = extractSessionCookie(req)
+    if (sessionCookie) {
+      token = sessionCookie
+      const payload = decodeJwtPayload(sessionCookie)
+      if (payload?.sub) resolvedUserId = payload.sub
+    }
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   }
 
-  if (userId && token) {
-    headers["X-Clerk-User-Id"] = userId
+  if (resolvedUserId && token) {
+    headers["X-Clerk-User-Id"] = resolvedUserId
     headers["Authorization"] = `Bearer ${token}`
     const email = extractEmailFromJwt(token)
     if (email) {
@@ -66,15 +77,33 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
   }
 }
 
-function extractEmailFromJwt(token: string): string | null {
+function extractSessionCookie(req: NextRequest): string | null {
+  const cookieHeader = req.headers.get("cookie")
+  if (!cookieHeader) return null
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim()
+    if (trimmed.startsWith("__session=")) {
+      return trimmed.slice("__session=".length)
+    }
+  }
+  return null
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".")
     if (parts.length !== 3) return null
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
-    const payload = JSON.parse(atob(padded))
-    return payload.email || payload.email_address || null
+    return JSON.parse(atob(padded))
   } catch {
     return null
   }
+}
+
+function extractEmailFromJwt(token: string): string | null {
+  const payload = decodeJwtPayload(token)
+  if (!payload) return null
+  const email = payload.email || payload.email_address
+  return typeof email === "string" && email.includes("@") ? email : null
 }

@@ -246,7 +246,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 export async function uploadImage(file: File) {
   const formData = new FormData()
   formData.append("file", file)
-  const response = await fetch(`${API_BASE_URL}/admin/media/upload`, {
+  const response = await fetch("/api/admin/media/upload", {
     method: "POST",
     body: formData,
   })
