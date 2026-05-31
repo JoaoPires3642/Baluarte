@@ -6,10 +6,25 @@ export const runtime = "edge"
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 export async function POST(req: NextRequest) {
-  const { userId, getToken } = await auth()
-  const token = await getToken()
+  let token = req.headers.get("X-Clerk-Session-Token") || null
+  let resolvedUserId = req.headers.get("X-Clerk-User-Id") || null
 
-  if (!userId || !token) {
+  if (!token || !resolvedUserId) {
+    const { userId, getToken } = await auth()
+    if (!token) token = await getToken()
+    if (!resolvedUserId) resolvedUserId = userId
+  }
+
+  if (!token || !resolvedUserId) {
+    const sessionCookie = extractSessionCookie(req)
+    if (sessionCookie) {
+      token = sessionCookie
+      const payload = decodeJwtPayload(sessionCookie)
+      if (payload?.sub && typeof payload.sub === "string") resolvedUserId = payload.sub
+    }
+  }
+
+  if (!token || !resolvedUserId) {
     return NextResponse.json(
       { error: { code: "UNAUTHORIZED", message: "Autenticação necessária" } },
       { status: 401 }
@@ -35,7 +50,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId,
+        "X-Clerk-User-Id": resolvedUserId,
         ...(email ? { "X-Clerk-Email": email } : {}),
       },
       body: backendForm,
@@ -54,15 +69,33 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function extractEmailFromJwt(token: string): string | null {
+function extractSessionCookie(req: NextRequest): string | null {
+  const cookieHeader = req.headers.get("cookie")
+  if (!cookieHeader) return null
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim()
+    if (trimmed.startsWith("__session=")) {
+      return trimmed.slice("__session=".length)
+    }
+  }
+  return null
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".")
     if (parts.length !== 3) return null
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
-    const payload = JSON.parse(atob(padded))
-    return payload.email || payload.email_address || null
+    return JSON.parse(atob(padded))
   } catch {
     return null
   }
+}
+
+function extractEmailFromJwt(token: string): string | null {
+  const payload = decodeJwtPayload(token)
+  if (!payload) return null
+  const email = payload.email || payload.email_address
+  return typeof email === "string" && email.includes("@") ? email : null
 }

@@ -243,11 +243,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
 }
 
 // Image Upload
-export async function uploadImage(file: File) {
+export async function uploadImage(file: File, extraHeaders?: Record<string, string>) {
   const formData = new FormData()
   formData.append("file", file)
   const response = await fetch("/api/admin/media/upload", {
     method: "POST",
+    headers: extraHeaders,
     body: formData,
   })
   if (!response.ok) {

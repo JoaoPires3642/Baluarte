@@ -26,20 +26,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
 }
 
 async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] }>, method: string) {
-  const { userId, getToken } = await auth()
   const { path } = await paramsPromise
   const pathStr = path && path.length > 0 ? `/${path.join("/")}` : ""
   const url = `${API_BASE}${pathStr}${req.nextUrl.search}`
 
-  let token = await getToken()
-  let resolvedUserId = userId
+  let token = req.headers.get("X-Clerk-Session-Token") || null
+  let resolvedUserId = req.headers.get("X-Clerk-User-Id") || null
+
+  if (!token || !resolvedUserId) {
+    const { userId, getToken } = await auth()
+    if (!token) token = await getToken()
+    if (!resolvedUserId) resolvedUserId = userId
+  }
 
   if (!token || !resolvedUserId) {
     const sessionCookie = extractSessionCookie(req)
     if (sessionCookie) {
       token = sessionCookie
       const payload = decodeJwtPayload(sessionCookie)
-      if (payload?.sub) resolvedUserId = payload.sub
+      if (payload?.sub && typeof payload.sub === "string") resolvedUserId = payload.sub
     }
   }
 

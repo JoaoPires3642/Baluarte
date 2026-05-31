@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
+import { useAuth } from "@clerk/nextjs"
 import { Camera, Check, ChevronLeft, ChevronRight, Eye, EyeOff, FolderOpen, PackagePlus, Pencil, Search, Trash2, X } from "lucide-react"
 import { fetchCategories, fetchTeamsByCategory, uploadImage, type Category, type Team, type AdminProduct } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
@@ -103,6 +104,7 @@ const emptyForm: FormData = {
 
 export default function AdminProductsPage() {
   const { authedFetch } = useAdminApi()
+  const { getToken, userId } = useAuth()
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -456,9 +458,14 @@ export default function AdminProductsPage() {
                   onChange={async e => {
                     const file = e.target.files?.[0]
                     if (!file) return
+                    const token = await getToken()
+                    if (!token) { setError("Sessão expirada, faça login novamente"); return }
                     setUploadingImage(true)
                     try {
-                      const res = await uploadImage(file)
+                      const res = await uploadImage(file, {
+                        "X-Clerk-Session-Token": token,
+                        ...(userId ? { "X-Clerk-User-Id": userId } : {}),
+                      })
                       setForm(f => ({ ...f, imageUrl: res.data.url }))
                     } catch (err: unknown) {
                       setError(err instanceof Error ? err.message : "Erro ao fazer upload")
@@ -474,9 +481,14 @@ export default function AdminProductsPage() {
                   onChange={async e => {
                     const file = e.target.files?.[0]
                     if (!file) return
+                    const token = await getToken()
+                    if (!token) { setError("Sessão expirada, faça login novamente"); return }
                     setUploadingImage(true)
                     try {
-                      const res = await uploadImage(file)
+                      const res = await uploadImage(file, {
+                        "X-Clerk-Session-Token": token,
+                        ...(userId ? { "X-Clerk-User-Id": userId } : {}),
+                      })
                       setForm(f => ({ ...f, imageUrl: res.data.url }))
                     } catch (err: unknown) {
                       setError(err instanceof Error ? err.message : "Erro ao fazer upload")
