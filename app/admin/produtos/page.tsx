@@ -121,10 +121,13 @@ export default function AdminProductsPage() {
   const loadData = useCallback(async () => {
     try {
       const [pData, cData] = await Promise.all([
-        authedFetch("/admin/products"),
+        authedFetch("/admin/products").catch(err => {
+          console.error("Failed to load admin products", err)
+          return null as unknown as { data: AdminProduct[] }
+        }),
         fetchCategories(),
       ])
-      setProducts(pData.data)
+      if (pData) setProducts(pData.data)
       setCategories(cData.data)
       const allTeams: Team[] = []
       for (const cat of cData.data) {
