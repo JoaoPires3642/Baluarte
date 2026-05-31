@@ -25,20 +25,33 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
   const [ready, setReady] = useState(() => (
     typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
   ))
+  const [sdkError, setSdkError] = useState("")
   const [cardholderName, setCardholderName] = useState("")
 
   const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+  const configError = !publicKey ? "Chave pública do Mercado Pago não configurada" : sdkError
 
   useEffect(() => {
-    if (!publicKey) return
-    if (window.MercadoPago) {
+    if (!publicKey) {
       return
     }
+    if (window.MercadoPago) {
+      queueMicrotask(() => setReady(true))
+      return
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://sdk.mercadopago.com/js/v2"]')
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setReady(true), { once: true })
+      existingScript.addEventListener("error", () => setSdkError("Não foi possível carregar o Mercado Pago"), { once: true })
+      return
+    }
+
     const script = document.createElement("script")
     script.src = "https://sdk.mercadopago.com/js/v2"
     script.onload = () => setReady(true)
+    script.onerror = () => setSdkError("Não foi possível carregar o Mercado Pago")
     document.head.appendChild(script)
-    return () => { script.remove() }
   }, [publicKey])
 
   const handleSubmit = async () => {
@@ -109,12 +122,12 @@ export function PaymentCardForm({ amount, cpf, loading, error, onToken }: Props)
         Total: R$ {amount.toFixed(2).replace(".", ",")}
       </p>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {(error || configError) && <p className="text-sm text-red-600">{error || configError}</p>}
 
       <Button
         type="button"
         className="w-full"
-        disabled={loading || !ready || !cardholderName}
+        disabled={loading || !ready || !cardholderName || Boolean(configError)}
         onClick={handleSubmit}
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
