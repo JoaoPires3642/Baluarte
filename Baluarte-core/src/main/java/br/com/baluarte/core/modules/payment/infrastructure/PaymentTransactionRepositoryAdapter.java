@@ -40,6 +40,12 @@ public class PaymentTransactionRepositoryAdapter implements PaymentTransactionRe
                 transaction.getStatus(),
                 transaction.getIdempotencyKey()
         );
+        entity.setProviderPaymentId(transaction.getProviderPaymentId());
+        entity.setStatusDetail(transaction.getStatusDetail());
+        entity.setInstallments(transaction.getInstallments());
+        if (transaction.getPixQrCode() != null) {
+            entity.setPixData(transaction.getPixQrCode(), transaction.getPixQrCodeBase64());
+        }
         return jpaRepository.save(entity).toDomain();
     }
 }

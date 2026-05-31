@@ -99,4 +99,14 @@ public class PaymentTransactionJpaEntity {
         this.providerPaymentId = providerPaymentId;
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void setInstallments(Integer installments) {
+        this.installments = installments;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setStatusDetail(String statusDetail) {
+        this.statusDetail = statusDetail;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
