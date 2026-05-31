@@ -99,15 +99,15 @@ function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
 
 export default async function AdminDashboard() {
   const [orders, products] = await Promise.all([getOrders(), getProducts()])
-  const todayOrders = orders.filter(order => isToday(order.createdAt))
+  const paidOrders = orders.filter(order => isToday(order.createdAt) && order.status !== "cancelled" && order.status !== "pending_payment")
 
   const activeProducts = products.filter((p: AdminProduct) => p.active)
   const lowStockVariants = getLowStockVariants(products)
 
   const stats = {
     totalProducts: activeProducts.length,
-    ordersToday: todayOrders.length,
-    revenue: todayOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
+    ordersToday: paidOrders.length,
+    revenue: paidOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
     lowStock: lowStockVariants.length,
   }
 
