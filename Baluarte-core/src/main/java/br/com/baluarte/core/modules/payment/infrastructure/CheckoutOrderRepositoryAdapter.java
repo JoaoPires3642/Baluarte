@@ -22,11 +22,13 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<CheckoutOrder> findById(String orderId) {
         return jpaRepository.findById(orderId).map(CheckoutOrderJpaEntity::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<CheckoutOrder> findByCheckoutSessionId(String checkoutSessionId) {
         return jpaRepository.findByCheckoutSessionId(checkoutSessionId).map(CheckoutOrderJpaEntity::toDomain);
     }
@@ -40,18 +42,21 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CheckoutOrder> findByCustomerRef(String customerRef) {
         return jpaRepository.findByCustomerRef(customerRef).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<CheckoutOrder> findByClerkUserId(String clerkUserId) {
         return jpaRepository.findByClerkUserIdOrderByCreatedAtDesc(clerkUserId).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }
 
+    @Transactional(readOnly = true)
     public Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId) {
         return jpaRepository.findByOrderIdAndClerkUserId(orderId, clerkUserId).map(CheckoutOrderJpaEntity::toDomain);
     }
