@@ -108,9 +108,8 @@ docker build -t baluarte-core-native .
 ```
 
 O Dockerfile faz build multi-estágio:
-1. **Maven + JDK 21**: compila o JAR
-2. **GraalVM native-image**: gera binário estático a partir do JAR
-3. **Alpine 3.21**: copia o binário (apenas 1 layer, ~70MB)
+1. **GraalVM + Maven**: roda `mvn -Pnative native:compile` com Spring AOT
+2. **Debian slim**: copia apenas o binário nativo para runtime glibc
 
 ### Local (requer GraalVM SDK instalado)
 
