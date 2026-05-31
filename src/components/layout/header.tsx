@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { Heart, Menu, ShieldCheck, ShoppingBag, UserRound, X } from "lucide-react"
+import { UserButton, useUser } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/context/cart-context"
@@ -19,6 +20,7 @@ export function Header() {
   )
   const { items } = useCart()
   const { items: wishlistItems } = useWishlist()
+  const { isLoaded, isSignedIn } = useUser()
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const [compactMobileHeader, setCompactMobileHeader] = useState(false)
   const [compactTabletHeader, setCompactTabletHeader] = useState(false)
@@ -104,12 +106,23 @@ export function Header() {
             </Link>
 
             <div className={`items-center gap-2 ${compactTabletHeader ? "hidden lg:flex" : "hidden sm:flex"}`}>
-              <Button variant="outline" size="sm" className="px-5" asChild>
-                <Link href="/sign-in">Entrar</Link>
-              </Button>
-              <Button variant="destructive" size="sm" className="px-5 shadow-md shadow-red-900/15" asChild>
-                <Link href="/sign-up">Criar conta</Link>
-              </Button>
+              {(!isLoaded || !isSignedIn) ? (
+                <>
+                <Button variant="outline" size="sm" className="px-5" asChild>
+                  <Link href="/sign-in">Entrar</Link>
+                </Button>
+                <Button variant="destructive" size="sm" className="px-5 shadow-md shadow-red-900/15" asChild>
+                  <Link href="/sign-up">Criar conta</Link>
+                </Button>
+                </>
+              ) : (
+                <>
+                <Button variant="outline" size="sm" className="px-5" asChild>
+                  <Link href="/conta">Minha conta</Link>
+                </Button>
+                <UserButton />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -176,12 +189,22 @@ export function Header() {
               </div>
 
               <div className="grid gap-2">
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>Entrar</Link>
-                </Button>
-                <Button variant="destructive" className="w-full" asChild>
-                  <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>Criar conta</Link>
-                </Button>
+                {(!isLoaded || !isSignedIn) ? (
+                  <>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>Entrar</Link>
+                  </Button>
+                  <Button variant="destructive" className="w-full" asChild>
+                    <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>Criar conta</Link>
+                  </Button>
+                  </>
+                ) : (
+                  <>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/conta" onClick={() => setMobileMenuOpen(false)}>Minha conta</Link>
+                  </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
