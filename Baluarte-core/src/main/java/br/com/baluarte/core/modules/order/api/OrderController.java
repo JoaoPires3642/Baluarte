@@ -1,6 +1,7 @@
 package br.com.baluarte.core.modules.order.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
+import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
@@ -12,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -33,6 +35,7 @@ public class OrderController {
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
+    private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
 
     @GetMapping
@@ -85,9 +88,14 @@ public class OrderController {
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
+        String previousStatus = order.getStatus();
         order.setStatus(request.status());
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
+
+        if ("cancelled".equals(request.status()) && !"cancelled".equals(previousStatus)) {
+            releaseOrderStock(order);
+        }
 
         return getOrder(orderId);
     }
@@ -107,9 +115,22 @@ public class OrderController {
             order.setStatus("cancelled");
             order.setUpdatedAt(now);
             orderRepository.save(order);
+            releaseOrderStock(order);
         }
 
         return order;
+    }
+
+    private void releaseOrderStock(CheckoutOrder order) {
+        if (order.getItems() == null) return;
+        for (var item : order.getItems()) {
+            try {
+                UUID productId = UUID.fromString(item.getProductId());
+                variantRepository.releaseStock(productId, item.getSize(), item.getQuantity());
+            } catch (IllegalArgumentException e) {
+                // ignore invalid product IDs
+            }
+        }
     }
 
     private String resolveUserId(String authorizationHeader, String clerkUserId) {
