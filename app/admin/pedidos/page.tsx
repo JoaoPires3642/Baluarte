@@ -1,7 +1,6 @@
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { ClipboardList, ChevronRight, Search } from "lucide-react"
-import { fetchOrders, type Order } from "@/lib/api"
+import { type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,13 +29,7 @@ const statusColors: Record<string, string> = {
 
 async function getOrders() {
   try {
-    const { getToken } = await auth()
-    const token = await getToken()
-    if (!token) return []
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    })
+    const res = await fetch("/api/admin/orders", { cache: "no-store" })
     if (!res.ok) return []
     return (await res.json() as { data: Order[] }).data
   } catch {
