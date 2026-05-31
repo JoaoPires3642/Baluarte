@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import Link from "next/link"
 import { fetchMyOrders, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
