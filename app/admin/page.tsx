@@ -32,21 +32,7 @@ const LOW_STOCK_THRESHOLD = 5
 
 async function getOrders(): Promise<Order[]> {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return []
-
-    const user = await currentUser()
-    const email = user?.emailAddresses?.[0]?.emailAddress
-
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId,
-        ...(email && { "X-Clerk-Email": email }),
-      },
-      cache: "no-store",
-    })
+    const res = await fetch(`${API_BASE_URL}/orders`, { cache: "no-store" })
     if (!res.ok) return []
     const payload = await res.json() as { data: Order[] }
     return payload.data
