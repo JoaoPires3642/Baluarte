@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { CreditCard, Loader2, MapPin, MapPinned, Plus, ShieldCheck, Truck } from "lucide-react"
+import { CreditCard, Loader2, MapPin, MapPinned, Plus, Truck } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { useUser } from "@clerk/nextjs"
@@ -696,10 +696,7 @@ export default function CheckoutPage() {
                 <span>Total</span>
                 <span>R$ {(total + shippingCost).toFixed(2).replace(".", ",")}</span>
               </div>
-              <div className="flex items-start gap-2 rounded-[1.25rem] border border-[#e6edf6] bg-[#f8fbff] p-3 text-sm text-slate-600">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-[#0f274d]" />
-                <span>Estrutura visual focada em leitura rápida dos dados críticos da compra.</span>
-              </div>
+
             </CardContent>
             <CardFooter>
               {paymentMethod === "pix" || !paymentResult ? (
