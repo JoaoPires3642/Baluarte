@@ -30,17 +30,9 @@ const LOW_STOCK_THRESHOLD = 5
 
 async function getOrders(): Promise<Order[]> {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return []
-
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
-      cache: "no-store",
-    })
+    const res = await fetch("/api/admin/orders", { cache: "no-store" })
     if (!res.ok) return []
-    const payload = await res.json() as { data: Order[] }
-    return payload.data
+    return (await res.json() as { data: Order[] }).data
   } catch {
     return []
   }

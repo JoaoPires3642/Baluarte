@@ -1,15 +1,12 @@
 import Link from "next/link"
-import { auth } from "@clerk/nextjs/server"
 import { ChevronLeft, MapPin, PackageSearch, UserRound } from "lucide-react"
-import { fetchOrder, type Order } from "@/lib/api"
+import { type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
 import { notFound } from "next/navigation"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
@@ -37,17 +34,9 @@ type Props = {
 
 async function getOrder(id: string) {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return null
-
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
-      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
-      cache: "no-store",
-    })
+    const res = await fetch(`/api/admin/orders/${id}`, { cache: "no-store" })
     if (!res.ok) return null
-    const payload = await res.json() as { data: Order }
-    return payload.data
+    return (await res.json() as { data: Order }).data
   } catch {
     return null
   }
