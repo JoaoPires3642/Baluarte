@@ -11,6 +11,7 @@ const statusLabels: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  pending_payment: "Aguardando Pagamento",
 }
 
 const statusColors: Record<string, string> = {
@@ -20,6 +21,7 @@ const statusColors: Record<string, string> = {
   shipped: "bg-orange-500",
   delivered: "bg-green-500",
   cancelled: "bg-red-500",
+  pending_payment: "bg-yellow-500",
 }
 
 async function getOrders() {

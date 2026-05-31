@@ -1,6 +1,5 @@
-export const runtime = "edge"
-
 import Link from "next/link"
+import { auth } from "@clerk/nextjs/server"
 import { ChevronLeft, MapPin, PackageSearch, UserRound } from "lucide-react"
 import { fetchOrder, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -10,6 +9,8 @@ import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
 import { notFound } from "next/navigation"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+
 const statusLabels: Record<string, string> = {
   pending: "Pendente",
   paid: "Pago",
@@ -17,6 +18,7 @@ const statusLabels: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  pending_payment: "Aguardando Pagamento",
 }
 
 const statusColors: Record<string, string> = {
@@ -26,6 +28,7 @@ const statusColors: Record<string, string> = {
   shipped: "bg-orange-500",
   delivered: "bg-green-500",
   cancelled: "bg-red-500",
+  pending_payment: "bg-yellow-500",
 }
 
 type Props = {
@@ -34,8 +37,17 @@ type Props = {
 
 async function getOrder(id: string) {
   try {
-    const res = await fetchOrder(id)
-    return res.data
+    const { userId, getToken } = await auth()
+    const token = await getToken()
+    if (!userId || !token) return null
+
+    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    const payload = await res.json() as { data: Order }
+    return payload.data
   } catch {
     return null
   }

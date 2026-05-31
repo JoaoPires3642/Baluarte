@@ -375,7 +375,7 @@ export default function CheckoutPage() {
       setPaymentResult(res.data)
 
       if (paymentMethod === "pix" && res.data.pix) {
-        showToast("PIX gerado com sucesso!", "success")
+        showToast("Pedido realizado com sucesso!", "success")
         setStep(3)
       } else if (res.data.status === "approved" || res.data.status === "pending") {
         clear()
@@ -649,6 +649,7 @@ export default function CheckoutPage() {
                     pix={paymentResult?.pix ?? null}
                     loading={loading}
                     error={paymentError}
+                    orderReference={paymentResult?.orderReference}
                     onGeneratePix={handleSubmit}
                   />
                 ) : null}

@@ -13,12 +13,14 @@ export function PaymentPixPanel({
   pix,
   loading,
   error,
+  orderReference,
   onGeneratePix,
 }: {
   total: number
   pix: PixData | null
   loading: boolean
   error: string
+  orderReference?: string
   onGeneratePix: () => void
 }) {
   const handleCopy = async () => {
@@ -39,6 +41,12 @@ export function PaymentPixPanel({
 
       {pix ? (
         <div className="space-y-4">
+          <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+            <p className="font-bold text-green-700">Pedido Confirmado!</p>
+            {orderReference && (
+              <p className="mt-1 text-sm text-green-600">Nº do pedido: {orderReference}</p>
+            )}
+          </div>
           <Image
             src={`data:image/png;base64,${pix.qrCodeBase64}`}
             alt="QR Code PIX"
