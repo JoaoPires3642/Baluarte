@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { PaymentPixPanel } from "@/components/payment-pix-panel"
+import { PaymentPixModal } from "@/components/payment-pix-modal"
 import { PaymentCardForm } from "@/components/payment-card-form"
 
 type PaymentMethod = "pix" | "card"
@@ -41,6 +41,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix")
   const [paymentResult, setPaymentResult] = useState<PaymentResponse | null>(null)
   const [paymentError, setPaymentError] = useState("")
+  const [pixModal, setPixModal] = useState<{ qrCodeBase64: string; copyPasteCode: string; orderReference: string } | null>(null)
 
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
@@ -375,8 +376,13 @@ export default function CheckoutPage() {
       setPaymentResult(res.data)
 
       if (paymentMethod === "pix" && res.data.pix) {
+        clear()
+        setPixModal({
+          qrCodeBase64: res.data.pix.qrCodeBase64,
+          copyPasteCode: res.data.pix.copyPasteCode,
+          orderReference: res.data.orderReference,
+        })
         showToast("Pedido realizado com sucesso!", "success")
-        setStep(3)
       } else if (res.data.status === "approved" || res.data.status === "pending") {
         clear()
         showToast("Pedido realizado com sucesso!", "success")
@@ -644,14 +650,14 @@ export default function CheckoutPage() {
                 <Separator />
 
                 {paymentMethod === "pix" ? (
-                  <PaymentPixPanel
-                    total={total + shippingCost}
-                    pix={paymentResult?.pix ?? null}
-                    loading={loading}
-                    error={paymentError}
-                    orderReference={paymentResult?.orderReference}
-                    onGeneratePix={handleSubmit}
-                  />
+                  <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-center">
+                    <p className="text-sm font-medium text-yellow-800">
+                      Ao finalizar, um QR Code PIX será exibido para pagamento.
+                    </p>
+                    <p className="mt-1 text-xs text-yellow-600">
+                      O PIX tem validade de 10 minutos.
+                    </p>
+                  </div>
                 ) : null}
 
                 <div className="space-y-2">
@@ -721,6 +727,20 @@ export default function CheckoutPage() {
           </Card>
         </div>
       </div>
+
+      {pixModal && (
+        <PaymentPixModal
+          qrCodeBase64={pixModal.qrCodeBase64}
+          copyPasteCode={pixModal.copyPasteCode}
+          total={total + shippingCost}
+          orderReference={pixModal.orderReference}
+          onClose={() => {
+            const ref = pixModal.orderReference
+            setPixModal(null)
+            router.push(`/pedidos/${ref}`)
+          }}
+        />
+      )}
     </div>
   )
 }
