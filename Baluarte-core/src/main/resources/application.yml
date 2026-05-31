@@ -53,3 +53,4 @@ app:
       public-key: ${APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY:}
       payer-email: ${APP_PAYMENT_MERCADOPAGO_PAYER_EMAIL:}
       payer-first-name: ${APP_PAYMENT_MERCADOPAGO_PAYER_FIRST_NAME:}
+      webhook-secret: ${APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET:}
