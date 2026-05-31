@@ -5,6 +5,7 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
@@ -31,6 +32,7 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CheckoutOrder> findAll() {
         return jpaRepository.findAll().stream()
             .map(CheckoutOrderJpaEntity::toDomain)
