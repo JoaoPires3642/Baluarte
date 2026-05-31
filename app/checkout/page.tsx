@@ -376,7 +376,6 @@ export default function CheckoutPage() {
       setPaymentResult(res.data)
 
       if (paymentMethod === "pix" && res.data.pix) {
-        clear()
         setPixModal({
           qrCodeBase64: res.data.pix.qrCodeBase64,
           copyPasteCode: res.data.pix.copyPasteCode,
@@ -737,6 +736,7 @@ export default function CheckoutPage() {
           onClose={() => {
             const ref = pixModal.orderReference
             setPixModal(null)
+            clear()
             router.push(`/pedidos/${ref}`)
           }}
         />
