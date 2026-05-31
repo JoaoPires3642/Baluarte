@@ -15,10 +15,10 @@ public record ShippingQuoteRequest(
 
     public record ShippingDestination(
         @NotBlank @Pattern(regexp = "^[0-9]{5}-?[0-9]{3}$") String cep,
-        @NotBlank String street,
-        @NotBlank String number,
-        @NotBlank String neighborhood,
-        @NotBlank String city,
+        String street,
+        String number,
+        String neighborhood,
+        String city,
         @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$") String state
     ) {
     }

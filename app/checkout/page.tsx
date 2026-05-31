@@ -124,10 +124,7 @@ export default function CheckoutPage() {
     setShowNewAddress(false)
     setShippingOptions([])
     setSelectedShipping("")
-    const digits = addr.cep.replace(/\D/g, "")
-    if (digits.length === 8) {
-      triggerShippingQuote(digits, addr.state)
-    }
+    triggerShippingQuote()
   }
 
   const handleCepBlur = async () => {
@@ -151,11 +148,19 @@ export default function CheckoutPage() {
     }
   }
 
-  const triggerShippingQuote = useCallback(async (cepDigits: string, stateUf: string) => {
-    if (cepDigits.length < 8 || items.length === 0) return
+  const triggerShippingQuote = useCallback(async () => {
+    const digits = cep.replace(/\D/g, "")
+    if (digits.length < 8 || !address.street || !address.state || items.length === 0) return
     setShippingLoading(true)
     try {
-      const res = await fetchShippingQuotes(cepDigits, stateUf, items.length)
+      const res = await fetchShippingQuotes({
+        cep: digits,
+        street: address.street,
+        number: address.number,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+      }, items.length)
       setShippingOptions(res.data.options || [])
       if (res.data.options?.length > 0) {
         setSelectedShipping(res.data.options[0].id)
@@ -165,12 +170,12 @@ export default function CheckoutPage() {
     } finally {
       setShippingLoading(false)
     }
-  }, [items.length])
+  }, [cep, address, items.length])
 
   useEffect(() => {
     const digits = cep.replace(/\D/g, "")
     if (digits.length === 8 && address.street && address.state) {
-      const timer = setTimeout(() => triggerShippingQuote(digits, address.state), 600)
+      const timer = setTimeout(() => triggerShippingQuote(), 600)
       return () => clearTimeout(timer)
     }
   }, [cep, address.street, address.state, triggerShippingQuote])
@@ -243,7 +248,14 @@ export default function CheckoutPage() {
     }
     setLoading(true)
     try {
-      const res = await fetchShippingQuotes(digits, address.state, items.length)
+      const res = await fetchShippingQuotes({
+        cep: digits,
+        street: address.street,
+        number: address.number,
+        neighborhood: address.neighborhood,
+        city: address.city,
+        state: address.state,
+      }, items.length)
       setShippingOptions(res.data.options || [])
       if (res.data.options?.length > 0) {
         setSelectedShipping(res.data.options[0].id)

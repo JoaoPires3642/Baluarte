@@ -108,14 +108,16 @@ export async function fetchMyOrder(orderId: string) {
 }
 
 // Shipping Quotes - POST /checkout/shipping/quotes
-export async function fetchShippingQuotes(cep: string, state: string, itemsCount: number) {
+export async function fetchShippingQuotes(destination: {
+  cep: string; street: string; number: string; neighborhood: string; city: string; state: string
+}, itemsCount: number) {
   const response = await fetch("/api/checkout/shipping/quotes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      destination: { cep, street: "", number: "", neighborhood: "", city: "", state },
+      destination,
       itemsCount,
     }),
   })

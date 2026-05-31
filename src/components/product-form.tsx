@@ -163,8 +163,7 @@ export function ProductForm({ product }: ProductFormProps) {
     setShippingOptions([])
 
     try {
-      const state = ""
-      const res = await fetchShippingQuotes(digits, state, 1)
+      const res = await fetchShippingQuotes({ cep: digits, street: "", number: "", neighborhood: "", city: "", state: "" }, 1)
       setShippingOptions(res.data.options)
     } catch (err) {
       setShippingError(err instanceof Error ? err.message : "Erro ao consultar frete")
