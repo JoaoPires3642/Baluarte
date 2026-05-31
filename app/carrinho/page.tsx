@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ShieldCheck, Shirt, Truck } from "lucide-react"
+import { Shirt, Truck } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { fetchShippingQuotes, type ShippingQuote } from "@/lib/api"
@@ -220,10 +220,7 @@ export default function CartPage() {
               <Link href="/" className="w-full">
                 <Button variant="outline" className="w-full">Continuar Comprando</Button>
               </Link>
-              <div className="flex items-start gap-2 rounded-[1.25rem] border border-[#e6edf6] bg-[#f8fbff] p-3 text-sm text-slate-600">
-                <ShieldCheck className="mt-0.5 h-4 w-4 text-[#0f274d]" />
-                <span>Layout simplificado para dar mais confiança antes do pagamento.</span>
-              </div>
+
             </CardFooter>
           </Card>
         </div>
