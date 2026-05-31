@@ -124,7 +124,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
                     Map<String, Object> transactionData = (Map<String, Object>) pointOfInteraction.get("transaction_data");
                     if (transactionData != null) {
                         String qrCode = (String) transactionData.get("qr_code");
-                        String qrCodeBase64 = (String) transactionData.get("qr_code_ep2");
+                        String qrCodeBase64 = (String) transactionData.get("qr_code_base64");
                         return PaymentGatewayResult.pendingPix(
                             providerPaymentId,
                             status,
