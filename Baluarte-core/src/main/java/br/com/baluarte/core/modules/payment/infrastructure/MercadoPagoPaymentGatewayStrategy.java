@@ -22,15 +22,18 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     private final RestClient restClient;
     private final String baseUrl;
     private final String accessToken;
+    private final String payerEmail;
     private final String payerFirstName;
 
     public MercadoPagoPaymentGatewayStrategy(
         @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
         @Value("${app.payment.mercadopago.access-token:}") String accessToken,
+        @Value("${app.payment.mercadopago.payer-email:}") String payerEmail,
         @Value("${app.payment.mercadopago.payer-first-name:APRO}") String payerFirstName
     ) {
         this.baseUrl = baseUrl;
         this.accessToken = accessToken;
+        this.payerEmail = payerEmail;
         this.payerFirstName = payerFirstName;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
@@ -99,7 +102,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
             );
 
         Map<String, Object> payer = new LinkedHashMap<>();
-        payer.put("email", command.payerEmail());
+        payer.put("email", payerEmail.isBlank() ? command.payerEmail() : payerEmail);
         payer.put("first_name", payerFirstName.isBlank() ? command.recipientName() : payerFirstName);
 
         Map<String, Object> body = new LinkedHashMap<>();
