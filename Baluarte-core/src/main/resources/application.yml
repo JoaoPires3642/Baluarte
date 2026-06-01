@@ -50,6 +50,14 @@ app:
     dev-bypass-key: ${APP_AUTH_DEV_BYPASS_KEY:}
   media:
     upload-dir: ${APP_MEDIA_UPLOAD_DIR:uploads}
+  storage:
+    s3:
+      endpoint: ${APP_STORAGE_S3_ENDPOINT:}
+      region: ${APP_STORAGE_S3_REGION:auto}
+      bucket: ${APP_STORAGE_S3_BUCKET:}
+      access-key-id: ${APP_STORAGE_S3_ACCESS_KEY_ID:}
+      secret-access-key: ${APP_STORAGE_S3_SECRET_ACCESS_KEY:}
+      presigned-url-ttl-minutes: ${APP_STORAGE_S3_PRESIGNED_URL_TTL_MINUTES:43200}
   shipping:
     active-provider: ${APP_SHIPPING_PROVIDER:mock}
     origin-cep: ${APP_SHIPPING_ORIGIN_CEP:01153000}
