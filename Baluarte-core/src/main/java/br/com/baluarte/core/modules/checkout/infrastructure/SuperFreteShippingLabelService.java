@@ -132,7 +132,7 @@ public class SuperFreteShippingLabelService {
                 order.getShippingStreet(), order.getShippingNumber(), order.getShippingComplement(),
                 order.getShippingNeighborhood(), order.getShippingCity(), order.getShippingState(), order.getShippingCep()),
             "products", List.of(Map.of(
-                "name", "Pedido Baluarte #" + order.getOrderId(),
+                "name", productDescription(order),
                 "quantity", Math.max(quantity, 1),
                 "unitary_value", insuranceValue,
                 "weight", weightKg,
@@ -153,6 +153,23 @@ public class SuperFreteShippingLabelService {
                 "use_insurance_value", insuranceValue.compareTo(BigDecimal.ZERO) > 0
             )
         );
+    }
+
+    private String productDescription(CheckoutOrder order) {
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            return "Pedido Baluarte";
+        }
+
+        String description = order.getItems().stream()
+            .map(item -> String.format("%s tam. %s qtd. %d",
+                value(item.getProductName()).isBlank() ? "Camisa" : item.getProductName(),
+                value(item.getSize()).isBlank() ? "-" : item.getSize(),
+                item.getQuantity()
+            ))
+            .reduce((left, right) -> left + "; " + right)
+            .orElse("Pedido Baluarte");
+
+        return description.length() > 120 ? description.substring(0, 117) + "..." : description;
     }
 
     private Map<String, Object> address(String name, String phone, String email, String document, String street,
