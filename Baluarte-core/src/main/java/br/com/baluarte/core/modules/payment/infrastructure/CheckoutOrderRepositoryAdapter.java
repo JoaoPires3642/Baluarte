@@ -63,12 +63,13 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
     @Override
     public CheckoutOrder save(CheckoutOrder order) {
+        boolean exists = jpaRepository.existsById(order.getOrderId());
         CheckoutOrderJpaEntity entity = jpaRepository.findById(order.getOrderId())
             .orElseGet(() -> CheckoutOrderJpaEntity.create(order));
         entity.apply(order);
         CheckoutOrder saved = jpaRepository.save(entity).toDomain();
 
-        if (order.getItems() != null) {
+        if (!exists && order.getItems() != null) {
             itemRepository.deleteAll(itemRepository.findByOrderId(order.getOrderId()));
             itemRepository.saveAll(order.getItems().stream()
                 .map(item -> CheckoutOrderItemJpaEntity.create(
