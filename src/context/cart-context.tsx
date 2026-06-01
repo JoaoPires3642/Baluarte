@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 
 export type CartItem = {
   id: string
@@ -25,9 +25,30 @@ type CartContextType = {
 }
 
 const CartContext = createContext<CartContextType | null>(null)
+const CART_STORAGE_KEY = "baluarte.cart.v1"
+
+function readStoredCart() {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.localStorage.getItem(CART_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  const [items, setItems] = useState<CartItem[]>(readStoredCart)
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+    } catch {
+      // Storage can be unavailable in private mode; cart still works in memory.
+    }
+  }, [items])
 
   const addItem = (item: CartItem) => {
     setItems((prev) => {
