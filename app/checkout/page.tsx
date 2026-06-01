@@ -29,6 +29,14 @@ function formatCep(value: string) {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`
 }
 
+function formatCpf(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+}
+
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, total, clear } = useCart()
@@ -283,6 +291,11 @@ export default function CheckoutPage() {
 
     if (!payer.email || !payer.cpf) {
       showToast("Preencha email e CPF", "error")
+      return
+    }
+
+    if (payer.cpf.length !== 11) {
+      showToast("CPF precisa ter 11 dígitos", "error")
       return
     }
 
@@ -669,7 +682,7 @@ export default function CheckoutPage() {
                   <Label>CPF</Label>
                   <Input
                     placeholder="000.000.000-00"
-                    value={payer.cpf}
+                    value={formatCpf(payer.cpf)}
                     onChange={(e) => setPayer({ ...payer, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
                   />
                 </div>

@@ -79,8 +79,13 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
       return null
     }
 
-    if (!cardholderName.trim() || cpf.replace(/\D/g, "").length !== 11) {
-      setCardError("Confira nome no cartao e CPF")
+    if (!cardholderName.trim()) {
+      setCardError("Informe o nome impresso no cartao")
+      return null
+    }
+
+    if (cpf.replace(/\D/g, "").length !== 11) {
+      setCardError("CPF precisa ter 11 digitos")
       return null
     }
 
