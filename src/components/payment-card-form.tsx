@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -23,30 +23,15 @@ type Props = {
 
 const MERCADOPAGO_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || "APP_USR-37373074-8635-4700-bd4a-bdd82a4f5ba8"
 
-function formatCardNumber(value: string) {
-  return value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ")
-}
-
-function formatExpiration(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 4)
-  if (digits.length <= 2) return digits
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`
-}
-
-function normalizeExpirationYear(year: string) {
-  return year.length === 2 ? `20${year}` : year
-}
-
 export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function PaymentCardForm({ amount, cpf, error }, ref) {
+  const mpRef = useRef<InstanceType<MercadoPago> | null>(null)
+  const fieldsMountedRef = useRef(false)
   const [ready, setReady] = useState(() => (
     typeof window !== "undefined" && Boolean(MERCADOPAGO_PUBLIC_KEY && window.MercadoPago)
   ))
   const [sdkError, setSdkError] = useState("")
   const [cardError, setCardError] = useState("")
   const [cardholderName, setCardholderName] = useState("")
-  const [cardNumber, setCardNumber] = useState("")
-  const [expiration, setExpiration] = useState("")
-  const [cvv, setCvv] = useState("")
 
   const publicKey = MERCADOPAGO_PUBLIC_KEY
   const configError = !publicKey ? "Chave pública do Mercado Pago não configurada" : sdkError
@@ -74,35 +59,39 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
     document.head.appendChild(script)
   }, [publicKey])
 
+  useEffect(() => {
+    if (!ready || !publicKey || fieldsMountedRef.current || !window.MercadoPago) return
+
+    const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" })
+    mp.fields.create("cardNumber", { placeholder: "0000 0000 0000 0000" }).mount("cardNumber")
+    mp.fields.create("expirationDate", { placeholder: "MM/AA" }).mount("cardExpiration")
+    mp.fields.create("securityCode", { placeholder: "123" }).mount("cardCvv")
+    mpRef.current = mp
+    fieldsMountedRef.current = true
+  }, [ready, publicKey])
+
   const createToken = async () => {
     setCardError("")
     if (!ready || !publicKey || configError) return null
 
-    const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" })
+    if (!mpRef.current || !fieldsMountedRef.current) {
+      setCardError("Meio de pagamento ainda esta carregando")
+      return null
+    }
 
-    const normalizedCardNumber = cardNumber.replace(/\D/g, "")
-    const expDate = expiration.split("/")
-    const normalizedCvv = cvv.replace(/\D/g, "")
-
-    if (normalizedCardNumber.length < 13 || expDate.length !== 2 || expDate[0].length !== 2 || expDate[1].length !== 2 || !normalizedCvv || !cardholderName.trim()) {
-      setCardError("Confira numero, vencimento, CVV e nome do cartao")
+    if (!cardholderName.trim() || cpf.replace(/\D/g, "").length !== 11) {
+      setCardError("Confira nome no cartao e CPF")
       return null
     }
 
     try {
       const tokenBody: Record<string, unknown> = {
-        cardNumber: normalizedCardNumber,
-        securityCode: normalizedCvv,
-        expirationMonth: expDate[0].trim(),
-        expirationYear: normalizeExpirationYear(expDate[1].trim()),
         cardholderName: cardholderName.trim(),
+        identificationType: "CPF",
+        identificationNumber: cpf.replace(/\D/g, ""),
       }
-      if (cpf) {
-        tokenBody.identificationType = "CPF"
-        tokenBody.identificationNumber = cpf.replace(/\D/g, "")
-      }
-      const tokenData = await mp.fields.createCardToken(tokenBody)
-      const paymentMethodId = (tokenData.payment_method_id as string) || detectPaymentMethodId(normalizedCardNumber)
+      const tokenData = await mpRef.current.fields.createCardToken(tokenBody)
+      const paymentMethodId = (tokenData.payment_method_id as string) || ""
       if (!paymentMethodId) {
         setCardError("Nao foi possivel identificar a bandeira do cartao")
         return null
@@ -136,41 +125,17 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
 
       <div className="space-y-2">
         <Label>Número do cartão</Label>
-        <Input
-          id="cardNumber"
-          inputMode="numeric"
-          autoComplete="cc-number"
-          placeholder="0000 0000 0000 0000"
-          maxLength={19}
-          value={cardNumber}
-          onChange={e => setCardNumber(formatCardNumber(e.target.value))}
-        />
+        <div id="cardNumber" className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Vencimento</Label>
-          <Input
-            id="cardExpiration"
-            inputMode="numeric"
-            autoComplete="cc-exp"
-            placeholder="MM/AA"
-            maxLength={5}
-            value={expiration}
-            onChange={e => setExpiration(formatExpiration(e.target.value))}
-          />
+          <div id="cardExpiration" className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
         </div>
         <div className="space-y-2">
           <Label>CVV</Label>
-          <Input
-            id="cardCvv"
-            inputMode="numeric"
-            autoComplete="cc-csc"
-            placeholder="123"
-            maxLength={4}
-            value={cvv}
-            onChange={e => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-          />
+          <div id="cardCvv" className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
         </div>
       </div>
 
@@ -184,11 +149,3 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
     </div>
   )
 })
-
-function detectPaymentMethodId(cardNumber: string) {
-  if (/^4/.test(cardNumber)) return "visa"
-  if (/^(5[1-5]|2[2-7])/.test(cardNumber)) return "master"
-  if (/^3[47]/.test(cardNumber)) return "amex"
-  if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(cardNumber)) return "elo"
-  return ""
-}

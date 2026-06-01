@@ -1,6 +1,10 @@
 interface MercadoPago {
   new (publicKey: string, options?: { locale: string }): {
     fields: {
+      create(type: "cardNumber" | "expirationDate" | "securityCode", options?: { placeholder?: string }): {
+        mount(elementId: string): void
+        unmount?(): void
+      }
       createCardToken(data: Record<string, unknown>): Promise<{
         id: string
         payment_method_id: string
