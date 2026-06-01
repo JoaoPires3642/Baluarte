@@ -42,8 +42,9 @@ public class AuthController {
         }
 
         InternalRole role = internalRoleResolver.resolveFromIdentity(clerkUserId, email);
+        boolean persisted = internalRoleResolver.existsByIdentity(clerkUserId);
 
-        return ApiSuccessResponse.of(new AuthMeResponse(clerkUserId, email, role.name()));
+        return ApiSuccessResponse.of(new AuthMeResponse(clerkUserId, email, role.name(), persisted));
     }
 
     private String extractBearerToken(String header) {
@@ -53,5 +54,5 @@ public class AuthController {
         return header.substring(7);
     }
 
-    record AuthMeResponse(String clerkUserId, String email, String role) {}
+    record AuthMeResponse(String clerkUserId, String email, String role, boolean persisted) {}
 }

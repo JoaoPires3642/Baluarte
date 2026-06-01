@@ -118,7 +118,8 @@ class AuthSessionIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.clerkUserId").value("user_321"))
             .andExpect(jsonPath("$.data.email").value("cliente@baluarte.com"))
-            .andExpect(jsonPath("$.data.role").value("CUSTOMER"));
+            .andExpect(jsonPath("$.data.role").value("CUSTOMER"))
+            .andExpect(jsonPath("$.data.persisted").value(true));
 
         AuthUserJpaEntity persisted = authUserRepository.findById("user_321").orElseThrow();
         org.assertj.core.api.Assertions.assertThat(persisted.getEmail()).isEqualTo("cliente@baluarte.com");

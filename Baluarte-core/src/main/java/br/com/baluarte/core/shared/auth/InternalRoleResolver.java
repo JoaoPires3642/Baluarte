@@ -73,6 +73,11 @@ public class InternalRoleResolver {
         return resolveFromIdentity(null, email);
     }
 
+    public boolean existsByIdentity(String clerkUserId) {
+        String normalizedUserId = normalize(clerkUserId);
+        return !normalizedUserId.isBlank() && authUserRepository.existsById(normalizedUserId);
+    }
+
     private String normalize(String value) {
         if (value == null) {
             return "";
