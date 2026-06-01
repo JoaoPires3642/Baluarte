@@ -108,6 +108,24 @@ class AuthSessionIntegrationTest {
     }
 
     @Test
+    void shouldReturnMeAndPersistAuthUser() throws Exception {
+        mockMvc.perform(
+            get("/api/v1/auth/me")
+                .header("Authorization", "Bearer token_client")
+                .header("X-Clerk-User-Id", "user_321")
+                .header("X-Clerk-Email", "cliente@baluarte.com")
+        )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.clerkUserId").value("user_321"))
+            .andExpect(jsonPath("$.data.email").value("cliente@baluarte.com"))
+            .andExpect(jsonPath("$.data.role").value("CUSTOMER"));
+
+        AuthUserJpaEntity persisted = authUserRepository.findById("user_321").orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(persisted.getEmail()).isEqualTo("cliente@baluarte.com");
+        org.assertj.core.api.Assertions.assertThat(persisted.getRole()).isEqualTo("client");
+    }
+
+    @Test
     void shouldReturnClientSessionWhenTokenHasNoEmailClaim() throws Exception {
         mockMvc.perform(
             get("/api/v1/auth/session")
