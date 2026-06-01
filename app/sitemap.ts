@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next"
 import { fetchCategories, fetchPublicModels, type Category, type Model } from "@/lib/api"
 
+export const dynamic = "force-dynamic"
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://baluarte.com.br"
 

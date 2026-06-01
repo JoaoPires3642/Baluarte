@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { fetchTeamsByCategory, fetchModelsByTeam, type Team, type Model } from "@/lib/api"
+
+export const dynamic = "force-dynamic"
 import { ChevronRight, ShieldCheck, Sparkles } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { ProductCard } from "@/components/product-card"

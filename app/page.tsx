@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
+
+export const dynamic = "force-dynamic"
 import { fetchCategories, fetchPublicModels, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
