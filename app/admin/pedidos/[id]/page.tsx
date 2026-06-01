@@ -1,11 +1,11 @@
 import Link from "next/link"
-import { ChevronLeft, MapPin, PackageSearch, UserRound } from "lucide-react"
+import { ChevronLeft, MapPin, PackageSearch, Truck, UserRound } from "lucide-react"
 import { type Order } from "@/lib/api"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
+import { CreateShippingLabel } from "@/components/create-shipping-label"
 import { notFound } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
@@ -114,6 +114,20 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             {!order.shipping?.address && (
               <p className="text-sm text-slate-500">Nenhuma informação de entrega disponível para este pedido.</p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="inline-flex items-center gap-2"><Truck className="h-5 w-5 shrink-0 text-[#0f274d]" />Frete e Etiqueta</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1 text-sm">
+              <p><span className="text-slate-500">Serviço:</span> {order.shipping?.serviceName || order.shipping?.serviceId || "Nao informado"}</p>
+              <p><span className="text-slate-500">Etiqueta:</span> {order.shipping?.labelId || "Nao gerada"}</p>
+              <p><span className="text-slate-500">Rastreio:</span> {order.shipping?.trackingCode || "Nao disponivel"}</p>
+            </div>
+            <CreateShippingLabel orderId={order.id} status={order.status} labelUrl={order.shipping?.labelUrl} />
           </CardContent>
         </Card>
       </div>

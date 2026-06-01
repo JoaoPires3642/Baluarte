@@ -24,6 +24,11 @@ public class CheckoutOrder {
     private String shippingNeighborhood;
     private String shippingCity;
     private String shippingState;
+    private String shippingServiceId;
+    private String shippingServiceName;
+    private String shippingProvider;
+    private String shippingLabelId;
+    private String shippingLabelUrl;
     private String paymentReference;
     private String trackingCode;
     private Instant createdAt;
@@ -110,6 +115,16 @@ public class CheckoutOrder {
     public void setShippingCity(String shippingCity) { this.shippingCity = shippingCity; }
     public String getShippingState() { return shippingState; }
     public void setShippingState(String shippingState) { this.shippingState = shippingState; }
+    public String getShippingServiceId() { return shippingServiceId; }
+    public void setShippingServiceId(String shippingServiceId) { this.shippingServiceId = shippingServiceId; }
+    public String getShippingServiceName() { return shippingServiceName; }
+    public void setShippingServiceName(String shippingServiceName) { this.shippingServiceName = shippingServiceName; }
+    public String getShippingProvider() { return shippingProvider; }
+    public void setShippingProvider(String shippingProvider) { this.shippingProvider = shippingProvider; }
+    public String getShippingLabelId() { return shippingLabelId; }
+    public void setShippingLabelId(String shippingLabelId) { this.shippingLabelId = shippingLabelId; }
+    public String getShippingLabelUrl() { return shippingLabelUrl; }
+    public void setShippingLabelUrl(String shippingLabelUrl) { this.shippingLabelUrl = shippingLabelUrl; }
     public String getPaymentReference() { return paymentReference; }
     public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
     public String getTrackingCode() { return trackingCode; }

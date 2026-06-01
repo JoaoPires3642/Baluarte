@@ -53,11 +53,25 @@ app:
       product-height-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_HEIGHT_CM:4}
       product-width-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_WIDTH_CM:25}
       product-length-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_LENGTH_CM:35}
+    sender:
+      name: ${APP_SHIPPING_SENDER_NAME:}
+      phone: ${APP_SHIPPING_SENDER_PHONE:}
+      email: ${APP_SHIPPING_SENDER_EMAIL:}
+      document: ${APP_SHIPPING_SENDER_DOCUMENT:}
+      street: ${APP_SHIPPING_SENDER_STREET:}
+      number: ${APP_SHIPPING_SENDER_NUMBER:}
+      complement: ${APP_SHIPPING_SENDER_COMPLEMENT:}
+      district: ${APP_SHIPPING_SENDER_DISTRICT:}
+      city: ${APP_SHIPPING_SENDER_CITY:}
+      state: ${APP_SHIPPING_SENDER_STATE:}
     superfrete:
       base-url: ${APP_SHIPPING_SUPERFRETE_BASE_URL:https://sandbox.superfrete.com}
       token: ${APP_SHIPPING_SUPERFRETE_TOKEN:}
       services: ${APP_SHIPPING_SUPERFRETE_SERVICES:1,2,17}
       user-agent: ${APP_SHIPPING_SUPERFRETE_USER_AGENT:Baluarte/1.0 (contato@baluarte.com)}
+      cart-path: ${APP_SHIPPING_SUPERFRETE_CART_PATH:/api/v0/cart}
+      checkout-path: ${APP_SHIPPING_SUPERFRETE_CHECKOUT_PATH:/api/v0/checkout}
+      label-link-path: ${APP_SHIPPING_SUPERFRETE_LABEL_LINK_PATH:/api/v0/orders/{id}/tag/link}
   payment:
     active-provider: ${APP_PAYMENT_PROVIDER:mock}
     mercadopago:

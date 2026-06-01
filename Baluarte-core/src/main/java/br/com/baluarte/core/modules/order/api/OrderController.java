@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.order.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
+import br.com.baluarte.core.modules.checkout.infrastructure.SuperFreteShippingLabelService;
 import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
@@ -20,6 +21,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -37,6 +39,7 @@ public class OrderController {
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
     private final PixOrderExpirationService pixOrderExpirationService;
+    private final SuperFreteShippingLabelService shippingLabelService;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders() {
@@ -98,6 +101,36 @@ public class OrderController {
             releaseOrderStock(order);
         }
 
+        return getOrder(orderId);
+    }
+
+    @PostMapping("/{orderId}/shipping-label")
+    @Transactional
+    public ApiSuccessResponse<OrderResponse> createShippingLabel(@PathVariable String orderId) {
+        CheckoutOrder order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+
+        if (!List.of("paid", "processing").contains(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Etiqueta so pode ser gerada para pedido pago");
+        }
+
+        if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
+            try {
+                var label = shippingLabelService.createLabel(order);
+                order.setShippingProvider("superfrete");
+                order.setShippingLabelId(label.labelId());
+                order.setShippingLabelUrl(label.labelUrl());
+                if (label.trackingCode() != null && !label.trackingCode().isBlank()) {
+                    order.setTrackingCode(label.trackingCode());
+                }
+            } catch (IllegalStateException exception) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
+            }
+        }
+
+        order.setStatus("processing");
+        order.setUpdatedAt(Instant.now());
+        orderRepository.save(order);
         return getOrder(orderId);
     }
 
@@ -173,7 +206,16 @@ public class OrderController {
             order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
             order.getTotalAmount().doubleValue(),
             items,
-            new ShippingResponse(order.getRecipientName(), shippingAddress, order.getTrackingCode()),
+            new ShippingResponse(
+                order.getRecipientName(),
+                shippingAddress,
+                order.getTrackingCode(),
+                order.getShippingProvider(),
+                order.getShippingServiceId(),
+                order.getShippingServiceName(),
+                order.getShippingLabelId(),
+                order.getShippingLabelUrl()
+            ),
             payment
         );
     }
@@ -201,7 +243,12 @@ record OrderItemResponse(
 record ShippingResponse(
     String recipientName,
     String address,
-    String trackingCode
+    String trackingCode,
+    String provider,
+    String serviceId,
+    String serviceName,
+    String labelId,
+    String labelUrl
 ) {}
 
 record PaymentResponse(

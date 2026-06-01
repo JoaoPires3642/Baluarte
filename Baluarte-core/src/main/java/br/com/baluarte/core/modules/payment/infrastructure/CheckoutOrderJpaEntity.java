@@ -70,6 +70,21 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "shipping_state", nullable = false, length = 2)
     private String shippingState;
 
+    @Column(name = "shipping_service_id", length = 40)
+    private String shippingServiceId;
+
+    @Column(name = "shipping_service_name", length = 80)
+    private String shippingServiceName;
+
+    @Column(name = "shipping_provider", length = 40)
+    private String shippingProvider;
+
+    @Column(name = "shipping_label_id", length = 120)
+    private String shippingLabelId;
+
+    @Column(name = "shipping_label_url", length = 500)
+    private String shippingLabelUrl;
+
     @Column(name = "payment_reference", length = 80)
     private String paymentReference;
 
@@ -112,6 +127,11 @@ public class CheckoutOrderJpaEntity {
         this.shippingNeighborhood = order.getShippingNeighborhood();
         this.shippingCity = order.getShippingCity();
         this.shippingState = order.getShippingState().toUpperCase();
+        this.shippingServiceId = order.getShippingServiceId();
+        this.shippingServiceName = order.getShippingServiceName();
+        this.shippingProvider = order.getShippingProvider();
+        this.shippingLabelId = order.getShippingLabelId();
+        this.shippingLabelUrl = order.getShippingLabelUrl();
         this.paymentReference = order.getPaymentReference();
         this.trackingCode = order.getTrackingCode();
         this.updatedAt = LocalDateTime.now();
@@ -124,6 +144,11 @@ public class CheckoutOrderJpaEntity {
                 shippingCity, shippingState);
         order.setPaymentReference(paymentReference);
         order.setTrackingCode(trackingCode);
+        order.setShippingServiceId(shippingServiceId);
+        order.setShippingServiceName(shippingServiceName);
+        order.setShippingProvider(shippingProvider);
+        order.setShippingLabelId(shippingLabelId);
+        order.setShippingLabelUrl(shippingLabelUrl);
         order.setItems(items.stream().map(CheckoutOrderItemJpaEntity::toDomain).toList());
         order.setCreatedAt(createdAt.toInstant(java.time.ZoneOffset.UTC));
         order.setUpdatedAt(updatedAt.toInstant(java.time.ZoneOffset.UTC));

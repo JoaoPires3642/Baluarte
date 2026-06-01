@@ -93,6 +93,8 @@ public class CreatePaymentUseCase {
                 item.unitPrice()
             ))
             .toList());
+        order.setShippingServiceId(request.shipping().optionId());
+        order.setShippingServiceName(request.shipping().label());
         orderRepository.save(order);
 
         CreatePaymentCommand command = new CreatePaymentCommand(

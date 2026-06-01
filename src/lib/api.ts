@@ -244,6 +244,12 @@ export async function updateOrderStatus(orderId: string, status: string) {
   })
 }
 
+export async function createShippingLabel(orderId: string) {
+  return fetchApi<{ data: Order }>(`/orders/${orderId}/shipping-label`, {
+    method: "POST",
+  })
+}
+
 // Image Upload
 export async function uploadImage(
   file: File,
@@ -414,6 +420,11 @@ export interface Order {
     recipientName?: string
     address: string
     trackingCode?: string
+    provider?: string
+    serviceId?: string
+    serviceName?: string
+    labelId?: string
+    labelUrl?: string
   }
   payment?: {
     method: string
