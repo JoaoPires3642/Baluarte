@@ -19,7 +19,7 @@ public record ShippingQuoteRequest(
         String number,
         String neighborhood,
         String city,
-        @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$") String state
+        @Pattern(regexp = "^$|^[A-Za-z]{2}$") String state
     ) {
     }
 }
