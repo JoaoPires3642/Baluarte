@@ -3,11 +3,15 @@ package br.com.baluarte.core.shared.auth;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class InternalRoleResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(InternalRoleResolver.class);
 
     private final Set<String> adminEmails;
     private final Set<String> adminClerkUserIds;
@@ -33,14 +37,22 @@ public class InternalRoleResolver {
         String normalizedEmail = normalize(email);
 
         if (normalizedUserId.isBlank() || normalizedEmail.isBlank()) {
+            log.warn("resolveFromIdentity skipped: blank userId or email");
             return InternalRole.CUSTOMER;
         }
 
-        AuthUserJpaEntity user = authUserRepository.findById(normalizedUserId)
-            .orElseGet(() -> AuthUserJpaEntity.createDefaultCustomer(normalizedUserId, normalizedEmail));
+        boolean exists = authUserRepository.findById(normalizedUserId).isPresent();
+        AuthUserJpaEntity user;
+        if (exists) {
+            user = authUserRepository.findById(normalizedUserId).get();
+            user.touchEmail(normalizedEmail);
+        } else {
+            log.info("Creating new auth_user: clerkUserId={}, email={}", normalizedUserId, normalizedEmail);
+            user = AuthUserJpaEntity.createDefaultCustomer(normalizedUserId, normalizedEmail);
+        }
 
-        user.touchEmail(normalizedEmail);
-        user = authUserRepository.save(user);
+        user = authUserRepository.saveAndFlush(user);
+        log.info("Saved auth_user: clerkUserId={}, email={}, role={}", user.getClerkUserId(), user.getEmail(), user.getRole());
 
         boolean adminFromAllowlist = adminClerkUserIds.contains(normalizedUserId) || adminEmails.contains(normalizedEmail);
         if (adminFromAllowlist) {
