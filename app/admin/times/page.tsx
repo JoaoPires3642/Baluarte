@@ -56,7 +56,7 @@ export default function AdminTeamsPage() {
   const [categoryFilter, setCategoryFilter] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: "", slug: "", categoryId: "", league: "", displayOrder: 0 })
+  const [form, setForm] = useState({ name: "", slug: "", categoryId: "", league: "", displayOrder: 0, logo: "" })
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -80,7 +80,7 @@ export default function AdminTeamsPage() {
 
   const openCreate = () => {
     setEditingId(null)
-    setForm({ name: "", slug: "", categoryId: "", league: "", displayOrder: 0 })
+    setForm({ name: "", slug: "", categoryId: "", league: "", displayOrder: 0, logo: "" })
     setError("")
     setDialogOpen(true)
   }
@@ -93,6 +93,7 @@ export default function AdminTeamsPage() {
       categoryId: team.categoryId || "",
       league: team.league || "",
       displayOrder: team.displayOrder || 0,
+      logo: team.logo || "",
     })
     setError("")
     setDialogOpen(true)
@@ -110,6 +111,7 @@ export default function AdminTeamsPage() {
         categoryId: form.categoryId,
         league: form.league.trim() || undefined,
         displayOrder: form.displayOrder || 0,
+        logo: form.logo.trim() || undefined,
       }
       if (editingId) {
         await authedFetch(`/admin/teams/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
@@ -178,9 +180,18 @@ export default function AdminTeamsPage() {
         {filtered.map(team => (
           <div key={team.id} className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#0f274d]/30">
             <div className="flex items-start justify-between">
-              <div>
-                <span className="font-semibold">{team.name}</span>
-                <p className="text-xs text-slate-400">{team.slug}</p>
+              <div className="flex items-center gap-3">
+                {team.logo ? (
+                  <img src={team.logo} alt={team.name} className="h-10 w-10 rounded-full object-contain bg-[#f4f7fb] p-1" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f4f7fb] text-[#0f274d]">
+                    <Users className="h-5 w-5" />
+                  </div>
+                )}
+                <div>
+                  <span className="font-semibold">{team.name}</span>
+                  <p className="text-xs text-slate-400">{team.slug}</p>
+                </div>
               </div>
               <Badge variant="secondary" className="text-xs">{team.league || "Sem liga"}</Badge>
             </div>
@@ -206,9 +217,18 @@ export default function AdminTeamsPage() {
         {filtered.map(team => (
           <div key={team.id} className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between">
-              <div>
-                <span className="font-semibold">{team.name}</span>
-                <p className="text-xs text-slate-400">{team.slug}</p>
+              <div className="flex items-center gap-3">
+                {team.logo ? (
+                  <img src={team.logo} alt={team.name} className="h-10 w-10 rounded-full object-contain bg-[#f4f7fb] p-1" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f4f7fb] text-[#0f274d]">
+                    <Users className="h-5 w-5" />
+                  </div>
+                )}
+                <div>
+                  <span className="font-semibold">{team.name}</span>
+                  <p className="text-xs text-slate-400">{team.slug}</p>
+                </div>
               </div>
               <Badge variant="secondary" className="text-xs">{team.league || "Sem liga"}</Badge>
             </div>
@@ -261,6 +281,16 @@ export default function AdminTeamsPage() {
             <Label>Ordem de exibição</Label>
             <Input type="number" min="0" value={form.displayOrder}
               onChange={e => setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>URL do escudo (logo)</Label>
+            <Input value={form.logo} onChange={e => setForm(f => ({ ...f, logo: e.target.value }))} placeholder="https://assets.football-logos.cc/..." />
+            {form.logo && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                <img src={form.logo} alt="preview" className="h-8 w-8 rounded-full object-contain bg-[#f4f7fb] p-0.5" />
+                <span>Pré-visualização</span>
+              </div>
+            )}
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">

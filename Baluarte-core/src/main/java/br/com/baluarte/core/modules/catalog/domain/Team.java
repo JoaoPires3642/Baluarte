@@ -12,6 +12,7 @@ public record Team(
     String league,
     Integer displayOrder,
     Boolean active,
+    String logo,
     LocalDateTime createdAt
 ) {
 }

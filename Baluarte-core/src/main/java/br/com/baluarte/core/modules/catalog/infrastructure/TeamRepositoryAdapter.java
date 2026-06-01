@@ -74,7 +74,7 @@ public class TeamRepositoryAdapter implements TeamRepository {
                 new Team(entity.getId(), entity.getName(), entity.getSlug(),
                     entity.getCategory().getId(), entity.getCategory().getSlug(),
                     entity.getLeague(), entity.getDisplayOrder(),
-                    false, entity.getCreatedAt()),
+                    false, entity.getLogo(), entity.getCreatedAt()),
                 entity.getCategory()
             );
             jpaRepository.save(entity);
@@ -91,6 +91,7 @@ public class TeamRepositoryAdapter implements TeamRepository {
             entity.getLeague(),
             entity.getDisplayOrder(),
             entity.getActive(),
+            entity.getLogo(),
             entity.getCreatedAt()
         );
     }

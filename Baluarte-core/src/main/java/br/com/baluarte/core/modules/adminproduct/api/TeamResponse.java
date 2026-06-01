@@ -10,5 +10,6 @@ public record TeamResponse(
     String categorySlug,
     String league,
     Integer displayOrder,
-    boolean active
+    boolean active,
+    String logo
 ) {}

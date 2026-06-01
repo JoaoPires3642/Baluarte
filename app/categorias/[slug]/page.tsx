@@ -100,7 +100,11 @@ export default async function CategoryPage({ params }: Props) {
           {displayTeams.map((team: Team) => (
               <Link key={team.id} href={`/times/${team.slug}`}>
                 <Card className="cursor-pointer p-4 text-center transition-shadow hover:shadow-lg sm:p-6">
-                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14"><ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+                  {team.logo ? (
+                    <img src={team.logo} alt={team.name} className="mx-auto mb-3 h-11 w-11 rounded-full object-contain bg-[#f4f7fb] p-1 sm:h-14 sm:w-14" />
+                  ) : (
+                    <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14"><ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+                  )}
                   <h3 className="text-sm font-semibold sm:text-base">{team.name}</h3>
                   <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c3222a]">Ver produtos <ChevronRight className="h-3.5 w-3.5" /></p>
                 </Card>

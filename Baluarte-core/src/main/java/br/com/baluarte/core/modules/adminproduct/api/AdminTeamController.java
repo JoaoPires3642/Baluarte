@@ -62,6 +62,7 @@ public class AdminTeamController {
             request.league(),
             request.displayOrder() != null ? request.displayOrder() : 0,
             true,
+            request.logo(),
             LocalDateTime.now()
         ));
         return ApiSuccessResponse.of(toResponse(team));
@@ -86,6 +87,7 @@ public class AdminTeamController {
             request.league(),
             request.displayOrder() != null ? request.displayOrder() : existing.displayOrder(),
             existing.active(),
+            request.logo(),
             existing.createdAt()
         ));
         return ApiSuccessResponse.of(toResponse(updated));
@@ -103,7 +105,8 @@ public class AdminTeamController {
         return new TeamResponse(
             team.id(), team.name(), team.slug(),
             team.categoryId(), team.categorySlug(),
-            team.league(), team.displayOrder(), team.active()
+            team.league(), team.displayOrder(), team.active(),
+            team.logo()
         );
     }
 }

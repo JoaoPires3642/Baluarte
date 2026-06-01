@@ -9,7 +9,8 @@ public record TeamResponse(
     String slug,
     String categorySlug,
     String league,
-    Integer displayOrder
+    Integer displayOrder,
+    String logo
 ) {
 
     static TeamResponse fromApplication(TeamView team) {
@@ -19,7 +20,8 @@ public record TeamResponse(
             team.slug(),
             team.categorySlug(),
             team.league(),
-            team.displayOrder()
+            team.displayOrder(),
+            team.logo()
         );
     }
 }

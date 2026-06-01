@@ -481,7 +481,7 @@ export default function AdminProductsPage() {
                 <select value={form.teamSlug} onChange={e => setForm(f => ({ ...f, teamSlug: e.target.value }))}
                   className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" disabled={!form.categorySlug}>
                   <option value="">Selecione...</option>
-                  {teams.map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
+                  {teams.filter(t => t.categorySlug === form.categorySlug).map(t => <option key={t.slug} value={t.slug}>{t.name}</option>)}
                 </select>
               </div>
             </div>

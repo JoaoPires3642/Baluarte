@@ -2,7 +2,7 @@ import Link from "next/link"
 import { fetchCategories, fetchTeamsByCategory, type Team, type Category } from "@/lib/api"
 
 export const dynamic = "force-dynamic"
-import { ShieldCheck, ChevronRight } from "lucide-react"
+import { ChevronRight, ShieldCheck } from "lucide-react"
 import { Card } from "@/components/ui/card"
 
 async function getData() {
@@ -57,9 +57,13 @@ export default async function TimesPage() {
             {teams.map((team) => (
               <Link key={team.id} href={`/times/${team.slug}`}>
                 <Card className="group cursor-pointer p-4 text-center transition-shadow hover:shadow-lg sm:p-5">
-                  <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14">
-                    <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7" />
-                  </div>
+                  {team.logo ? (
+                    <img src={team.logo} alt={team.name} className="mx-auto mb-3 h-12 w-12 rounded-full object-contain bg-[#f4f7fb] p-1 sm:h-14 sm:w-14" />
+                  ) : (
+                    <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14">
+                      <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                  )}
                   <h3 className="text-sm font-semibold leading-tight sm:text-base">{team.name}</h3>
                   <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#c3222a]">
                     Ver <ChevronRight className="h-3 w-3" />

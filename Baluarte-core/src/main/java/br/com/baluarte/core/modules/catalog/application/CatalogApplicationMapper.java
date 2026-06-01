@@ -23,7 +23,8 @@ final class CatalogApplicationMapper {
             team.slug(),
             team.categorySlug(),
             team.league(),
-            team.displayOrder()
+            team.displayOrder(),
+            team.logo()
         );
     }
 

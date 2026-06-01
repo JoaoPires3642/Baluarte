@@ -8,6 +8,7 @@ public record TeamView(
     String slug,
     String categorySlug,
     String league,
-    Integer displayOrder
+    Integer displayOrder,
+    String logo
 ) {
 }

@@ -41,6 +41,9 @@ public class TeamJpaEntity {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(nullable = true)
+    private String logo;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -53,6 +56,7 @@ public class TeamJpaEntity {
         entity.league = team.league();
         entity.displayOrder = team.displayOrder();
         entity.active = team.active() != null ? team.active() : true;
+        entity.logo = team.logo();
         entity.createdAt = team.createdAt() != null ? team.createdAt() : LocalDateTime.now();
         return entity;
     }
@@ -64,5 +68,6 @@ public class TeamJpaEntity {
         this.league = team.league();
         this.displayOrder = team.displayOrder();
         this.active = team.active() != null ? team.active() : true;
+        this.logo = team.logo();
     }
 }

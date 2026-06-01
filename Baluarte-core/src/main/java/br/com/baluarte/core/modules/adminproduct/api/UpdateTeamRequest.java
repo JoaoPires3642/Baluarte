@@ -8,5 +8,6 @@ public record UpdateTeamRequest(
     @NotBlank String slug,
     @NotBlank UUID categoryId,
     String league,
-    Integer displayOrder
+    Integer displayOrder,
+    String logo
 ) {}

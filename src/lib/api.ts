@@ -324,6 +324,7 @@ export interface Team {
   league?: string
   displayOrder?: number
   active?: boolean
+  logo?: string
 }
 
 export interface Model {
