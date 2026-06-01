@@ -32,7 +32,6 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
   const [sdkError, setSdkError] = useState("")
   const [cardError, setCardError] = useState("")
   const [cardholderName, setCardholderName] = useState("")
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("master")
 
   const publicKey = MERCADOPAGO_PUBLIC_KEY
   const configError = !publicKey ? "Chave pública do Mercado Pago não configurada" : sdkError
@@ -97,7 +96,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         identificationNumber: cpf.replace(/\D/g, ""),
       }
       const tokenData = await mpRef.current.fields.createCardToken(tokenBody)
-      const paymentMethodId = extractPaymentMethodId(tokenData) || selectedPaymentMethodId
+      const paymentMethodId = extractPaymentMethodId(tokenData) || "master"
       if (!paymentMethodId) {
         setCardError("Nao foi possivel identificar a bandeira do cartao")
         return null
@@ -132,20 +131,6 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
       <div className="space-y-2">
         <Label>Número do cartão</Label>
         <div id="cardNumber" className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Bandeira</Label>
-        <select
-          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-          value={selectedPaymentMethodId}
-          onChange={e => setSelectedPaymentMethodId(e.target.value)}
-        >
-          <option value="master">Mastercard</option>
-          <option value="visa">Visa</option>
-          <option value="amex">American Express</option>
-          <option value="elo">Elo</option>
-        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
