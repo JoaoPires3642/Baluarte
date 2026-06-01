@@ -3,16 +3,20 @@ package br.com.baluarte.core.shared.auth;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Persistable;
 
 @Entity
 @Table(name = "auth_user")
 @Getter
 @NoArgsConstructor
-public class AuthUserJpaEntity {
+public class AuthUserJpaEntity implements Persistable<String> {
 
     @Id
     @Column(name = "clerk_user_id", nullable = false, length = 120)
@@ -29,6 +33,25 @@ public class AuthUserJpaEntity {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    public String getId() {
+        return clerkUserId;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    private void markNotNew() {
+        this.isNew = false;
+    }
 
     public static AuthUserJpaEntity createDefaultCustomer(String clerkUserId, String email) {
         AuthUserJpaEntity entity = new AuthUserJpaEntity();
