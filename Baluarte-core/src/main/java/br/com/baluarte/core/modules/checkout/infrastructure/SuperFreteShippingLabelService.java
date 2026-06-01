@@ -130,6 +130,12 @@ public class SuperFreteShippingLabelService {
                 "width", productWidthCm,
                 "length", productLengthCm
             )),
+            "volumes", List.of(Map.of(
+                "weight", productWeightKg * Math.max(quantity, 1),
+                "height", productHeightCm,
+                "width", productWidthCm,
+                "length", productLengthCm
+            )),
             "options", Map.of(
                 "own_hand", false,
                 "receipt", false,
