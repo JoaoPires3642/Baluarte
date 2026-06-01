@@ -32,6 +32,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
   const [sdkError, setSdkError] = useState("")
   const [cardError, setCardError] = useState("")
   const [cardholderName, setCardholderName] = useState("")
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("master")
 
   const publicKey = MERCADOPAGO_PUBLIC_KEY
   const configError = !publicKey ? "Chave pública do Mercado Pago não configurada" : sdkError
@@ -96,7 +97,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         identificationNumber: cpf.replace(/\D/g, ""),
       }
       const tokenData = await mpRef.current.fields.createCardToken(tokenBody)
-      const paymentMethodId = (tokenData.payment_method_id as string) || detectPaymentMethodId(tokenData.first_six_digits || "")
+      const paymentMethodId = extractPaymentMethodId(tokenData) || selectedPaymentMethodId
       if (!paymentMethodId) {
         setCardError("Nao foi possivel identificar a bandeira do cartao")
         return null
@@ -133,6 +134,20 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         <div id="cardNumber" className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
       </div>
 
+      <div className="space-y-2">
+        <Label>Bandeira</Label>
+        <select
+          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+          value={selectedPaymentMethodId}
+          onChange={e => setSelectedPaymentMethodId(e.target.value)}
+        >
+          <option value="master">Mastercard</option>
+          <option value="visa">Visa</option>
+          <option value="amex">American Express</option>
+          <option value="elo">Elo</option>
+        </select>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Vencimento</Label>
@@ -155,7 +170,24 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
   )
 })
 
+function extractPaymentMethodId(tokenData: Record<string, unknown>) {
+  const paymentMethod = tokenData.payment_method
+  const nestedPaymentMethodId = paymentMethod && typeof paymentMethod === "object"
+    ? (paymentMethod as Record<string, unknown>).id
+    : null
+  const bin = tokenData.first_six_digits || tokenData.firstSixDigits || tokenData.bin || tokenData.first_six
+  return stringValue(tokenData.payment_method_id)
+    || stringValue(tokenData.paymentMethodId)
+    || stringValue(nestedPaymentMethodId)
+    || detectPaymentMethodId(stringValue(bin))
+}
+
+function stringValue(value: unknown) {
+  return value == null ? "" : String(value)
+}
+
 function detectPaymentMethodId(bin: string) {
+  if (!bin && process.env.NODE_ENV !== "production") return "master"
   if (/^4/.test(bin)) return "visa"
   if (/^(5[1-5]|2[2-7])/.test(bin)) return "master"
   if (/^3[47]/.test(bin)) return "amex"
