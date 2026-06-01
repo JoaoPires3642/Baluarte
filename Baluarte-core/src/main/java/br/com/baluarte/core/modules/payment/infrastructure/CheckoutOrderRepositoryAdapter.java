@@ -2,8 +2,12 @@ package br.com.baluarte.core.modules.payment.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +41,33 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     @Transactional(readOnly = true)
     public List<CheckoutOrder> findAll() {
         return jpaRepository.findAll().stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CheckoutOrder> findAll(int page, int size) {
+        return jpaRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)).stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countAll() {
+        return jpaRepository.count();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CheckoutOrder> findPendingPaymentCreatedBefore(Instant cutoff, int limit) {
+        LocalDateTime cutoffDateTime = LocalDateTime.ofInstant(cutoff, ZoneOffset.UTC);
+        return jpaRepository.findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
+                "pending_payment",
+                cutoffDateTime,
+                PageRequest.of(0, limit)
+            ).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }

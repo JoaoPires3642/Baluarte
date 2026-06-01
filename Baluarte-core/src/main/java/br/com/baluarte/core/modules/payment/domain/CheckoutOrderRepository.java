@@ -10,5 +10,8 @@ public interface CheckoutOrderRepository {
     List<CheckoutOrder> findByClerkUserId(String clerkUserId);
     Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId);
     List<CheckoutOrder> findAll();
+    List<CheckoutOrder> findAll(int page, int size);
+    long countAll();
+    List<CheckoutOrder> findPendingPaymentCreatedBefore(java.time.Instant cutoff, int limit);
     CheckoutOrder save(CheckoutOrder order);
 }

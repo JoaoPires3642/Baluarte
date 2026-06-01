@@ -15,6 +15,7 @@ import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,15 +48,26 @@ public class OrderController {
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders(
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "30") int size,
         @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
         @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
         @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
     ) {
         resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
-        List<OrderResponse> data = orderRepository.findAll().stream()
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        long total = orderRepository.countAll();
+        List<OrderResponse> data = orderRepository.findAll(safePage, safeSize).stream()
             .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
             .toList();
-        return ApiSuccessResponse.of(data);
+        long totalPages = total == 0 ? 0 : (long) Math.ceil((double) total / safeSize);
+        return new ApiSuccessResponse<>(data, Map.of(
+            "page", safePage,
+            "size", safeSize,
+            "total", total,
+            "totalPages", totalPages
+        ));
     }
 
     @GetMapping("/my")

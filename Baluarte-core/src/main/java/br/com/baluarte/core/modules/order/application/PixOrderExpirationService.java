@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PixOrderExpirationService {
 
     private static final long PIX_EXPIRATION_MINUTES = 10;
+    private static final int EXPIRATION_BATCH_SIZE = 100;
 
     private final CheckoutOrderRepository orderRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
@@ -29,8 +30,8 @@ public class PixOrderExpirationService {
     @Scheduled(fixedDelayString = "${app.payment.pix-expiration-check-delay-ms:60000}")
     @Transactional
     public void expirePendingPixOrders() {
-        orderRepository.findAll().stream()
-            .filter(order -> "pending_payment".equals(order.getStatus()))
+        Instant cutoff = Instant.now().minus(Duration.ofMinutes(PIX_EXPIRATION_MINUTES));
+        orderRepository.findPendingPaymentCreatedBefore(cutoff, EXPIRATION_BATCH_SIZE).stream()
             .forEach(this::expireIfNeeded);
     }
 

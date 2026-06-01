@@ -28,12 +28,26 @@ const statusColors: Record<string, string> = {
   pending_payment: "bg-yellow-500",
 }
 
-async function getOrders(): Promise<Order[]> {
+type Props = {
+  searchParams: Promise<{ page?: string }>
+}
+
+type OrdersPayload = {
+  data: Order[]
+  meta: {
+    page: number
+    size: number
+    total: number
+    totalPages: number
+  }
+}
+
+async function getOrders(page: number): Promise<OrdersPayload> {
   try {
     const { userId, getToken } = await auth()
     const user = await currentUser()
     const token = await getToken()
-    const res = await fetch(`${API_BASE_URL}/orders`, {
+    const res = await fetch(`${API_BASE_URL}/orders?page=${page}&size=30`, {
       cache: "no-store",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -41,16 +55,24 @@ async function getOrders(): Promise<Order[]> {
         "X-Clerk-Email": user?.emailAddresses?.[0]?.emailAddress || "",
       },
     })
-    if (!res.ok) return []
-    const payload = await res.json() as { data: Order[] }
-    return payload.data
+    if (!res.ok) return emptyOrdersPayload(page)
+    const payload = await res.json() as OrdersPayload
+    return payload
   } catch {
-    return []
+    return emptyOrdersPayload(page)
   }
 }
 
-export default async function AdminOrdersPage() {
-  const orders = await getOrders()
+function emptyOrdersPayload(page: number): OrdersPayload {
+  return { data: [], meta: { page, size: 30, total: 0, totalPages: 0 } }
+}
+
+export default async function AdminOrdersPage({ searchParams }: Props) {
+  const params = await searchParams
+  const currentPage = Math.max(Number(params.page || "0") || 0, 0)
+  const payload = await getOrders(currentPage)
+  const orders = payload.data
+  const meta = payload.meta
 
   return (
     <div className="space-y-6 py-8">
@@ -136,6 +158,22 @@ export default async function AdminOrdersPage() {
               </Link>
             ))}
           </div>
+
+          {meta.totalPages > 1 && (
+            <div className="mt-6 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Página {meta.page + 1} de {meta.totalPages} • {meta.total} pedidos
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild disabled={meta.page <= 0}>
+                  <Link href={`/admin/pedidos?page=${Math.max(meta.page - 1, 0)}`}>Anterior</Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild disabled={meta.page + 1 >= meta.totalPages}>
+                  <Link href={`/admin/pedidos?page=${meta.page + 1}`}>Próxima</Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -458,6 +458,13 @@ export interface Order {
   }
 }
 
+export interface PaginationMeta {
+  page: number
+  size: number
+  total: number
+  totalPages: number
+}
+
 export interface AdminShippingSettings {
   provider: string
   originCep: string
