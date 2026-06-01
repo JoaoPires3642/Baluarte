@@ -9,6 +9,7 @@ interface MercadoPago {
         id: string
         payment_method_id: string
         issuer_id: string
+        first_six_digits?: string
         [key: string]: unknown
       }>
     }

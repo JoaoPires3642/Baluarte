@@ -96,7 +96,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         identificationNumber: cpf.replace(/\D/g, ""),
       }
       const tokenData = await mpRef.current.fields.createCardToken(tokenBody)
-      const paymentMethodId = (tokenData.payment_method_id as string) || ""
+      const paymentMethodId = (tokenData.payment_method_id as string) || detectPaymentMethodId(tokenData.first_six_digits || "")
       if (!paymentMethodId) {
         setCardError("Nao foi possivel identificar a bandeira do cartao")
         return null
@@ -154,3 +154,11 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
     </div>
   )
 })
+
+function detectPaymentMethodId(bin: string) {
+  if (/^4/.test(bin)) return "visa"
+  if (/^(5[1-5]|2[2-7])/.test(bin)) return "master"
+  if (/^3[47]/.test(bin)) return "amex"
+  if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(bin)) return "elo"
+  return ""
+}
