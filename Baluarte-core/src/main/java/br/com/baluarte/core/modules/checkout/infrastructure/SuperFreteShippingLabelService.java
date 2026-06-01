@@ -99,19 +99,8 @@ public class SuperFreteShippingLabelService {
             throw new IllegalStateException("SuperFrete cart response missing label id");
         }
 
-        Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of("orders", List.of(labelId)), settings);
-        String checkoutLabelId = firstValue(checkoutResponse, "id", "order_id", "protocol", "uuid");
-        if (checkoutLabelId != null && !checkoutLabelId.isBlank()) {
-            labelId = checkoutLabelId;
-        }
-
-        String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
-        if (labelUrl == null || labelUrl.isBlank()) {
-            Map<String, Object> linkResponse = get(settings.superfreteLabelLinkPath().replace("{id}", labelId), settings);
-            labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
-        }
-
-        String trackingCode = firstValue(checkoutResponse, "tracking_code", "tracking", "code", "authorization_code");
+        String labelUrl = firstValue(cartResponse, "label_url", "print_url", "url", "link");
+        String trackingCode = firstValue(cartResponse, "tracking_code", "tracking", "code", "authorization_code");
         return new ShippingLabelResult(labelId, labelUrl, trackingCode);
     }
 

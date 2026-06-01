@@ -127,7 +127,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <p><span className="text-slate-500">Etiqueta:</span> {order.shipping?.labelId || "Nao gerada"}</p>
               <p><span className="text-slate-500">Rastreio:</span> {order.shipping?.trackingCode || "Nao disponivel"}</p>
             </div>
-            <CreateShippingLabel orderId={order.id} status={order.status} labelUrl={order.shipping?.labelUrl} />
+            <CreateShippingLabel orderId={order.id} status={order.status} labelId={order.shipping?.labelId} labelUrl={order.shipping?.labelUrl} />
           </CardContent>
         </Card>
       </div>

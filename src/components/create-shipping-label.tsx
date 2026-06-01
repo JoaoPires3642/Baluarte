@@ -2,17 +2,19 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ExternalLink, PackagePlus } from "lucide-react"
+import { ExternalLink, PackageCheck, PackagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createShippingLabel } from "@/lib/api"
 
 export function CreateShippingLabel({
   orderId,
   status,
+  labelId,
   labelUrl,
 }: {
   orderId: string
   status: string
+  labelId?: string
   labelUrl?: string
 }) {
   const router = useRouter()
@@ -42,13 +44,18 @@ export function CreateShippingLabel({
               <ExternalLink className="mr-2 h-4 w-4" /> Abrir etiqueta
             </a>
           </Button>
+        ) : labelId ? (
+          <Button size="sm" variant="outline" disabled>
+            <PackageCheck className="mr-2 h-4 w-4" /> Etiqueta criada
+          </Button>
         ) : (
           <Button size="sm" onClick={handleCreate} disabled={!canCreate || loading}>
             <PackagePlus className="mr-2 h-4 w-4" /> {loading ? "Gerando..." : "Gerar etiqueta"}
           </Button>
         )}
       </div>
-      {!canCreate && !labelUrl && <p className="text-xs text-slate-500">Disponível após pagamento aprovado.</p>}
+      {!canCreate && !labelUrl && !labelId && <p className="text-xs text-slate-500">Disponível após pagamento aprovado.</p>}
+      {labelId && !labelUrl && <p className="text-xs text-slate-500">Etiqueta criada no carrinho da SuperFrete. Emita pelo painel da SuperFrete.</p>}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   )
