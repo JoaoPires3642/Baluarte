@@ -3,7 +3,7 @@ export const runtime = "edge";
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, ShieldCheck } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 
 type SuccessPageProps = {
   searchParams: Promise<{ order?: string }>
@@ -30,9 +30,6 @@ export default async function CheckoutSuccessPage({ searchParams }: SuccessPageP
               Número do pedido: <span className="text-primary">{order}</span>
             </p>
           )}
-          <div className="rounded-[1.25rem] border border-[#e6edf6] bg-[#f8fbff] p-4 text-sm text-slate-600">
-            <p className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#0f274d]" />Compra registrada com sucesso no fluxo renovado da Baluarte.</p>
-          </div>
           <div className="flex flex-col gap-2 pt-4">
             <Link href="/">
               <Button className="w-full">Continuar Comprando</Button>
