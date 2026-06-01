@@ -1,7 +1,9 @@
 package br.com.baluarte.core.modules.checkout.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -164,7 +166,7 @@ public class SuperFreteShippingLabelService {
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
-                throw new IllegalStateException("SuperFrete label request failed: " + resp.getStatusCode());
+                throw new IllegalStateException("SuperFrete label request failed: " + resp.getStatusCode() + " - " + responseBody(resp));
             })
             .body(Object.class));
     }
@@ -177,9 +179,17 @@ public class SuperFreteShippingLabelService {
             .header("accept", "application/json")
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
-                throw new IllegalStateException("SuperFrete label link failed: " + resp.getStatusCode());
+                throw new IllegalStateException("SuperFrete label link failed: " + resp.getStatusCode() + " - " + responseBody(resp));
             })
             .body(Object.class));
+    }
+
+    private String responseBody(org.springframework.http.client.ClientHttpResponse response) {
+        try {
+            return new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            return "unable to read response body";
+        }
     }
 
     private String firstValue(Map<String, Object> source, String... keys) {
