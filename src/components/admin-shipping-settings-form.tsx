@@ -4,12 +4,14 @@ import { useState } from "react"
 import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { updateAdminShippingSettings, type AdminShippingSettings, type AdminShippingSettingsUpdate } from "@/lib/api"
+import { type AdminShippingSettings, type AdminShippingSettingsUpdate } from "@/lib/api"
+import { useAdminApi } from "@/lib/use-admin-api"
 
 const fieldClass = "space-y-1"
 const labelClass = "text-xs font-semibold uppercase tracking-[0.14em] text-slate-500"
 
 export function AdminShippingSettingsForm({ initialSettings }: { initialSettings: AdminShippingSettings }) {
+  const { authedFetch } = useAdminApi()
   const [settings, setSettings] = useState<AdminShippingSettingsUpdate>({ ...initialSettings, superfreteToken: "" })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
@@ -28,7 +30,10 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
     setMessage("")
     setError("")
     try {
-      const response = await updateAdminShippingSettings(settings)
+      const response = await authedFetch("/admin/shipping-settings", {
+        method: "PUT",
+        body: JSON.stringify(settings),
+      }) as { data: AdminShippingSettings }
       setSettings({ ...response.data, superfreteToken: "" })
       setMessage("Configuracoes de frete salvas.")
     } catch (err: unknown) {
