@@ -1,6 +1,5 @@
 CREATE INDEX IF NOT EXISTS idx_checkout_order_pending_payment_created
-    ON checkout_order (created_at)
-    WHERE status = 'pending_payment';
+    ON checkout_order (created_at);
 
 CREATE INDEX IF NOT EXISTS idx_checkout_order_created_desc
     ON checkout_order (created_at DESC);
