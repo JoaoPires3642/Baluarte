@@ -43,6 +43,9 @@ public class MercadoPagoWebhookController {
     @Value("${app.payment.mercadopago.webhook-secret:}")
     private String webhookSecret;
 
+    @Value("${app.payment.active-provider:mock}")
+    private String activePaymentProvider;
+
     public MercadoPagoWebhookController(
         CheckoutOrderRepository orderRepository,
         PaymentTransactionRepository transactionRepository,
@@ -93,6 +96,11 @@ public class MercadoPagoWebhookController {
         String nextStatus = resolveLocalOrderStatus(orderStatus, paymentStatus);
 
         String previousStatus = order.getStatus();
+        if ("cancelled".equals(previousStatus) && "paid".equals(nextStatus)) {
+            updatePaymentTransaction(order.getOrderId(), payment, "payment_received_after_cancellation", paymentStatusDetail);
+            return ApiSuccessResponse.of(Map.of("status", "ok", "orderStatus", previousStatus));
+        }
+
         if (!previousStatus.equals(nextStatus)) {
             order.setStatus(nextStatus);
             order.setUpdatedAt(Instant.now());
@@ -165,7 +173,12 @@ public class MercadoPagoWebhookController {
     }
 
     private void validateSignatureIfConfigured(String dataId, String requestId, String signature) {
-        if (webhookSecret == null || webhookSecret.isBlank()) return;
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            if ("mercadopago".equalsIgnoreCase(activePaymentProvider)) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mercado Pago webhook secret not configured");
+            }
+            return;
+        }
         if (requestId == null || requestId.isBlank() || signature == null || signature.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Mercado Pago webhook signature");
         }

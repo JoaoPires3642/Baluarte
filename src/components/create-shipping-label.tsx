@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ExternalLink, PackagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createShippingLabel } from "@/lib/api"
+import { useAdminApi } from "@/lib/use-admin-api"
 
 export function CreateShippingLabel({
   orderId,
@@ -18,6 +18,7 @@ export function CreateShippingLabel({
   labelUrl?: string
 }) {
   const router = useRouter()
+  const { authedFetch } = useAdminApi()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const canCreate = status === "paid" || status === "processing"
@@ -26,7 +27,7 @@ export function CreateShippingLabel({
     setLoading(true)
     setError("")
     try {
-      await createShippingLabel(orderId)
+      await authedFetch(`/orders/${orderId}/shipping-label`, { method: "POST" })
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao gerar etiqueta")

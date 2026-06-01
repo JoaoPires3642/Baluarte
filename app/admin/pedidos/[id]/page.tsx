@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
 import { CreateShippingLabel } from "@/components/create-shipping-label"
 import { notFound } from "next/navigation"
+import { auth, currentUser } from "@clerk/nextjs/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -36,7 +37,17 @@ type Props = {
 
 async function getOrder(id: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders/${id}`, { cache: "no-store" })
+    const { userId, getToken } = await auth()
+    const user = await currentUser()
+    const token = await getToken()
+    const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Clerk-User-Id": userId || "",
+        "X-Clerk-Email": user?.emailAddresses?.[0]?.emailAddress || "",
+      },
+    })
     if (!res.ok) return null
     const payload = await res.json() as { data: Order }
     return payload.data

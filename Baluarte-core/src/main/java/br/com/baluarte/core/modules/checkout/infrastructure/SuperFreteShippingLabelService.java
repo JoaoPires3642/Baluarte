@@ -90,19 +90,29 @@ public class SuperFreteShippingLabelService {
     }
 
     public ShippingLabelResult createLabel(CheckoutOrder order) {
+        ShippingLabelResult cartLabel = createCartLabel(order);
+        return emitLabel(cartLabel.labelId());
+    }
+
+    public ShippingLabelResult createCartLabel(CheckoutOrder order) {
         AdminShippingSettingsValues settings = settingsService.get();
         ensureConfigured(settings);
         ensureValidRecipientDocument(order);
         String serviceId = order.getShippingServiceId() != null ? order.getShippingServiceId() : "1";
-        String labelId = order.getShippingLabelId();
-        if (labelId == null || labelId.isBlank()) {
-            Map<String, Object> cartResponse = post(settings.superfreteCartPath(), cartBody(order, serviceId, settings), settings);
-            labelId = firstValue(cartResponse, "id", "order_id", "protocol", "uuid");
-        }
+        Map<String, Object> cartResponse = post(settings.superfreteCartPath(), cartBody(order, serviceId, settings), settings);
+        String labelId = firstValue(cartResponse, "id", "order_id", "protocol", "uuid");
         if (labelId == null || labelId.isBlank()) {
             throw new IllegalStateException("SuperFrete cart response missing label id");
         }
+        return new ShippingLabelResult(labelId, null, null);
+    }
 
+    public ShippingLabelResult emitLabel(String labelId) {
+        AdminShippingSettingsValues settings = settingsService.get();
+        ensureConfigured(settings);
+        if (labelId == null || labelId.isBlank()) {
+            throw new IllegalStateException("SuperFrete label id missing");
+        }
         Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of("orders", List.of(labelId)), settings);
         String checkoutLabelId = firstValue(checkoutResponse, "id", "order_id", "protocol", "uuid");
         if (checkoutLabelId != null && !checkoutLabelId.isBlank()) {

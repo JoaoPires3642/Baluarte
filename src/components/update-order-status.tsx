@@ -3,12 +3,13 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { updateOrderStatus } from "@/lib/api"
+import { useAdminApi } from "@/lib/use-admin-api"
 
 const STATUS_ORDER = ["pending", "paid", "processing", "shipped", "delivered"]
 
 export function UpdateOrderStatus({ orderId, currentStatus }: { orderId: string; currentStatus: string }) {
   const router = useRouter()
+  const { authedFetch } = useAdminApi()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -19,7 +20,10 @@ export function UpdateOrderStatus({ orderId, currentStatus }: { orderId: string;
     setLoading(true)
     setError("")
     try {
-      await updateOrderStatus(orderId, status)
+      await authedFetch(`/orders/${orderId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      })
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao atualizar status")

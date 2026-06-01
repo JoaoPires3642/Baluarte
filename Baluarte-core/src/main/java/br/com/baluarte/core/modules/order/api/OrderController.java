@@ -10,6 +10,8 @@ import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
+import br.com.baluarte.core.shared.auth.InternalRole;
+import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -38,11 +40,17 @@ public class OrderController {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
+    private final InternalRoleResolver internalRoleResolver;
     private final PixOrderExpirationService pixOrderExpirationService;
     private final SuperFreteShippingLabelService shippingLabelService;
 
     @GetMapping
-    public ApiSuccessResponse<List<OrderResponse>> listOrders() {
+    public ApiSuccessResponse<List<OrderResponse>> listOrders(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
         List<OrderResponse> data = orderRepository.findAll().stream()
             .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
             .toList();
@@ -61,7 +69,13 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    public ApiSuccessResponse<OrderResponse> getOrder(@PathVariable String orderId) {
+    public ApiSuccessResponse<OrderResponse> getOrder(
+        @PathVariable String orderId,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
         CheckoutOrder order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
@@ -87,8 +101,12 @@ public class OrderController {
     @Transactional
     public ApiSuccessResponse<OrderResponse> updateOrderStatus(
         @PathVariable String orderId,
-        @Valid @RequestBody UpdateOrderStatusRequest request
+        @Valid @RequestBody UpdateOrderStatusRequest request,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
     ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
@@ -101,12 +119,17 @@ public class OrderController {
             releaseOrderStock(order);
         }
 
-        return getOrder(orderId);
+        return ApiSuccessResponse.of(toResponse(orderRepository.findById(orderId).orElse(order)));
     }
 
     @PostMapping("/{orderId}/shipping-label")
-    @Transactional
-    public ApiSuccessResponse<OrderResponse> createShippingLabel(@PathVariable String orderId) {
+    public ApiSuccessResponse<OrderResponse> createShippingLabel(
+        @PathVariable String orderId,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
@@ -114,25 +137,31 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Etiqueta so pode ser gerada para pedido pago");
         }
 
-        if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()
-            || order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank()) {
-            try {
-                var label = shippingLabelService.createLabel(order);
+        try {
+            if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
+                var cartLabel = shippingLabelService.createCartLabel(order);
                 order.setShippingProvider("superfrete");
+                order.setShippingLabelId(cartLabel.labelId());
+                order.setUpdatedAt(Instant.now());
+                orderRepository.save(order);
+            }
+
+            if (order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank()) {
+                var label = shippingLabelService.emitLabel(order.getShippingLabelId());
                 order.setShippingLabelId(label.labelId());
                 order.setShippingLabelUrl(label.labelUrl());
                 if (label.trackingCode() != null && !label.trackingCode().isBlank()) {
                     order.setTrackingCode(label.trackingCode());
                 }
-            } catch (IllegalStateException exception) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
             }
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
         }
 
         order.setStatus("processing");
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
-        return getOrder(orderId);
+        return ApiSuccessResponse.of(toResponse(orderRepository.save(order)));
     }
 
     private void releaseOrderStock(CheckoutOrder order) {
@@ -153,6 +182,19 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
         return jwt.getSubject();
+    }
+
+    private void resolveAdmin(String authorizationHeader, String clerkUserId, String clerkEmail) {
+        Jwt jwt = clerkJwtVerifier.verify(extractBearerToken(authorizationHeader));
+        if (jwt == null || clerkUserId == null || !clerkUserId.equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        if (clerkEmail == null || clerkEmail.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+        if (internalRoleResolver.resolveFromIdentity(jwt.getSubject(), clerkEmail) != InternalRole.ADMIN) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin privileges required");
+        }
     }
 
     private String extractBearerToken(String authorizationHeader) {

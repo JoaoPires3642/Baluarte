@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { ClipboardList, ChevronRight, Search } from "lucide-react"
+import { ClipboardList, ChevronRight } from "lucide-react"
 import { type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { auth, currentUser } from "@clerk/nextjs/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -29,7 +30,17 @@ const statusColors: Record<string, string> = {
 
 async function getOrders(): Promise<Order[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders`, { cache: "no-store" })
+    const { userId, getToken } = await auth()
+    const user = await currentUser()
+    const token = await getToken()
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Clerk-User-Id": userId || "",
+        "X-Clerk-Email": user?.emailAddresses?.[0]?.emailAddress || "",
+      },
+    })
     if (!res.ok) return []
     const payload = await res.json() as { data: Order[] }
     return payload.data
