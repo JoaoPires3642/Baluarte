@@ -48,6 +48,7 @@ public class UpdateAdminProductUseCase {
         var team = teamRepository.findPublicTeamByCategorySlugAndSlug(categorySlug, teamSlug)
             .orElseThrow(() -> new AdminProductValidationException(List.of("teamSlug time nao encontrado para a categoria informada")));
 
+        List<String> images = normalizeImages(command.imageUrl(), command.images());
         List<AdminProductVariant> variants = command.variants().stream()
             .map(item -> new AdminProductVariant(
                 UUID.randomUUID(),
@@ -70,7 +71,8 @@ public class UpdateAdminProductUseCase {
             command.description().trim(),
             command.price(),
             command.originalPrice(),
-            command.imageUrl().trim(),
+            images.get(0),
+            images,
             command.customizationEnabled(),
             normalizeTemplate(command.customizationTemplatePng()),
             normalizeTemplate(command.customizationTemplateMetadata()),
@@ -105,8 +107,11 @@ public class UpdateAdminProductUseCase {
         if (command.price() == null || command.price().signum() <= 0) {
             errors.add("price preco deve ser maior que zero");
         }
-        if (isBlank(command.imageUrl())) {
-            errors.add("imageUrl imagem e obrigatoria");
+        if (command.originalPrice() != null && command.originalPrice().signum() > 0 && command.price() != null && command.price().compareTo(command.originalPrice()) > 0) {
+            errors.add("price preco atual nao pode ser maior que o preco original");
+        }
+        if (normalizeImages(command.imageUrl(), command.images()).isEmpty()) {
+            errors.add("images pelo menos uma imagem e obrigatoria");
         }
         if (command.variants() == null || command.variants().isEmpty()) {
             errors.add("variants pelo menos uma variante e obrigatoria");
@@ -145,6 +150,20 @@ public class UpdateAdminProductUseCase {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<String> normalizeImages(String imageUrl, List<String> images) {
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        if (!isBlank(imageUrl)) {
+            values.add(imageUrl.trim());
+        }
+        if (images != null) {
+            images.stream()
+                .filter(value -> !isBlank(value))
+                .map(String::trim)
+                .forEach(values::add);
+        }
+        return values.stream().toList();
     }
 
     private String normalizeTemplate(String value) {

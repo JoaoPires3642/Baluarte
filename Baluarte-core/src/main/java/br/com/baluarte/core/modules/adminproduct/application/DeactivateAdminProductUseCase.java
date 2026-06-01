@@ -43,6 +43,7 @@ public class DeactivateAdminProductUseCase {
             existing.price(),
             existing.originalPrice(),
             existing.imageUrl(),
+            existing.images(),
             existing.customizationEnabled(),
             existing.customizationTemplatePng(),
             existing.customizationTemplateMetadata(),

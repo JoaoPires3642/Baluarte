@@ -9,6 +9,7 @@ import br.com.baluarte.core.modules.catalog.infrastructure.TeamJpaEntity;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,6 +79,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             entity.getPrice(),
             entity.getOriginalPrice(),
             entity.getImageUrl(),
+            decodeImages(entity.getImageUrl(), entity.getImageUrls()),
             Boolean.TRUE.equals(entity.getCustomizationEnabled()),
             entity.getCustomizationTemplatePng(),
             entity.getCustomizationTemplateMetadata(),
@@ -87,5 +89,20 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             entity.getVariants().stream().map(AdminProductVariantJpaEntity::toDomain).toList(),
             entity.getCreatedAt()
         );
+    }
+
+    private List<String> decodeImages(String imageUrl, String imageUrls) {
+        List<String> decoded = imageUrls == null || imageUrls.isBlank()
+            ? List.of()
+            : Stream.of(imageUrls.split("\\R"))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+
+        if (!decoded.isEmpty()) {
+            return decoded;
+        }
+        return imageUrl == null || imageUrl.isBlank() ? List.of() : List.of(imageUrl);
     }
 }

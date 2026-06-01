@@ -49,6 +49,9 @@ public class AdminProductJpaEntity {
     @Column(name = "image_url", nullable = false)
     private String imageUrl;
 
+    @Column(name = "image_urls", columnDefinition = "text")
+    private String imageUrls;
+
     @Column(name = "customization_enabled", nullable = false)
     private Boolean customizationEnabled;
 
@@ -87,6 +90,7 @@ public class AdminProductJpaEntity {
         entity.price = product.price();
         entity.originalPrice = product.originalPrice();
         entity.imageUrl = product.imageUrl();
+        entity.imageUrls = encodeImages(product.images());
         entity.customizationEnabled = product.customizationEnabled();
         entity.customizationTemplatePng = product.customizationTemplatePng();
         entity.customizationTemplateMetadata = product.customizationTemplateMetadata();
@@ -112,6 +116,7 @@ public class AdminProductJpaEntity {
         this.price = product.price();
         this.originalPrice = product.originalPrice();
         this.imageUrl = product.imageUrl();
+        this.imageUrls = encodeImages(product.images());
         this.customizationEnabled = product.customizationEnabled();
         this.customizationTemplatePng = product.customizationTemplatePng();
         this.customizationTemplateMetadata = product.customizationTemplateMetadata();
@@ -126,5 +131,12 @@ public class AdminProductJpaEntity {
         this.variants.addAll(product.variants().stream()
             .map(variant -> AdminProductVariantJpaEntity.fromDomain(variant, this))
             .toList());
+    }
+
+    private static String encodeImages(List<String> images) {
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+        return String.join("\n", images);
     }
 }

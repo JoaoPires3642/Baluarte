@@ -1,12 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { Camera, Check, ChevronLeft, ChevronRight, Eye, EyeOff, FolderOpen, PackagePlus, Pencil, Search, Trash2, X } from "lucide-react"
 import { fetchCategories, fetchTeamsByCategory, uploadImage, type Category, type Team, type AdminProduct } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
+import { resolveMediaUrl } from "@/lib/media"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -89,6 +91,7 @@ type FormData = {
   categorySlug: string
   teamSlug: string
   imageUrl: string
+  imageUrls: string[]
   variants: Record<string, string>
 }
 
@@ -100,7 +103,16 @@ const emptyForm: FormData = {
   categorySlug: "",
   teamSlug: "",
   imageUrl: "",
+  imageUrls: [],
   variants: { P: "0", M: "0", G: "0", GG: "0" },
+}
+
+function normalizeImageUrls(values: Array<string | undefined>) {
+  return Array.from(new Set(values.map(value => value?.trim()).filter(Boolean) as string[]))
+}
+
+function parseMoney(value: string) {
+  return parseFloat(value.replace(",", "."))
 }
 
 export default function AdminProductsPage() {
@@ -171,6 +183,7 @@ export default function AdminProductsPage() {
   }
 
   const openEdit = (product: AdminProduct) => {
+    const imageUrls = normalizeImageUrls([...(product.images || []), product.imageUrl])
     setEditingId(product.id)
     setForm({
       modelName: product.modelName,
@@ -179,7 +192,8 @@ export default function AdminProductsPage() {
       originalPrice: product.originalPrice ? product.originalPrice.toString().replace(".", ",") : "",
       categorySlug: product.categorySlug,
       teamSlug: product.teamSlug,
-      imageUrl: product.imageUrl || "",
+      imageUrl: imageUrls.join("\n"),
+      imageUrls,
       variants: {
         P: String(product.variants.find(v => v.size === "P")?.stockQuantity ?? 0),
         M: String(product.variants.find(v => v.size === "M")?.stockQuantity ?? 0),
@@ -202,14 +216,16 @@ export default function AdminProductsPage() {
       return true
     }
     if (s === 1) {
-      const price = parseFloat(form.price.replace(",", "."))
+      const price = parseMoney(form.price)
       if (!price || price <= 0) { setError("Preço inválido"); return false }
+      const originalPrice = form.originalPrice ? parseMoney(form.originalPrice) : undefined
+      if (originalPrice && originalPrice > 0 && price > originalPrice) { setError("Preço atual não pode ser maior que o preço original"); return false }
       const hasStock = SIZES.some(s => parseInt(form.variants[s] || "0") > 0)
       if (!hasStock) { setError("Adicione estoque em pelo menos um tamanho"); return false }
       return true
     }
     if (s === 2) {
-      if (!form.imageUrl.trim()) { setError("URL da imagem é obrigatória"); return false }
+      if (form.imageUrls.length === 0) { setError("Adicione pelo menos uma imagem"); return false }
       return true
     }
     return true
@@ -221,13 +237,53 @@ export default function AdminProductsPage() {
 
   const handleBack = () => setStep(s => Math.max(s - 1, 0))
 
+  const handleImageUrlTextChange = (value: string) => {
+    setForm(f => ({ ...f, imageUrl: value, imageUrls: normalizeImageUrls(value.split(/\r?\n/)) }))
+  }
+
+  const handleImageFiles = async (files: FileList | null) => {
+    const selectedFiles = Array.from(files || [])
+    if (selectedFiles.length === 0) return
+
+    const token = await getToken()
+    if (!token) { setError("Sessão expirada, faça login novamente"); return }
+    setUploadingImage(true)
+    try {
+      const uploadedUrls: string[] = []
+      for (const file of selectedFiles) {
+        const res = await uploadImage(file, {
+          token,
+          userId: userId || "",
+          email: userEmail,
+        })
+        uploadedUrls.push(res.data.url)
+      }
+      setForm(f => {
+        const imageUrls = normalizeImageUrls([...f.imageUrls, ...uploadedUrls])
+        return { ...f, imageUrl: imageUrls.join("\n"), imageUrls }
+      })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao fazer upload")
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const removeImage = (imageUrl: string) => {
+    setForm(f => {
+      const imageUrls = f.imageUrls.filter(value => value !== imageUrl)
+      return { ...f, imageUrl: imageUrls.join("\n"), imageUrls }
+    })
+  }
+
   const handleSave = async () => {
     if (!validateStep(step)) return
 
     setSaving(true)
     try {
-      const price = parseFloat(form.price.replace(",", "."))
-      const originalPrice = form.originalPrice ? parseFloat(form.originalPrice.replace(",", ".")) : undefined
+      const price = parseMoney(form.price)
+      const originalPrice = form.originalPrice ? parseMoney(form.originalPrice) : undefined
+      const imageUrls = normalizeImageUrls(form.imageUrls)
       const variants = SIZES
         .filter(s => parseInt(form.variants[s] || "0") > 0)
         .map(s => ({ size: s, stockQuantity: parseInt(form.variants[s] || "0") }))
@@ -238,7 +294,8 @@ export default function AdminProductsPage() {
         description: form.description.trim(),
         price,
         originalPrice: originalPrice && originalPrice > 0 ? originalPrice : undefined,
-        imageUrl: form.imageUrl.trim(),
+        imageUrl: imageUrls[0],
+        images: imageUrls,
         customizationEnabled: false,
         variants,
       }
@@ -463,64 +520,39 @@ export default function AdminProductsPage() {
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>URL da Imagem</Label>
-              <Input value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))} placeholder="https://..." />
+              <Label>URLs das Imagens</Label>
+              <Textarea value={form.imageUrl} onChange={e => handleImageUrlTextChange(e.target.value)} placeholder="https://...\nhttps://..." rows={3} />
+              <p className="text-xs text-slate-500">Use uma URL por linha. A primeira imagem será a capa.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-sm font-medium text-slate-600 hover:border-[#0f274d] hover:text-[#0f274d] transition-colors">
                 <Camera className="h-5 w-5 shrink-0" />
                 <span className="truncate">Câmera</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={async e => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    const token = await getToken()
-                    if (!token) { setError("Sessão expirada, faça login novamente"); return }
-                    setUploadingImage(true)
-                    try {
-                      const res = await uploadImage(file, {
-                        token,
-                        userId: userId || "",
-                        email: userEmail,
-                      })
-                      setForm(f => ({ ...f, imageUrl: res.data.url }))
-                    } catch (err: unknown) {
-                      setError(err instanceof Error ? err.message : "Erro ao fazer upload")
-                    } finally {
-                      setUploadingImage(false)
-                    }
-                  }} />
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleImageFiles(e.target.files)} />
               </label>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-sm font-medium text-slate-600 hover:border-[#0f274d] hover:text-[#0f274d] transition-colors">
                 <FolderOpen className="h-5 w-5 shrink-0" />
                 <span className="truncate">Arquivos</span>
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={async e => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    const token = await getToken()
-                    if (!token) { setError("Sessão expirada, faça login novamente"); return }
-                    setUploadingImage(true)
-                    try {
-                      const res = await uploadImage(file, {
-                        token,
-                        userId: userId || "",
-                        email: userEmail,
-                      })
-                      setForm(f => ({ ...f, imageUrl: res.data.url }))
-                    } catch (err: unknown) {
-                      setError(err instanceof Error ? err.message : "Erro ao fazer upload")
-                    } finally {
-                      setUploadingImage(false)
-                    }
-                  }} />
+                <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleImageFiles(e.target.files)} />
               </label>
             </div>
 
-            {form.imageUrl && (
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <img src={form.imageUrl} alt="Preview" className="max-h-48 w-full object-contain bg-slate-50" />
+            {uploadingImage && <p className="text-sm text-slate-500">Enviando imagem...</p>}
+
+            {form.imageUrls.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {form.imageUrls.map((imageUrl, index) => (
+                  <div key={imageUrl} className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <Image src={resolveMediaUrl(imageUrl) || imageUrl} alt={`Preview ${index + 1}`} width={240} height={128} unoptimized className="h-32 w-full object-contain" />
+                    <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {index === 0 ? "Capa" : index + 1}
+                    </div>
+                    <button type="button" onClick={() => removeImage(imageUrl)} className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-slate-500 hover:text-red-600">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>

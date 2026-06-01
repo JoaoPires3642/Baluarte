@@ -339,6 +339,7 @@ export interface Model {
   customizationTemplatePng?: string
   customizationTemplateMetadata?: string
   available?: boolean
+  active?: boolean
   stockQuantity?: number
   variants?: Variant[]
 }
@@ -510,6 +511,7 @@ export interface AdminProduct {
   price: number
   originalPrice?: number
   imageUrl?: string
+  images?: string[]
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
@@ -527,6 +529,7 @@ export interface CreateProductRequest {
   price: number
   originalPrice?: number
   imageUrl?: string
+  images?: string[]
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
@@ -541,6 +544,7 @@ export interface UpdateProductRequest {
   price: number
   originalPrice?: number
   imageUrl?: string
+  images?: string[]
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null

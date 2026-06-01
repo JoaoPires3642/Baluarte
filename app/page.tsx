@@ -56,7 +56,7 @@ export default async function Home() {
     }
   })
 
-  const displayProducts = products
+  const displayProducts = products.filter(product => product.active !== false && product.available !== false)
   const displayTeams = teams.slice(0, 8)
   const categoryIcons = [Trophy, Globe2, Sparkles, Shirt]
 

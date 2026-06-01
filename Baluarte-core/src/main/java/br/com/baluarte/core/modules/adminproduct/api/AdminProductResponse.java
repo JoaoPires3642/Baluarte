@@ -13,6 +13,7 @@ public record AdminProductResponse(
     BigDecimal price,
     BigDecimal originalPrice,
     String imageUrl,
+    List<String> images,
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,

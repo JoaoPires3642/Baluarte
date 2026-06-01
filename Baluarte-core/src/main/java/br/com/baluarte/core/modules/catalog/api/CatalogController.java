@@ -137,7 +137,7 @@ public class CatalogController {
             product.price(),
             product.originalPrice(),
             product.imageUrl(),
-            List.of(product.imageUrl()),
+            product.images(),
             product.customizationEnabled(),
             product.customizationTemplatePng(),
             product.customizationTemplateMetadata(),
