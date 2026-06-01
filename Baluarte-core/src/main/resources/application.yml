@@ -45,6 +45,19 @@ app:
     dev-bypass-key: ${APP_AUTH_DEV_BYPASS_KEY:}
   media:
     upload-dir: ${APP_MEDIA_UPLOAD_DIR:uploads}
+  shipping:
+    active-provider: ${APP_SHIPPING_PROVIDER:mock}
+    origin-cep: ${APP_SHIPPING_ORIGIN_CEP:01153000}
+    package:
+      product-weight-kg: ${APP_SHIPPING_PACKAGE_PRODUCT_WEIGHT_KG:0.3}
+      product-height-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_HEIGHT_CM:4}
+      product-width-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_WIDTH_CM:25}
+      product-length-cm: ${APP_SHIPPING_PACKAGE_PRODUCT_LENGTH_CM:35}
+    superfrete:
+      base-url: ${APP_SHIPPING_SUPERFRETE_BASE_URL:https://sandbox.superfrete.com}
+      token: ${APP_SHIPPING_SUPERFRETE_TOKEN:}
+      services: ${APP_SHIPPING_SUPERFRETE_SERVICES:1,2,17}
+      user-agent: ${APP_SHIPPING_SUPERFRETE_USER_AGENT:Baluarte/1.0 (contato@baluarte.com)}
   payment:
     active-provider: ${APP_PAYMENT_PROVIDER:mock}
     mercadopago:
