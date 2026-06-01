@@ -250,6 +250,30 @@ export async function createShippingLabel(orderId: string) {
   })
 }
 
+export async function fetchAdminShippingSettings() {
+  const url = typeof window === "undefined" ? `${API_BASE_URL}/admin/shipping-settings` : "/api/admin/admin/shipping-settings"
+  const response = await fetch(url, { cache: "no-store" })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new Error(body?.error?.message || "Erro ao carregar configuracoes de frete")
+  }
+  return response.json() as Promise<{ data: AdminShippingSettings }>
+}
+
+export async function updateAdminShippingSettings(settings: AdminShippingSettingsUpdate) {
+  const response = await fetch("/api/admin/admin/shipping-settings", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const details = body?.error?.details?.length ? ": " + body.error.details.join("; ") : ""
+    throw new Error((body?.error?.message || "Erro ao salvar configuracoes de frete") + details)
+  }
+  return response.json() as Promise<{ data: AdminShippingSettings }>
+}
+
 // Image Upload
 export async function uploadImage(
   file: File,
@@ -432,6 +456,36 @@ export interface Order {
     pixQrCodeBase64?: string
     pixCopyPasteCode?: string
   }
+}
+
+export interface AdminShippingSettings {
+  provider: string
+  originCep: string
+  packageWeightKg: number
+  packageHeightCm: number
+  packageWidthCm: number
+  packageLengthCm: number
+  superfreteBaseUrl: string
+  superfreteTokenConfigured: boolean
+  superfreteServices: string
+  superfreteUserAgent: string
+  superfreteCartPath: string
+  superfreteCheckoutPath: string
+  superfreteLabelLinkPath: string
+  senderName: string
+  senderPhone: string
+  senderEmail: string
+  senderDocument: string
+  senderStreet: string
+  senderNumber: string
+  senderComplement: string
+  senderDistrict: string
+  senderCity: string
+  senderState: string
+}
+
+export type AdminShippingSettingsUpdate = AdminShippingSettings & {
+  superfreteToken?: string
 }
 
 export interface AuthSession {

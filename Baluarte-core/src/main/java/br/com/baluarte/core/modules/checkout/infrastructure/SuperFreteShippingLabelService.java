@@ -36,6 +36,7 @@ public class SuperFreteShippingLabelService {
     private final int productHeightCm;
     private final int productWidthCm;
     private final int productLengthCm;
+    private final AdminShippingSettingsService settingsService;
 
     public SuperFreteShippingLabelService(
         @Value("${app.shipping.superfrete.base-url:https://sandbox.superfrete.com}") String baseUrl,
@@ -58,7 +59,8 @@ public class SuperFreteShippingLabelService {
         @Value("${app.shipping.package.product-weight-kg:0.3}") double productWeightKg,
         @Value("${app.shipping.package.product-height-cm:4}") int productHeightCm,
         @Value("${app.shipping.package.product-width-cm:25}") int productWidthCm,
-        @Value("${app.shipping.package.product-length-cm:35}") int productLengthCm
+        @Value("${app.shipping.package.product-length-cm:35}") int productLengthCm,
+        AdminShippingSettingsService settingsService
     ) {
         this.token = token;
         this.originCep = originCep;
@@ -80,6 +82,7 @@ public class SuperFreteShippingLabelService {
         this.productHeightCm = productHeightCm;
         this.productWidthCm = productWidthCm;
         this.productLengthCm = productLengthCm;
+        this.settingsService = settingsService;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(30000);
@@ -87,15 +90,16 @@ public class SuperFreteShippingLabelService {
     }
 
     public ShippingLabelResult createLabel(CheckoutOrder order) {
-        ensureConfigured();
+        AdminShippingSettingsValues settings = settingsService.get();
+        ensureConfigured(settings);
         String serviceId = order.getShippingServiceId() != null ? order.getShippingServiceId() : "1";
-        Map<String, Object> cartResponse = post(cartPath, cartBody(order, serviceId));
+        Map<String, Object> cartResponse = post(settings.superfreteCartPath(), cartBody(order, serviceId, settings), settings);
         String labelId = firstValue(cartResponse, "id", "order_id", "protocol", "uuid");
         if (labelId == null || labelId.isBlank()) {
             throw new IllegalStateException("SuperFrete cart response missing label id");
         }
 
-        Map<String, Object> checkoutResponse = post(checkoutPath, Map.of("orders", List.of(labelId)));
+        Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of("orders", List.of(labelId)), settings);
         String checkoutLabelId = firstValue(checkoutResponse, "id", "order_id", "protocol", "uuid");
         if (checkoutLabelId != null && !checkoutLabelId.isBlank()) {
             labelId = checkoutLabelId;
@@ -103,7 +107,7 @@ public class SuperFreteShippingLabelService {
 
         String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
         if (labelUrl == null || labelUrl.isBlank()) {
-            Map<String, Object> linkResponse = get(labelLinkPath.replace("{id}", labelId));
+            Map<String, Object> linkResponse = get(settings.superfreteLabelLinkPath().replace("{id}", labelId), settings);
             labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
         }
 
@@ -111,13 +115,15 @@ public class SuperFreteShippingLabelService {
         return new ShippingLabelResult(labelId, labelUrl, trackingCode);
     }
 
-    private Map<String, Object> cartBody(CheckoutOrder order, String serviceId) {
+    private Map<String, Object> cartBody(CheckoutOrder order, String serviceId, AdminShippingSettingsValues settings) {
         int quantity = order.getItems() == null ? 1 : order.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
         BigDecimal insuranceValue = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
+        double weightKg = settings.packageWeightKg().doubleValue();
         return Map.of(
             "service", Integer.parseInt(serviceId),
-            "from", address(senderName, senderPhone, senderEmail, senderDocument, senderStreet, senderNumber,
-                senderComplement, senderDistrict, senderCity, senderState, originCep),
+            "from", address(settings.senderName(), settings.senderPhone(), settings.senderEmail(), settings.senderDocument(),
+                settings.senderStreet(), settings.senderNumber(), settings.senderComplement(), settings.senderDistrict(),
+                settings.senderCity(), settings.senderState(), settings.originCep()),
             "to", address(order.getRecipientName(), "", order.getPayerEmail(), order.getPayerDocumentNumber(),
                 order.getShippingStreet(), order.getShippingNumber(), order.getShippingComplement(),
                 order.getShippingNeighborhood(), order.getShippingCity(), order.getShippingState(), order.getShippingCep()),
@@ -125,16 +131,16 @@ public class SuperFreteShippingLabelService {
                 "name", "Pedido Baluarte #" + order.getOrderId(),
                 "quantity", Math.max(quantity, 1),
                 "unitary_value", insuranceValue,
-                "weight", productWeightKg,
-                "height", productHeightCm,
-                "width", productWidthCm,
-                "length", productLengthCm
+                "weight", weightKg,
+                "height", settings.packageHeightCm(),
+                "width", settings.packageWidthCm(),
+                "length", settings.packageLengthCm()
             )),
             "volumes", List.of(Map.of(
-                "weight", productWeightKg * Math.max(quantity, 1),
-                "height", productHeightCm,
-                "width", productWidthCm,
-                "length", productLengthCm
+                "weight", weightKg * Math.max(quantity, 1),
+                "height", settings.packageHeightCm(),
+                "width", settings.packageWidthCm(),
+                "length", settings.packageLengthCm()
             )),
             "options", Map.of(
                 "own_hand", false,
@@ -162,11 +168,11 @@ public class SuperFreteShippingLabelService {
         );
     }
 
-    private Map<String, Object> post(String path, Map<String, Object> body) {
-        return normalizeResponse(restClient.post()
+    private Map<String, Object> post(String path, Map<String, Object> body, AdminShippingSettingsValues settings) {
+        return normalizeResponse(restClient(settings).post()
             .uri(path)
-            .header("Authorization", "Bearer " + token)
-            .header("User-Agent", userAgent)
+            .header("Authorization", "Bearer " + settings.superfreteToken())
+            .header("User-Agent", settings.superfreteUserAgent())
             .header("accept", "application/json")
             .header("content-type", "application/json")
             .body(body)
@@ -177,11 +183,11 @@ public class SuperFreteShippingLabelService {
             .body(Object.class));
     }
 
-    private Map<String, Object> get(String path) {
-        return normalizeResponse(restClient.get()
+    private Map<String, Object> get(String path, AdminShippingSettingsValues settings) {
+        return normalizeResponse(restClient(settings).get()
             .uri(path)
-            .header("Authorization", "Bearer " + token)
-            .header("User-Agent", userAgent)
+            .header("Authorization", "Bearer " + settings.superfreteToken())
+            .header("User-Agent", settings.superfreteUserAgent())
             .header("accept", "application/json")
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
@@ -224,10 +230,17 @@ public class SuperFreteShippingLabelService {
         return Map.of();
     }
 
-    private void ensureConfigured() {
-        if (token == null || token.isBlank()) throw new IllegalStateException("SuperFrete token not configured");
-        if (senderName.isBlank() || senderStreet.isBlank() || senderNumber.isBlank() || senderDistrict.isBlank()
-            || senderCity.isBlank() || senderState.isBlank()) {
+    private RestClient restClient(AdminShippingSettingsValues settings) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(30000);
+        return RestClient.builder().requestFactory(factory).baseUrl(settings.superfreteBaseUrl()).build();
+    }
+
+    private void ensureConfigured(AdminShippingSettingsValues settings) {
+        if (settings.superfreteToken() == null || settings.superfreteToken().isBlank()) throw new IllegalStateException("SuperFrete token not configured");
+        if (settings.senderName().isBlank() || settings.senderStreet().isBlank() || settings.senderNumber().isBlank()
+            || settings.senderDistrict().isBlank() || settings.senderCity().isBlank() || settings.senderState().isBlank()) {
             throw new IllegalStateException("SuperFrete sender address not configured");
         }
     }

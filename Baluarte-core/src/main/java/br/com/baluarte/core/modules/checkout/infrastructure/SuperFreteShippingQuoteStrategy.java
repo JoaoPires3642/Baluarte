@@ -24,6 +24,7 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
     private final int productHeightCm;
     private final int productWidthCm;
     private final int productLengthCm;
+    private final AdminShippingSettingsService settingsService;
 
     public SuperFreteShippingQuoteStrategy(
         @Value("${app.shipping.superfrete.base-url:https://sandbox.superfrete.com}") String baseUrl,
@@ -34,7 +35,8 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
         @Value("${app.shipping.package.product-weight-kg:0.3}") double productWeightKg,
         @Value("${app.shipping.package.product-height-cm:4}") int productHeightCm,
         @Value("${app.shipping.package.product-width-cm:25}") int productWidthCm,
-        @Value("${app.shipping.package.product-length-cm:35}") int productLengthCm
+        @Value("${app.shipping.package.product-length-cm:35}") int productLengthCm,
+        AdminShippingSettingsService settingsService
     ) {
         this.token = token;
         this.originCep = originCep;
@@ -44,6 +46,7 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
         this.productHeightCm = productHeightCm;
         this.productWidthCm = productWidthCm;
         this.productLengthCm = productLengthCm;
+        this.settingsService = settingsService;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(30000);
@@ -60,14 +63,15 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
 
     @Override
     public List<ShippingQuoteOption> quote(ShippingQuoteCommand command) {
-        if (token == null || token.isBlank()) {
+        AdminShippingSettingsValues settings = settingsService.get();
+        if (settings.superfreteToken() == null || settings.superfreteToken().isBlank()) {
             throw new IllegalStateException("SuperFrete token not configured");
         }
 
         Map<String, Object> body = Map.of(
-            "from", Map.of("postal_code", onlyDigits(originCep)),
+            "from", Map.of("postal_code", onlyDigits(settings.originCep())),
             "to", Map.of("postal_code", onlyDigits(command.cep())),
-            "services", services,
+            "services", settings.superfreteServices(),
             "options", Map.of(
                 "own_hand", false,
                 "receipt", false,
@@ -76,17 +80,17 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
             ),
             "products", List.of(Map.of(
                 "quantity", command.itemsCount(),
-                "height", productHeightCm,
-                "length", productLengthCm,
-                "width", productWidthCm,
-                "weight", productWeightKg
+                "height", settings.packageHeightCm(),
+                "length", settings.packageLengthCm(),
+                "width", settings.packageWidthCm(),
+                "weight", settings.packageWeightKg()
             ))
         );
 
-        List<Map<String, Object>> response = restClient.post()
+        List<Map<String, Object>> response = restClient(settings).post()
             .uri("/api/v0/calculator")
-            .header("Authorization", "Bearer " + token)
-            .header("User-Agent", userAgent)
+            .header("Authorization", "Bearer " + settings.superfreteToken())
+            .header("User-Agent", settings.superfreteUserAgent())
             .header("accept", "application/json")
             .header("content-type", "application/json")
             .body(body)
@@ -113,6 +117,13 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
 
     private Number numberValue(Object value) {
         return value instanceof Number number ? number : new BigDecimal(String.valueOf(value));
+    }
+
+    private RestClient restClient(AdminShippingSettingsValues settings) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000);
+        factory.setReadTimeout(30000);
+        return RestClient.builder().requestFactory(factory).baseUrl(settings.superfreteBaseUrl()).build();
     }
 
     private String onlyDigits(String value) {

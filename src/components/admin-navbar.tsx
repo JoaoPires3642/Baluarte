@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown, Truck } from "lucide-react"
 import { useState } from "react"
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/produtos", label: "Produtos", icon: Package },
   { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
+  { href: "/admin/frete", label: "Frete", icon: Truck },
   { href: "/admin/categorias", label: "Categorias", icon: FolderTree },
   { href: "/admin/times", label: "Times", icon: Users },
 ]
