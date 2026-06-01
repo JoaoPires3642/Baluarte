@@ -3,6 +3,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { isValidCpf } from "@/lib/cpf"
 
 type CardTokenResult = {
   token: string
@@ -84,8 +85,8 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
       return null
     }
 
-    if (cpf.replace(/\D/g, "").length !== 11) {
-      setCardError("CPF precisa ter 11 digitos")
+    if (!isValidCpf(cpf)) {
+      setCardError("Informe um CPF valido")
       return null
     }
 

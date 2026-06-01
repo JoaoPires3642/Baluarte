@@ -43,6 +43,8 @@ public class CreatePaymentUseCase {
 
     @Transactional
     public CreatePaymentResponse execute(CreatePaymentRequest request, String provider, String clerkUserId) {
+        validateCpf(request.payer().identification().type(), request.payer().identification().number());
+
         Optional<PaymentTransaction> existingTx = 
             transactionRepository.findByIdempotencyKey(request.idempotencyKey());
         
@@ -181,6 +183,29 @@ public class CreatePaymentUseCase {
         } catch (IllegalArgumentException exception) {
             throw new PaymentValidationException("Produto invalido");
         }
+    }
+
+    private void validateCpf(String type, String number) {
+        if (!"CPF".equalsIgnoreCase(type)) return;
+        String cpf = number == null ? "" : number.replaceAll("\\D", "");
+        if (cpf.length() != 11 || cpf.chars().distinct().count() == 1) {
+            throw new PaymentValidationException("CPF invalido");
+        }
+
+        int firstDigit = calculateCpfDigit(cpf.substring(0, 9), 10);
+        int secondDigit = calculateCpfDigit(cpf.substring(0, 10), 11);
+        if (Character.digit(cpf.charAt(9), 10) != firstDigit || Character.digit(cpf.charAt(10), 10) != secondDigit) {
+            throw new PaymentValidationException("CPF invalido");
+        }
+    }
+
+    private int calculateCpfDigit(String numbers, int startWeight) {
+        int sum = 0;
+        for (int i = 0; i < numbers.length(); i++) {
+            sum += Character.digit(numbers.charAt(i), 10) * (startWeight - i);
+        }
+        int remainder = (sum * 10) % 11;
+        return remainder == 10 ? 0 : remainder;
     }
 
     private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice) {}

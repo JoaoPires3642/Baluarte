@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { PaymentPixModal } from "@/components/payment-pix-modal"
 import { PaymentCardForm, type PaymentCardFormRef } from "@/components/payment-card-form"
+import { isValidCpf, onlyCpfDigits } from "@/lib/cpf"
 
 type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
@@ -294,8 +295,8 @@ export default function CheckoutPage() {
       return
     }
 
-    if (payer.cpf.length !== 11) {
-      showToast("CPF precisa ter 11 dígitos", "error")
+    if (!isValidCpf(payer.cpf)) {
+      showToast("Informe um CPF válido", "error")
       return
     }
 
@@ -683,7 +684,7 @@ export default function CheckoutPage() {
                   <Input
                     placeholder="000.000.000-00"
                     value={formatCpf(payer.cpf)}
-                    onChange={(e) => setPayer({ ...payer, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+                    onChange={(e) => setPayer({ ...payer, cpf: onlyCpfDigits(e.target.value) })}
                   />
                 </div>
 
