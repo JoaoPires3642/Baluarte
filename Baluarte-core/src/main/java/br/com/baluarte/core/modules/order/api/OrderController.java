@@ -114,7 +114,8 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Etiqueta so pode ser gerada para pedido pago");
         }
 
-        if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
+        if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()
+            || order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank()) {
             try {
                 var label = shippingLabelService.createLabel(order);
                 order.setShippingProvider("superfrete");

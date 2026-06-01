@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ExternalLink, PackageCheck, PackagePlus } from "lucide-react"
+import { ExternalLink, PackagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createShippingLabel } from "@/lib/api"
 
@@ -45,8 +45,8 @@ export function CreateShippingLabel({
             </a>
           </Button>
         ) : labelId ? (
-          <Button size="sm" variant="outline" disabled>
-            <PackageCheck className="mr-2 h-4 w-4" /> Etiqueta criada
+          <Button size="sm" onClick={handleCreate} disabled={!canCreate || loading}>
+            <PackagePlus className="mr-2 h-4 w-4" /> {loading ? "Emitindo..." : "Emitir etiqueta"}
           </Button>
         ) : (
           <Button size="sm" onClick={handleCreate} disabled={!canCreate || loading}>
@@ -55,7 +55,7 @@ export function CreateShippingLabel({
         )}
       </div>
       {!canCreate && !labelUrl && !labelId && <p className="text-xs text-slate-500">Disponível após pagamento aprovado.</p>}
-      {labelId && !labelUrl && <p className="text-xs text-slate-500">Etiqueta criada no carrinho da SuperFrete. Emita pelo painel da SuperFrete.</p>}
+      {labelId && !labelUrl && <p className="text-xs text-slate-500">Etiqueta ja criada na SuperFrete. Clique para emitir e buscar o link de impressao.</p>}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   )

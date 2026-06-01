@@ -92,15 +92,30 @@ public class SuperFreteShippingLabelService {
     public ShippingLabelResult createLabel(CheckoutOrder order) {
         AdminShippingSettingsValues settings = settingsService.get();
         ensureConfigured(settings);
+        ensureValidRecipientDocument(order);
         String serviceId = order.getShippingServiceId() != null ? order.getShippingServiceId() : "1";
-        Map<String, Object> cartResponse = post(settings.superfreteCartPath(), cartBody(order, serviceId, settings), settings);
-        String labelId = firstValue(cartResponse, "id", "order_id", "protocol", "uuid");
+        String labelId = order.getShippingLabelId();
+        if (labelId == null || labelId.isBlank()) {
+            Map<String, Object> cartResponse = post(settings.superfreteCartPath(), cartBody(order, serviceId, settings), settings);
+            labelId = firstValue(cartResponse, "id", "order_id", "protocol", "uuid");
+        }
         if (labelId == null || labelId.isBlank()) {
             throw new IllegalStateException("SuperFrete cart response missing label id");
         }
 
-        String labelUrl = firstValue(cartResponse, "label_url", "print_url", "url", "link");
-        String trackingCode = firstValue(cartResponse, "tracking_code", "tracking", "code", "authorization_code");
+        Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of("orders", List.of(labelId)), settings);
+        String checkoutLabelId = firstValue(checkoutResponse, "id", "order_id", "protocol", "uuid");
+        if (checkoutLabelId != null && !checkoutLabelId.isBlank()) {
+            labelId = checkoutLabelId;
+        }
+
+        String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
+        if (labelUrl == null || labelUrl.isBlank()) {
+            Map<String, Object> linkResponse = get(settings.superfreteLabelLinkPath().replace("{id}", labelId), settings);
+            labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
+        }
+
+        String trackingCode = firstValue(checkoutResponse, "tracking_code", "tracking", "code", "authorization_code");
         return new ShippingLabelResult(labelId, labelUrl, trackingCode);
     }
 
@@ -232,6 +247,28 @@ public class SuperFreteShippingLabelService {
             || settings.senderDistrict().isBlank() || settings.senderCity().isBlank() || settings.senderState().isBlank()) {
             throw new IllegalStateException("SuperFrete sender address not configured");
         }
+    }
+
+    private void ensureValidRecipientDocument(CheckoutOrder order) {
+        String document = onlyDigits(order.getPayerDocumentNumber());
+        if (document.length() == 11 && isValidCpf(document)) return;
+        throw new IllegalStateException("CPF do destinatario invalido. Corrija o CPF do pedido antes de gerar a etiqueta.");
+    }
+
+    private boolean isValidCpf(String cpf) {
+        if (cpf.length() != 11 || cpf.chars().distinct().count() == 1) return false;
+        int firstDigit = calculateCpfDigit(cpf.substring(0, 9), 10);
+        int secondDigit = calculateCpfDigit(cpf.substring(0, 10), 11);
+        return Character.digit(cpf.charAt(9), 10) == firstDigit && Character.digit(cpf.charAt(10), 10) == secondDigit;
+    }
+
+    private int calculateCpfDigit(String numbers, int startWeight) {
+        int sum = 0;
+        for (int i = 0; i < numbers.length(); i++) {
+            sum += Character.digit(numbers.charAt(i), 10) * (startWeight - i);
+        }
+        int remainder = (sum * 10) % 11;
+        return remainder == 10 ? 0 : remainder;
     }
 
     private String value(String value) {
