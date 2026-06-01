@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "edge"
@@ -51,6 +51,11 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
 
   if (!resolvedEmail && token) {
     resolvedEmail = extractEmailFromJwt(token)
+  }
+
+  if (!resolvedEmail && resolvedUserId) {
+    const user = await currentUser().catch(() => null)
+    resolvedEmail = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() || null
   }
 
   const headers: Record<string, string> = {
