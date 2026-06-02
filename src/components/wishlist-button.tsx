@@ -24,7 +24,7 @@ export function WishlistButton({ product }: WishlistButtonProps) {
         id: product.id,
         name: product.modelName,
         price: product.price,
-        image: product.imageUrl,
+        image: product.images?.[0] || product.thumbnailUrl || product.imageUrl,
       })
       showToast("Adicionado aos favoritos!", "success")
     }

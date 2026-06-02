@@ -1,11 +1,13 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Heart, Shirt, Trash2 } from "lucide-react"
 import { useWishlist } from "@/context/wishlist-context"
 import { useToast } from "@/context/toast-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { resolveMediaUrl } from "@/lib/media"
 
 export default function WishlistPage() {
   const { items, removeItem } = useWishlist()
@@ -41,8 +43,12 @@ export default function WishlistPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => (
           <Card key={item.id} className="overflow-hidden">
-            <div className="aspect-square bg-muted flex items-center justify-center">
-              <Shirt className="h-12 w-12 text-[#0f274d]" />
+            <div className="relative aspect-square bg-muted flex items-center justify-center">
+              {resolveMediaUrl(item.image) ? (
+                <Image src={resolveMediaUrl(item.image) as string} alt={item.name} fill unoptimized className="object-cover" />
+              ) : (
+                <Shirt className="h-12 w-12 text-[#0f274d]" />
+              )}
             </div>
             <CardContent className="p-4">
               <h3 className="font-semibold line-clamp-2">{item.name}</h3>
