@@ -1,4 +1,6 @@
-import { Team, Product, Order, Coupon } from "./types";
+import { Team, Product, Order, Coupon, Size } from "./types";
+
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
 
 export const teams: Team[] = [
   // Nacionais - Série A
@@ -45,7 +47,7 @@ export const products: Product[] = [
     customizationTemplatePng: "https://flamengo.vtexassets.com/arquivos/ids/177009-800-450?v=638853314009100000&width=800&height=450&aspect=true",
     teamId: "flamengo",
     team: teams.find(t => t.id === "flamengo")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
     featured: true,
   },
@@ -57,7 +59,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "flamengo",
     team: teams.find(t => t.id === "flamengo")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // Palmeiras
@@ -70,7 +72,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "palmeiras",
     team: teams.find(t => t.id === "palmeiras")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
     featured: true,
   },
@@ -83,7 +85,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "corinthians",
     team: teams.find(t => t.id === "corinthians")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // São Paulo
@@ -95,7 +97,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "sao-paulo",
     team: teams.find(t => t.id === "sao-paulo")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // Real Madrid
@@ -108,7 +110,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "real-madrid",
     team: teams.find(t => t.id === "real-madrid")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
     featured: true,
   },
@@ -121,7 +123,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "barcelona",
     team: teams.find(t => t.id === "barcelona")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // Manchester City
@@ -133,7 +135,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "manchester-city",
     team: teams.find(t => t.id === "manchester-city")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // Brasil
@@ -146,7 +148,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "brasil",
     team: teams.find(t => t.id === "brasil")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
     featured: true,
   },
@@ -159,7 +161,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "argentina",
     team: teams.find(t => t.id === "argentina")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
   // França
@@ -171,7 +173,7 @@ export const products: Product[] = [
     image: "https://images.unsplash.com/photo-1580089595767-98745d7025c5?w=400&h=500&fit=crop",
     teamId: "franca",
     team: teams.find(t => t.id === "franca")!,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     inStock: true,
   },
 ];

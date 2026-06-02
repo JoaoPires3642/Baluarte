@@ -1,7 +1,21 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import { CheckoutScreen } from "../CheckoutScreen";
-import type { Address } from "../../../lib/types";
+import type { Address, Size } from "../../../lib/types";
+
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
+
+const stockBySize = (overrides: Partial<Record<Size, number>> = {}): Record<Size, number> => ({
+  P: 0,
+  M: 0,
+  G: 0,
+  GG: 0,
+  G1: 0,
+  G2: 0,
+  G3: 0,
+  G4: 0,
+  ...overrides
+});
 
 const guestAddress: Address = {
   cep: "01001-000",
@@ -57,8 +71,8 @@ describe("CheckoutScreen", () => {
                 logo: "https://example.com/logo.png",
                 category: "nacionais"
               },
-              sizes: ["P", "M", "G", "GG"],
-              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              sizes: PRODUCT_SIZES,
+              stockBySize: stockBySize({ P: 1, M: 1, G: 1, GG: 1 }),
               inStock: true
             },
             size: "M",
@@ -501,8 +515,8 @@ describe("CheckoutScreen", () => {
                 logo: "https://example.com/logo.png",
                 category: "nacionais"
               },
-              sizes: ["P", "M", "G", "GG"],
-              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              sizes: PRODUCT_SIZES,
+              stockBySize: stockBySize({ P: 1, M: 1, G: 1, GG: 1 }),
               inStock: true
             },
             size: "M",
@@ -553,8 +567,8 @@ describe("CheckoutScreen", () => {
                 logo: "https://example.com/logo.png",
                 category: "nacionais"
               },
-              sizes: ["P", "M", "G", "GG"],
-              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              sizes: PRODUCT_SIZES,
+              stockBySize: stockBySize({ P: 1, M: 1, G: 1, GG: 1 }),
               inStock: true
             },
             size: "M",
@@ -641,8 +655,8 @@ describe("CheckoutScreen", () => {
                 logo: "https://example.com/logo.png",
                 category: "nacionais"
               },
-              sizes: ["P", "M", "G", "GG"],
-              stockBySize: { P: 1, M: 1, G: 1, GG: 1 },
+              sizes: PRODUCT_SIZES,
+              stockBySize: stockBySize({ P: 1, M: 1, G: 1, GG: 1 }),
               inStock: true
             },
             size: "M",

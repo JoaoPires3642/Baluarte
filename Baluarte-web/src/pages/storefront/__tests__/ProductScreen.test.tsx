@@ -1,7 +1,21 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import { ProductScreen } from "../ProductScreen";
-import type { Product } from "../../../lib/types";
+import type { Product, Size } from "../../../lib/types";
+
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
+
+const stockBySize = (overrides: Partial<Record<Size, number>> = {}): Record<Size, number> => ({
+  P: 0,
+  M: 0,
+  G: 0,
+  GG: 0,
+  G1: 0,
+  G2: 0,
+  G3: 0,
+  G4: 0,
+  ...overrides
+});
 
 function buildProduct(): Product {
   return {
@@ -18,8 +32,8 @@ function buildProduct(): Product {
       category: "nacionais",
       league: "Serie A"
     },
-    sizes: ["P", "M", "G", "GG"],
-    stockBySize: { P: 0, M: 5, G: 2, GG: 0 },
+    sizes: PRODUCT_SIZES,
+    stockBySize: stockBySize({ M: 5, G: 2 }),
     inStock: true
   };
 }

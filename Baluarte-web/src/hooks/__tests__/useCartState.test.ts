@@ -1,7 +1,21 @@
 import { act, renderHook } from "@testing-library/react-native";
 
 import { useCartState } from "../useCartState";
-import type { Product } from "../../lib/types";
+import type { Product, Size } from "../../lib/types";
+
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
+
+const stockBySize = (overrides: Partial<Record<Size, number>> = {}): Record<Size, number> => ({
+  P: 0,
+  M: 0,
+  G: 0,
+  GG: 0,
+  G1: 0,
+  G2: 0,
+  G3: 0,
+  G4: 0,
+  ...overrides
+});
 
 function buildProduct(): Product {
   return {
@@ -20,8 +34,8 @@ function buildProduct(): Product {
     },
     customizationEnabled: true,
     customizationTemplatePng: "https://example.com/templates/flamengo-home.png",
-    sizes: ["P", "M", "G", "GG"],
-    stockBySize: { P: 0, M: 2, G: 0, GG: 0 },
+    sizes: PRODUCT_SIZES,
+    stockBySize: stockBySize({ M: 2 }),
     inStock: true
   };
 }
@@ -37,7 +51,7 @@ describe("useCartState", () => {
 
     expect(result.current.cartItems).toHaveLength(1);
 
-    product.stockBySize = { P: 0, M: 0, G: 0, GG: 0 };
+    product.stockBySize = stockBySize();
 
     act(() => {
       result.current.updateCartQuantity(product.id, "M", 1);

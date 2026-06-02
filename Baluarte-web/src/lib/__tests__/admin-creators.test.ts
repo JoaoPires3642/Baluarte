@@ -1,5 +1,17 @@
 import { createAdminProduct } from "../admin-creators";
-import type { Team } from "../types";
+import type { Size, Team } from "../types";
+
+const stockBySize = (overrides: Partial<Record<Size, number>> = {}): Record<Size, number> => ({
+  P: 0,
+  M: 0,
+  G: 0,
+  GG: 0,
+  G1: 0,
+  G2: 0,
+  G3: 0,
+  G4: 0,
+  ...overrides
+});
 
 const team: Team = {
   id: "flamengo",
@@ -17,7 +29,7 @@ describe("createAdminProduct", () => {
       299.9,
       ["https://example.com/product.jpg"],
       team,
-      { P: 1, M: 2, G: 3, GG: 4 },
+      stockBySize({ P: 1, M: 2, G: 3, GG: 4 }),
       undefined,
       true,
       "https://example.com/templates/flamengo-home.png"
@@ -34,10 +46,10 @@ describe("createAdminProduct", () => {
       299.9,
       ["https://example.com/product.jpg"],
       team,
-      { P: 0, M: 2, G: 3, GG: 0 }
+      stockBySize({ M: 2, G: 3 })
     );
 
-    expect(product.stockBySize).toEqual({ P: 0, M: 2, G: 3, GG: 0 });
+    expect(product.stockBySize).toEqual(stockBySize({ M: 2, G: 3 }));
     expect(product.stockQuantity).toBe(5);
     expect(product.inStock).toBe(true);
   });
@@ -49,7 +61,7 @@ describe("createAdminProduct", () => {
       299.9,
       ["https://example.com/product.jpg"],
       team,
-      { P: 0, M: 0, G: 0, GG: 0 }
+      stockBySize()
     );
 
     expect(product.stockQuantity).toBe(0);
@@ -63,7 +75,7 @@ describe("createAdminProduct", () => {
       299.9,
       ["https://example.com/product.jpg"],
       team,
-      { P: 1, M: 2, G: 3, GG: 4 }
+      stockBySize({ P: 1, M: 2, G: 3, GG: 4 })
     );
 
     expect(product.customizationEnabled).toBe(false);

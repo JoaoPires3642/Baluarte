@@ -15,7 +15,21 @@ import {
 } from "../AppRouteContent";
 import * as clerkClient from "../../lib/clerkClient";
 import type { AppState } from "../../hooks/useAppState";
-import type { Product } from "../../lib/types";
+import type { Product, Size } from "../../lib/types";
+
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
+
+const stockBySize = (overrides: Partial<Record<Size, number>> = {}): Record<Size, number> => ({
+  P: 0,
+  M: 0,
+  G: 0,
+  GG: 0,
+  G1: 0,
+  G2: 0,
+  G3: 0,
+  G4: 0,
+  ...overrides
+});
 
 function buildProduct(teamId: string, id: string): Product {
   return {
@@ -32,8 +46,8 @@ function buildProduct(teamId: string, id: string): Product {
       category: "nacionais",
       league: "Serie A"
     },
-    sizes: ["P", "M", "G", "GG"],
-    stockBySize: { P: 1, M: 2, G: 3, GG: 4 },
+    sizes: PRODUCT_SIZES,
+    stockBySize: stockBySize({ P: 1, M: 2, G: 3, GG: 4 }),
     inStock: true
   };
 }
@@ -112,7 +126,7 @@ describe("mapHierarchyModelToProduct", () => {
 
     expect(mapped.teamId).toBe("team-a");
     expect(mapped.inStock).toBe(false);
-    expect(mapped.stockBySize).toEqual({ P: 0, M: 0, G: 0, GG: 0 });
+    expect(mapped.stockBySize).toEqual(stockBySize());
   });
 
   it("maps stock by size from api variants", () => {
@@ -145,7 +159,7 @@ describe("mapHierarchyModelToProduct", () => {
     expect(mapped.price).toBe(149);
     expect(mapped.originalPrice).toBe(299.9);
     expect(mapped.image).toBe("https://example.com/modelo.png");
-    expect(mapped.stockBySize).toEqual({ P: 10, M: 10, G: 10, GG: 10 });
+    expect(mapped.stockBySize).toEqual(stockBySize({ P: 10, M: 10, G: 10, GG: 10 }));
     expect(mapped.inStock).toBe(true);
   });
 });
@@ -279,12 +293,12 @@ describe("filterCatalogProducts", () => {
       ...buildProduct("flamengo", "fla-1"),
       name: "Camisa Flamengo I",
       originalPrice: 349.9,
-      stockBySize: { P: 0, M: 2, G: 0, GG: 0 }
+      stockBySize: stockBySize({ M: 2 })
     },
     {
       ...buildProduct("flamengo", "fla-2"),
       name: "Camisa Treino",
-      stockBySize: { P: 0, M: 0, G: 0, GG: 0 },
+      stockBySize: stockBySize(),
       inStock: false
     }
   ];

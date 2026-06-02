@@ -30,6 +30,12 @@ type AppRouteContentProps = {
   isDesktop?: boolean;
 };
 
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
+
+const emptyStockBySize = (): Record<Size, number> => Object.fromEntries(
+  PRODUCT_SIZES.map((size) => [size, 0])
+) as Record<Size, number>;
+
 type HierarchyModelShape = {
   slug: string;
   name: string;
@@ -207,7 +213,7 @@ export function mapHierarchyModelToProduct(
 ): Product {
   const localMatch = teamProducts.find((product) => product.id === model.slug);
   const primaryImage = model.images?.[0] ?? model.thumbnailUrl;
-  const variantStockBySize: Record<Size, number> = { P: 0, M: 0, G: 0, GG: 0 };
+  const variantStockBySize = emptyStockBySize();
   if (model.variants?.length) {
     model.variants.forEach((variant) => {
       variantStockBySize[variant.size] = Math.max(0, variant.stockQuantity);
@@ -255,8 +261,8 @@ export function mapHierarchyModelToProduct(
     customizationTemplateMetadata: model.customizationTemplateMetadata,
     teamId: selectedTeam.id,
     team: selectedTeam,
-    sizes: ["P", "M", "G", "GG"],
-    stockBySize: model.variants?.length ? variantStockBySize : { P: 0, M: 0, G: 0, GG: apiStockQuantity },
+    sizes: PRODUCT_SIZES,
+    stockBySize: model.variants?.length ? variantStockBySize : { ...emptyStockBySize(), GG: apiStockQuantity },
     inStock: resolvedInStock
   };
 }
