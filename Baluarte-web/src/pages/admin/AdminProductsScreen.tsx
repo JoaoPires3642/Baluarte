@@ -31,9 +31,19 @@ import { useToast } from "../../hooks/useToast";
 import { AdminBlockedScreen } from "./AdminBlockedScreen";
 import type { AdminProduct, AdminProductsScreenProps, ValidSize } from "./types";
 
-const SIZE_ORDER: ValidSize[] = ["P", "M", "G", "GG"];
+const SIZE_ORDER: ValidSize[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
 
-const defaultStock = (): Record<ValidSize, string> => ({ P: "10", M: "10", G: "10", GG: "10" });
+const defaultStock = (): Record<ValidSize, string> => Object.fromEntries(
+  SIZE_ORDER.map((size) => [size, "10"])
+) as Record<ValidSize, string>;
+
+const emptyNumericStock = (): Record<ValidSize, number> => Object.fromEntries(
+  SIZE_ORDER.map((size) => [size, 0])
+) as Record<ValidSize, number>;
+
+const emptyTextStock = (): Record<ValidSize, string> => Object.fromEntries(
+  SIZE_ORDER.map((size) => [size, "0"])
+) as Record<ValidSize, string>;
 
 type AdminProductsScreenContentProps = AdminProductsScreenProps & {
   initialDraft: ProductFormDraft;
@@ -146,7 +156,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
         acc[size] = 0;
       }
       return acc;
-    }, { P: 0, M: 0, G: 0, GG: 0 });
+    }, emptyNumericStock());
   };
 
   const resolvePathWithoutQuery = (value: string): string => {
@@ -287,7 +297,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       const variant = dto.variants.find((item) => item.size === size);
       acc[size] = variant?.stockQuantity ?? 0;
       return acc;
-    }, { P: 0, M: 0, G: 0, GG: 0 });
+    }, emptyNumericStock());
 
     return {
       id: dto.id,
@@ -404,7 +414,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       stockBySize: SIZE_ORDER.reduce<Record<ValidSize, string>>((acc, size) => {
         acc[size] = String(product.stockBySize[size] ?? 0);
         return acc;
-      }, { P: "0", M: "0", G: "0", GG: "0" }),
+      }, emptyTextStock()),
       images: product.images && product.images.length > 0 ? [...product.images] : [product.image]
     };
 
@@ -893,7 +903,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
             <Text style={styles.summaryValue}>{product.stockQuantity}</Text>
           </View>
           <View style={styles.summaryLine}>
-            <Text style={styles.summaryKey}>P/M/G/GG</Text>
+            <Text style={styles.summaryKey}>P/M/G/GG/G1/G2/G3/G4</Text>
             <Text style={styles.summaryValue}>
               {SIZE_ORDER.map((size) => `${size}:${product.stockBySize[size] ?? 0}`).join(" | ")}
             </Text>

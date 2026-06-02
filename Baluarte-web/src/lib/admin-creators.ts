@@ -2,6 +2,8 @@ import { slugifyCategory } from "./admin-categories";
 import { VALID_SIZES, slugifyEntity } from "./admin-utils";
 import type { AdminCategory, Product, Size, Team } from "./types";
 
+const PRODUCT_SIZES = [...VALID_SIZES] as Size[];
+
 type AdminProductDraft = Product & {
   stockQuantity: number;
   stockBySize: Record<Size, number>;
@@ -57,7 +59,7 @@ export const createAdminProduct = (
   const normalizedStockBySize = (Object.keys(stockBySize) as Size[]).reduce<Record<Size, number>>((acc, key) => {
     acc[key] = Math.max(0, stockBySize[key] ?? 0);
     return acc;
-  }, { P: 0, M: 0, G: 0, GG: 0 });
+  }, Object.fromEntries(PRODUCT_SIZES.map((size) => [size, 0])) as Record<Size, number>);
   const stockQuantity = Object.values(normalizedStockBySize).reduce((sum, value) => sum + value, 0);
 
   return {
@@ -72,7 +74,7 @@ export const createAdminProduct = (
     customizationTemplatePng: customizationEnabled ? customizationTemplatePng : undefined,
     teamId: selectedTeam.id,
     team: selectedTeam,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     stockBySize: normalizedStockBySize,
     inStock: stockQuantity > 0,
     stockQuantity,

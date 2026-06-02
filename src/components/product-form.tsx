@@ -22,6 +22,8 @@ type ProductFormProps = {
   product: ModelDetail
 }
 
+const DEFAULT_SIZES = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]
+
 type CustomizationMetadata = {
   maxNameLength?: number
   maxNumberLength?: number
@@ -59,7 +61,7 @@ export function ProductForm({ product }: ProductFormProps) {
   const [showMobileSizeSheet, setShowMobileSizeSheet] = useState(false)
 
   const displayProduct = product as ProductFormModel
-  const sizes = product.variants?.map((variant) => variant.size) || displayProduct.sizes || ["P", "M", "G", "GG"]
+  const sizes = product.variants?.map((variant) => variant.size) || displayProduct.sizes || DEFAULT_SIZES
   const customizationMetadata = useMemo(
     () => parseCustomizationMetadata(product.customizationTemplateMetadata),
     [product.customizationTemplateMetadata]
@@ -305,11 +307,11 @@ export function ProductForm({ product }: ProductFormProps) {
 
           {personalizationEnabled ? (
             <>
-              <div className="mt-4 hidden gap-4 lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <div className="mt-4 hidden gap-4 sm:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 {personalizationPanel}
               </div>
 
-              <div className="mt-4 rounded-[1.25rem] border border-[#e6edf6] bg-white p-4 lg:hidden">
+              <div className="mt-4 rounded-[1.25rem] border border-[#e6edf6] bg-white p-4 sm:hidden">
                 <p className="text-sm font-semibold text-[#10233f]">Personalização ativa</p>
                 <p className="mt-1 text-xs text-slate-500">Abra o editor para preencher e revisar o preview sem alongar a página.</p>
                 <Button variant="outline" className="mt-4 w-full" onClick={() => setPersonalizationMobileOpen(true)}>
@@ -318,7 +320,7 @@ export function ProductForm({ product }: ProductFormProps) {
               </div>
 
               {personalizationMobileOpen ? (
-                <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/55 backdrop-blur-sm lg:hidden">
+                <div className="fixed inset-0 z-[70] flex items-end bg-slate-950/55 backdrop-blur-sm sm:hidden">
                   <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-[2rem] bg-white p-4 shadow-2xl">
                     <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-slate-200" />
                     <div className="mb-4 flex items-start justify-between gap-4">

@@ -1,7 +1,7 @@
 import type { AdminCategory, Category, Coupon, Order, Product, Team, User } from "../../lib/types";
 import type { AuthSession } from "../../hooks/useAuthState";
 
-export type ValidSize = "P" | "M" | "G" | "GG";
+export type ValidSize = "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
 
 export type AdminProduct = Product & {
   stockQuantity: number;

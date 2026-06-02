@@ -6,7 +6,7 @@ export interface AdminCategory {
 	logo: string;
 }
 
-export type Size = "P" | "M" | "G" | "GG";
+export type Size = "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
 
 export interface Team {
 	id: string;

@@ -83,7 +83,7 @@ export interface CatalogModelDto {
   available?: boolean;
   stockQuantity?: number;
   variants?: {
-    size: "P" | "M" | "G" | "GG";
+    size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
     stockQuantity: number;
     available: boolean;
   }[];
@@ -104,7 +104,7 @@ export interface CatalogModelDetailDto {
   available?: boolean;
   stockQuantity?: number;
   variants?: {
-    size: "P" | "M" | "G" | "GG";
+    size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
     stockQuantity: number;
     available: boolean;
   }[];

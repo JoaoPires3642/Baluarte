@@ -5,7 +5,7 @@ import styles from "../../App.styles";
 import { toBrl } from "../../lib/format";
 import type { TeamScreenProps } from "./types";
 
-const SIZE_OPTIONS = ["P", "M", "G", "GG"] as const;
+const SIZE_OPTIONS = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"] as const;
 
 export function TeamScreen({
   isLoading,

@@ -14,7 +14,7 @@ type RestockActionSheetProps = {
   onClose: () => void;
 };
 
-const RESTOCK_SIZES: RestockSize[] = ["ALL", "P", "M", "G", "GG"];
+const RESTOCK_SIZES: RestockSize[] = ["ALL", "P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
 const RESTOCK_DELTAS = [1, 3, 5, 10];
 
 export function RestockActionSheet({

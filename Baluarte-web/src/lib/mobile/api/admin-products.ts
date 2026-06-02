@@ -1,13 +1,14 @@
-import type { Team } from "@/lib/types";
+import type { Size, Team } from "@/lib/types";
 import type { AdminProduct } from "@/pages/admin/types";
 
 import type { ApiAuthorizationContext } from "./contracts";
 import { ApiClient } from "./client";
 
 const defaultClient = new ApiClient();
+const PRODUCT_SIZES: Size[] = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"];
 
 export type CreateAdminProductVariantPayload = {
-  size: "P" | "M" | "G" | "GG";
+  size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
   stockQuantity: number;
 };
 
@@ -28,7 +29,7 @@ export type CreateAdminProductPayload = {
 export type UpdateAdminProductPayload = CreateAdminProductPayload;
 
 type AdminProductVariantDto = {
-  size: "P" | "M" | "G" | "GG";
+  size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
   stockQuantity: number;
   available: boolean;
 };
@@ -150,11 +151,11 @@ export function mapAdminProductDtoToAdminProduct(dto: AdminProductDto, teams: Te
     category: dto.categorySlug,
     league: undefined
   };
-  const stockBySize = (["P", "M", "G", "GG"] as const).reduce<Record<"P" | "M" | "G" | "GG", number>>((accumulator, size) => {
+  const stockBySize = PRODUCT_SIZES.reduce<Record<Size, number>>((accumulator, size) => {
     const variant = dto.variants.find((item) => item.size === size);
     accumulator[size] = variant?.stockQuantity ?? 0;
     return accumulator;
-  }, { P: 0, M: 0, G: 0, GG: 0 });
+  }, Object.fromEntries(PRODUCT_SIZES.map((size) => [size, 0])) as Record<Size, number>);
 
   return {
     id: dto.id,
@@ -162,7 +163,7 @@ export function mapAdminProductDtoToAdminProduct(dto: AdminProductDto, teams: Te
     description: dto.description,
     teamId: resolvedTeam.id,
     team: resolvedTeam,
-    sizes: ["P", "M", "G", "GG"],
+    sizes: PRODUCT_SIZES,
     price: dto.price,
     originalPrice: dto.originalPrice,
     stockBySize,

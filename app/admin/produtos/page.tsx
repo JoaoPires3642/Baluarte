@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
-const SIZES = ["P", "M", "G", "GG"]
+const SIZES = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]
 const STEPS = ["Informações", "Preço & Estoque", "Imagem"]
 
 function Dialog({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -104,7 +104,7 @@ const emptyForm: FormData = {
   teamSlug: "",
   imageUrl: "",
   imageUrls: [],
-  variants: { P: "0", M: "0", G: "0", GG: "0" },
+  variants: Object.fromEntries(SIZES.map(size => [size, "0"])),
 }
 
 function normalizeImageUrls(values: Array<string | undefined>) {
@@ -194,12 +194,9 @@ export default function AdminProductsPage() {
       teamSlug: product.teamSlug,
       imageUrl: imageUrls.join("\n"),
       imageUrls,
-      variants: {
-        P: String(product.variants.find(v => v.size === "P")?.stockQuantity ?? 0),
-        M: String(product.variants.find(v => v.size === "M")?.stockQuantity ?? 0),
-        G: String(product.variants.find(v => v.size === "G")?.stockQuantity ?? 0),
-        GG: String(product.variants.find(v => v.size === "GG")?.stockQuantity ?? 0),
-      },
+      variants: Object.fromEntries(
+        SIZES.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])
+      ),
     })
     setStep(0)
     setError("")

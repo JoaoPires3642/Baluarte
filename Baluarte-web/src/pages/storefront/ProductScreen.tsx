@@ -26,13 +26,13 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
 
   const sizeStock = useMemo(() => {
     if (!product) {
-      return { P: 0, M: 0, G: 0, GG: 0 };
+      return { P: 0, M: 0, G: 0, GG: 0, G1: 0, G2: 0, G3: 0, G4: 0 };
     }
     return product.sizes.reduce<Record<Size, number>>((acc, size) => {
       const available = product.stockBySize?.[size];
       acc[size] = Number.isFinite(available) ? Math.max(0, available as number) : 0;
       return acc;
-    }, { P: 0, M: 0, G: 0, GG: 0 });
+    }, { P: 0, M: 0, G: 0, GG: 0, G1: 0, G2: 0, G3: 0, G4: 0 });
   }, [product]);
 
   useEffect(() => {

@@ -22,7 +22,7 @@ type CatalogModelApiDto = {
   available: boolean;
   stockQuantity: number;
   variants: {
-    size: "P" | "M" | "G" | "GG";
+    size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
     stockQuantity: number;
     available: boolean;
   }[];
@@ -43,7 +43,7 @@ type CatalogModelDetailApiDto = {
   available: boolean;
   stockQuantity: number;
   variants: {
-    size: "P" | "M" | "G" | "GG";
+    size: "P" | "M" | "G" | "GG" | "G1" | "G2" | "G3" | "G4";
     stockQuantity: number;
     available: boolean;
   }[];
@@ -99,7 +99,7 @@ export async function fetchPublicModelsByTeam(teamSlug: string, client: ApiClien
         originalPrice: product.originalPrice,
         available: product.inStock,
         stockQuantity: Object.values(product.stockBySize ?? {}).reduce((sum, units) => sum + Math.max(0, units), 0),
-        variants: (product.sizes ?? ["P", "M", "G", "GG"]).map((size) => {
+        variants: (product.sizes ?? ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]).map((size) => {
           const stockQuantity = Math.max(0, product.stockBySize?.[size] ?? 0);
           return {
             size,
@@ -142,7 +142,7 @@ export async function fetchPublicModelDetail(
       throw new Error("Modelo nao encontrado");
     }
 
-    const variants = (product.sizes ?? ["P", "M", "G", "GG"]).map((size) => {
+    const variants = (product.sizes ?? ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]).map((size) => {
       const stockQuantity = Math.max(0, product.stockBySize?.[size] ?? 0);
       return {
         size,
