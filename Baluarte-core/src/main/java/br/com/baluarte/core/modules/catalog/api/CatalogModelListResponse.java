@@ -13,6 +13,7 @@ public record CatalogModelListResponse(
     BigDecimal price,
     BigDecimal originalPrice,
     String thumbnailUrl,
+    List<String> images,
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,

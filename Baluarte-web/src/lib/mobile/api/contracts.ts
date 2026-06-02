@@ -73,6 +73,7 @@ export interface CatalogModelDto {
   slug: string;
   teamSlug: string;
   thumbnailUrl: string;
+  images?: string[];
   displayOrder: number;
   price?: number;
   originalPrice?: number;
@@ -181,4 +182,3 @@ export interface PaymentResponseDto {
     copyPasteCode: string;
   };
 }
-

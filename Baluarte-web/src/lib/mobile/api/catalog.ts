@@ -13,6 +13,7 @@ type CatalogModelApiDto = {
   modelName: string;
   description?: string;
   thumbnailUrl: string;
+  images?: string[];
   price: number;
   originalPrice?: number;
   customizationEnabled?: boolean;
@@ -117,6 +118,7 @@ export async function fetchPublicModelsByTeam(teamSlug: string, client: ApiClien
     description: item.description,
     teamSlug: item.teamSlug,
     thumbnailUrl: item.thumbnailUrl,
+    images: item.images,
     displayOrder: index + 1,
     price: item.price,
     originalPrice: item.originalPrice,

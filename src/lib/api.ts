@@ -336,6 +336,7 @@ export interface Model {
   originalPrice?: number
   thumbnailUrl?: string
   imageUrl?: string
+  images?: string[]
   customizationEnabled?: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: string
@@ -345,9 +346,7 @@ export interface Model {
   variants?: Variant[]
 }
 
-export interface ModelDetail extends Model {
-  images?: string[]
-}
+export interface ModelDetail extends Model {}
 
 export interface Variant {
   size: string
@@ -361,6 +360,7 @@ export interface ProductView {
   slug: string
   teamSlug: string
   imageUrl?: string
+  images?: string[]
   displayOrder: number
   stockQuantity: number
 }

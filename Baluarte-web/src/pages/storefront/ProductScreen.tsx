@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Pressable, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { ImageStyle, StyleProp } from "react-native";
 
 import styles from "../../App.styles";
@@ -22,6 +22,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
   const [customNumberInput, setCustomNumberInput] = useState("");
   const [customNumber, setCustomNumber] = useState<string | null>(null);
   const [previewFrame, setPreviewFrame] = useState({ width: 0, height: 0 });
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const sizeStock = useMemo(() => {
     if (!product) {
@@ -42,12 +43,22 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
     setCustomNames([]);
     setCustomNumberInput("");
     setCustomNumber(null);
+    setSelectedImageIndex(0);
   }, [product?.id]);
 
   const selectedSizeStock = selectedSize ? sizeStock[selectedSize] ?? 0 : 0;
   const canPersonalize = Boolean(product?.customizationEnabled && product?.customizationTemplatePng);
   const previewName = customNames.join(" ").trim();
   const galleryImages = product?.images?.length ? product.images : product?.image ? [product.image] : [];
+  const selectedImage = galleryImages[selectedImageIndex] ?? galleryImages[0];
+
+  const goToPreviousImage = () => {
+    setSelectedImageIndex((current) => (current === 0 ? galleryImages.length - 1 : current - 1));
+  };
+
+  const goToNextImage = () => {
+    setSelectedImageIndex((current) => (current === galleryImages.length - 1 ? 0 : current + 1));
+  };
 
   if (!product) {
     return (
@@ -66,13 +77,38 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
         <Text style={styles.backLink}>Voltar para {product.team.name}</Text>
       </Pressable>
 
-      {galleryImages.map((imageUrl, index) => (
-        <Image
-          key={`${product.id}-image-${index}`}
-          source={{ uri: imageUrl }}
-          style={styles.detailImage as StyleProp<ImageStyle>}
-        />
-      ))}
+      {selectedImage ? (
+        <View style={styles.productGalleryContainer}>
+          <Image source={{ uri: selectedImage }} style={styles.detailImage as StyleProp<ImageStyle>} />
+
+          {galleryImages.length > 1 ? (
+            <>
+              <View style={styles.productGalleryBadge}>
+                <Text style={styles.productGalleryBadgeText}>{selectedImageIndex + 1}/{galleryImages.length}</Text>
+              </View>
+              <View style={styles.productGalleryControls}>
+                <Pressable style={styles.productGalleryControlButton} onPress={goToPreviousImage}>
+                  <Text style={styles.productGalleryControlText}>‹</Text>
+                </Pressable>
+                <Pressable style={styles.productGalleryControlButton} onPress={goToNextImage}>
+                  <Text style={styles.productGalleryControlText}>›</Text>
+                </Pressable>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productGalleryThumbs}>
+                {galleryImages.map((imageUrl, index) => (
+                  <Pressable
+                    key={`${product.id}-thumb-${index}`}
+                    onPress={() => setSelectedImageIndex(index)}
+                    style={[styles.productGalleryThumb, selectedImageIndex === index && styles.productGalleryThumbSelected]}
+                  >
+                    <Image source={{ uri: imageUrl }} style={styles.productGalleryThumbImage as StyleProp<ImageStyle>} />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
+        </View>
+      ) : null}
       <Text style={styles.productTeam}>{product.team.name}</Text>
       <Text style={styles.screenTitle}>{product.name}</Text>
       {product.originalPrice ? (

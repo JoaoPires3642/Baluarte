@@ -384,6 +384,69 @@ export const componentStyles = {
     borderRadius: 14,
     marginTop: 6
   },
+  productGalleryContainer: {
+    position: "relative",
+    gap: 10
+  },
+  productGalleryBadge: {
+    position: "absolute",
+    top: 16,
+    left: 12,
+    backgroundColor: "rgba(15,23,42,0.72)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  productGalleryBadgeText: {
+    color: theme.colors.white,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  productGalleryControls: {
+    position: "absolute",
+    top: 156,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  productGalleryControlButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderColor: theme.colors.border,
+    borderWidth: 1
+  },
+  productGalleryControlText: {
+    color: theme.colors.blue700,
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 34
+  },
+  productGalleryThumbs: {
+    gap: 8,
+    paddingBottom: 2
+  },
+  productGalleryThumb: {
+    width: 66,
+    height: 66,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    backgroundColor: theme.colors.surfaceMuted
+  },
+  productGalleryThumbSelected: {
+    borderColor: theme.colors.blue700,
+    borderWidth: 2
+  },
+  productGalleryThumbImage: {
+    width: "100%",
+    height: "100%"
+  },
   personalizationPreviewImage: {
     width: "100%",
     height: 240
