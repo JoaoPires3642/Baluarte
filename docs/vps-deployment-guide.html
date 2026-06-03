@@ -340,7 +340,224 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
 <span class="cmd">docker compose logs -f</span></code></pre>
 
 <!-- ============================================================ -->
-<h2>6. CI/CD com GitHub Actions</h2>
+<h2>6. Estratégia de Recursos (Multi-projeto)</h2>
+
+<p>A VPS tem <strong>4 vCPU e 8 GB RAM</strong>. Com limites de recurso por container (Docker <code>deploy.resources</code>), conseguimos rodar <strong>múltiplos projetos</strong> em uma única máquina de forma previsível, sem um projeto roubar recurso do outro.</p>
+
+<div class="info">
+  <strong>🧠 Ideia central:</strong> O PostgreSQL é compartilhado entre todos os projetos. Cada projeto backend roda em containers isolados com limites fixos de CPU/RAM. Se um projeto precisa de mais capacidade, adicionamos réplicas do container dele — horizontal scaling dentro da própria VPS.
+</div>
+
+<h3>6.1 Alocação sugerida</h3>
+
+<table>
+  <tr><th>Serviço</th><th>vCPU</th><th>RAM</th><th>Storage</th><th>Compartilhado?</th></tr>
+  <tr>
+    <td><strong>PostgreSQL</strong> (compartilhado)</td>
+    <td>1.0</td>
+    <td>2 GB</td>
+    <td>75 GB NVMe</td>
+    <td>✅ Sim — todos os projetos usam o mesmo banco</td>
+  </tr>
+  <tr>
+    <td><strong>Nginx</strong> (proxy reverso)</td>
+    <td>0.25</td>
+    <td>128 MB</td>
+    <td>-</td>
+    <td>✅ Sim — roteia cada domínio para o container certo</td>
+  </tr>
+  <tr>
+    <td><strong>Projeto A</strong> (ex: Baluarte)</td>
+    <td>0.5</td>
+    <td>512 MB</td>
+    <td>~2 GB (uploads)</td>
+    <td>❌ Cada projeto tem seu container</td>
+  </tr>
+  <tr>
+    <td><strong>Projeto B</strong></td>
+    <td>0.5</td>
+    <td>512 MB</td>
+    <td>Variável</td>
+    <td>❌ Container separado</td>
+  </tr>
+  <tr>
+    <td><strong>Projeto C</strong></td>
+    <td>0.5</td>
+    <td>512 MB</td>
+    <td>Variável</td>
+    <td>❌ Container separado</td>
+  </tr>
+  <tr>
+    <td><strong>Projeto D</strong></td>
+    <td>0.5</td>
+    <td>512 MB</td>
+    <td>Variável</td>
+    <td>❌ Container separado</td>
+  </tr>
+  <tr>
+    <td><strong>Monitoramento</strong></td>
+    <td>0.25</td>
+    <td>256 MB</td>
+    <td>-</td>
+    <td>✅ Sim</td>
+  </tr>
+  <tr>
+    <td><strong>Reserva (sobra)</strong></td>
+    <td>0.5</td>
+    <td>~1.5 GB</td>
+    <td>-</td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td><strong>Total</strong></td>
+    <td><strong>4.0</strong></td>
+    <td><strong>~6.5 GB</strong></td>
+    <td>-</td>
+    <td>-</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>💡 Por que PostgreSQL compartilhado?</strong>
+  <ul>
+    <li>Um Postgres bem configurado roda dezenas de databases sem problema</li>
+    <li>Economiza ~1-2 GB de RAM que seriam gastos com um Postgres por projeto</li>
+    <li>Backup único: um <code>pg_dump</code> salva todos os projetos de uma vez</li>
+    <li>Manutenção centralizada: atualiza só um container</li>
+    <li>Cada projeto continua isolado em seu próprio database/schema</li>
+  </ul>
+</div>
+
+<h3>6.2 docker-compose com limites de recurso</h3>
+
+<pre><code>services:
+  db:
+    image: postgres:16-alpine
+    container_name: shared-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  baluarte-core:
+    image: ghcr.io/joaopires3642/baluarte-core-native:latest
+    container_name: baluarte-core
+    restart: unless-stopped
+    pull_policy: always
+    env_file: ./baluarte/.env
+    depends_on:
+      db: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - baluarte_uploads:/var/www/uploads
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+
+volumes:
+  postgres_data:
+  baluarte_uploads:</code></pre>
+
+<div class="warning">
+  <strong>⚠️ Modo swarm vs docker compose:</strong> <code>deploy.resources</code> funciona nativamente no Docker Swarm. No Docker Compose standalone (<code>docker compose up</code>), use <code>--compatibility</code> ou defina os limites via flags da plataforma (Contabo usa Docker Engine padrão). Alternativa: use <code>docker run --cpus="0.5" --memory="512m"</code> ou um orquestrador leve como <strong>Nomad</strong> ou <strong>K3s</strong>.
+</div>
+
+<h3>6.3 Escalando horizontalmente</h3>
+
+<p>Se o Projeto Baluarte começar a precisar de mais capacidade:</p>
+
+<pre><code><span class="comment"># Em vez de aumentar os limites do container (vertical scaling),
+# adicionamos outra instância com 0.5 vCPU + load balance interno</span>
+
+  baluarte-core-2:
+    image: ghcr.io/joaopires3642/baluarte-core-native:latest
+    container_name: baluarte-core-2
+    restart: unless-stopped
+    pull_policy: always
+    env_file: ./baluarte/.env
+    depends_on:
+      db: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - baluarte_uploads:/var/www/uploads
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"</code></pre>
+
+<p>Depois configura o nginx para fazer balanceamento entre as duas instâncias:</p>
+
+<pre><code>upstream baluarte-backend {
+    server 127.0.0.1:8080;
+    server 127.0.0.1:8081;
+}
+
+server {
+    listen 443 ssl;
+    server_name api.baluarte.com.br;
+
+    location / {
+        proxy_pass http://baluarte-backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}</code></pre>
+
+<div class="info">
+  <strong>📈 Quando escalar:</strong> Com 0.5 vCPU e 512 MB RAM, um backend nativo Spring Boot aguenta dezenas de requisições simultâneas. Você só precisará de réplicas se:<br>
+  <ul>
+    <li>O site estiver recebendo picos > 100 req/s sustentados</li>
+    <li>O CPU do container ficar consistentemente > 80%</li>
+    <li>O tempo de resposta médio passar de 1s</li>
+  </ul>
+  Até lá, 0.5 vCPU é mais que suficiente para um e-commerce de pequeno-médio porte.
+</div>
+
+<h3>6.4 Exemplo completo com 3 projetos</h3>
+
+<table>
+  <tr><th>Projeto</th><th>Domínio</th><th>Container</th><th>Porta</th><th>vCPU</th><th>RAM</th></tr>
+  <tr><td>Baluarte</td><td>api.baluarte.com.br</td><td>baluarte-core</td><td>8080</td><td>0.5</td><td>512 MB</td></tr>
+  <tr><td>Projeto X</td><td>api.projetox.com.br</td><td>projetox-core</td><td>8082</td><td>0.5</td><td>512 MB</td></tr>
+  <tr><td>Projeto Y</td><td>api.projetoy.com.br</td><td>projetoy-core</td><td>8083</td><td>0.5</td><td>512 MB</td></tr>
+  <tr><td>PostgreSQL</td><td>compartilhado</td><td>shared-postgres</td><td>5432</td><td>1.0</td><td>2 GB</td></tr>
+  <tr><td>Nginx</td><td>-</td><td>-</td><td>80/443</td><td>0.25</td><td>128 MB</td></tr>
+  <tr><td><strong>Total usado</strong></td><td></td><td></td><td></td><td><strong>3.25</strong></td><td><strong>~3.7 GB</strong></td></tr>
+  <tr><td>Sobra disponível</td><td></td><td></td><td></td><td>0.75 vCPU</td><td>~4.3 GB RAM</td></tr>
+</table>
+
+<p>Ainda sobra recurso para mais projetos ou réplicas extras se precisar escalar.</p>
+
+<!-- ============================================================ -->
+<h2>7. CI/CD com GitHub Actions</h2>
 
 <p>O Build das imagens acontece no GitHub Actions. O deploy do frontend é automático via Vercel (conectado ao GitHub).</p>
 
@@ -349,7 +566,7 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   <strong>⚠️ Atenção:</strong> O build nativo do backend (GraalVM) é pesado. Enquanto roda, consome ~8GB de RAM no runner do GitHub. Se o workflow falhar com "out of memory", troque para o Dockerfile JVM (build em ~3 min, consome menos RAM, mas o container usa mais RAM em runtime).
 </div>
 
-<h3>6.1 Limites do GitHub Actions Free</h3>
+<h3>7.1 Limites do GitHub Actions Free</h3>
 
 <table>
   <tr><th>Característica</th><th>Plano Free</th></tr>
@@ -362,7 +579,7 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
 
 <p>O repositório Baluarte é <strong>público</strong>, então os builds são gratuitos e <strong>ilimitados</strong>. Não há contagem de minutos.</p>
 
-<h3>6.2 Backend — Build + Deploy</h3>
+<h3>7.2 Backend — Build + Deploy</h3>
 <p>Arquivo <code>.github/workflows/backend-deploy.yml</code>:</p>
 <pre><code>name: Backend Deploy
 
@@ -421,7 +638,7 @@ jobs:
             docker compose up -d --no-deps core
             docker image prune -f</code></pre>
 
-<h3>6.3 Frontend — Deploy automático na Vercel</h3>
+<h3>7.3 Frontend — Deploy automático na Vercel</h3>
 <p>Não precisa de workflow personalizado. A Vercel já está conectada ao GitHub:</p>
 <ol>
   <li>Push na branch <code>main</code></li>
@@ -432,7 +649,7 @@ jobs:
 
 <p>A única variável que precisa estar correta na Vercel é <code>NEXT_PUBLIC_API_BASE_URL</code> apontando para <code>https://api.seudominio.com.br/api/v1</code>.</p>
 
-<h3>6.4 Secrets do GitHub</h3>
+<h3>7.4 Secrets do GitHub</h3>
 <table>
   <tr><th>Secret</th><th>Valor</th></tr>
   <tr><td><code>VPS_HOST</code></td><td>IP da VPS</td></tr>
@@ -440,7 +657,7 @@ jobs:
   <tr><td><code>VPS_SSH_KEY</code></td><td>Chave privada SSH do usuário <code>deploy</code></td></tr>
 </table>
 
-<h3>6.5 Custos de build vs alternativas</h3>
+<h3>7.5 Custos de build vs alternativas</h3>
 
 <table>
   <tr><th>Opção</th><th>Custo</th><th>Tempo de build</th><th>Notas</th></tr>
@@ -454,9 +671,9 @@ jobs:
 </div>
 
 <!-- ============================================================ -->
-<h2>7. Banco de Dados — Backup e Prevenção</h2>
+<h2>8. Banco de Dados — Backup e Prevenção</h2>
 
-<h3>7.1 Backup automático diário</h3>
+<h3>8.1 Backup automático diário</h3>
 <pre><code><span class="cmd">nano /home/deploy/baluarte/backup.sh</span></code></pre>
 
 <pre><code>#!/bin/bash
@@ -484,20 +701,20 @@ echo "Backup concluído: baluarte_$DATE.sql.gz"</code></pre>
 
 <pre><code><span class="cmd">chmod +x /home/deploy/baluarte/backup.sh</span></code></pre>
 
-<h3>7.2 Agendar no crontab</h3>
+<h3>8.2 Agendar no crontab</h3>
 <pre><code><span class="cmd">crontab -e</span></code></pre>
 
 <pre><code><span class="comment"># Backup diário às 03:00</span>
 0 3 * * * /home/deploy/baluarte/backup.sh >> /var/log/baluarte-backup.log 2>&1</code></pre>
 
-<h3>7.3 Testar restore</h3>
+<h3>8.3 Testar restore</h3>
 <pre><code><span class="cmd">gunzip -c backups/baluarte_2026-06-03_03-00.sql.gz | docker exec -i baluarte-db psql -U baluarte -d baluarte</span></code></pre>
 
 <div class="danger">
   <strong>Teste o restore periodicamente!</strong> Um backup que não pode ser restaurado não é um backup. Faça um restore em banco de teste a cada 30 dias.
 </div>
 
-<h3>7.4 Armazenamento externo</h3>
+<h3>8.4 Armazenamento externo</h3>
 <table>
   <tr><th>Serviço</th><th>Custo</th><th>Limite grátis</th></tr>
   <tr><td>Cloudflare R2</td><td>$0.015/GB/mês</td><td>10 GB</td></tr>
@@ -508,7 +725,7 @@ echo "Backup concluído: baluarte_$DATE.sql.gz"</code></pre>
 <pre><code><span class="cmd">sudo apt install rclone</span>
 <span class="cmd">rclone config</span></code></pre>
 
-<h3>7.5 Prevenção de perda de dados</h3>
+<h3>8.5 Prevenção de perda de dados</h3>
 <ul>
   <li><strong>Snapshot Contabo:</strong> 1 incluso. Agende semanal via painel.</li>
   <li><strong>RPO:</strong> Máximo 24 horas (backup diário).</li>
@@ -518,9 +735,9 @@ echo "Backup concluído: baluarte_$DATE.sql.gz"</code></pre>
 </ul>
 
 <!-- ============================================================ -->
-<h2>8. Monitoramento e Health Check</h2>
+<h2>9. Monitoramento e Health Check</h2>
 
-<h3>8.1 Opções de monitoramento</h3>
+<h3>9.1 Opções de monitoramento</h3>
 <table>
   <tr><th>Ferramenta</th><th>Custo</th><th>Funcionalidade</th></tr>
   <tr><td>Uptime Kuma (auto-hospedado)</td><td>Grátis</td><td>Health check, alerta Telegram/Discord, histórico</td></tr>
@@ -528,7 +745,7 @@ echo "Backup concluído: baluarte_$DATE.sql.gz"</code></pre>
   <tr><td>Better Uptime</td><td>Grátis (10 monitores)</td><td>Monitoramento externo, página de status</td></tr>
 </table>
 
-<h3>8.2 Health check com cron + Telegram</h3>
+<h3>9.2 Health check com cron + Telegram</h3>
 <pre><code><span class="cmd">nano /home/deploy/baluarte/healthcheck.sh</span></code></pre>
 
 <pre><code>#!/bin/bash
@@ -553,13 +770,13 @@ done</code></pre>
 <pre><code><span class="comment"># A cada 5 minutos</span>
 */5 * * * * /home/deploy/baluarte/healthcheck.sh</code></pre>
 
-<h3>8.3 Logs</h3>
+<h3>9.3 Logs</h3>
 <pre><code><span class="cmd">docker compose logs -f --tail=100</span>
 <span class="cmd">docker compose logs core --tail=50</span>
 <span class="cmd">docker stats --no-stream</span></code></pre>
 
 <!-- ============================================================ -->
-<h2>9. Dockerfile do Backend</h2>
+<h2>10. Dockerfile do Backend</h2>
 
 <p>O Dockerfile do backend (<code>Baluarte-core/Dockerfile</code>) já existe no repositório. Duas opções:</p>
 
@@ -592,7 +809,7 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
 
 <!-- ============================================================ -->
-<h2>10. Precificação — Mensalidade de Manutenção</h2>
+<h2>11. Precificação — Mensalidade de Manutenção</h2>
 
 <table>
   <tr><th>Item</th><th>Custo mensal</th></tr>
@@ -638,7 +855,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
 </div>
 
 <!-- ============================================================ -->
-<h2>11. Checklist de Migração</h2>
+<h2>12. Checklist de Migração</h2>
 
 <ul>
   <li><input type="checkbox"> Contratar Contabo VPS S</li>
@@ -663,7 +880,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
 </ul>
 
 <!-- ============================================================ -->
-<h2>12. Comparação de Custos</h2>
+<h2>13. Comparação de Custos</h2>
 
 <table>
   <tr><th>Item</th><th>Railway + Vercel</th><th>VPS Contabo + Vercel</th><th>Diferença</th></tr>
