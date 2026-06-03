@@ -395,6 +395,13 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
     <td>❌ Container separado</td>
   </tr>
   <tr>
+    <td><strong>Redis</strong> (cache + fila compartilhado)</td>
+    <td>0.25</td>
+    <td>256 MB</td>
+    <td>-</td>
+    <td>✅ Sim — todos os projetos compartilham</td>
+  </tr>
+  <tr>
     <td><strong>Monitoramento</strong></td>
     <td>0.25</td>
     <td>256 MB</td>
@@ -403,7 +410,7 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   </tr>
   <tr>
     <td><strong>Reserva (sobra)</strong></td>
-    <td>1.5</td>
+    <td>1.25</td>
     <td>~4.6 GB</td>
     <td>-</td>
     <td>-</td>
@@ -532,7 +539,64 @@ volumes:
   </ul>
 </div>
 
-<h3>6.4 Escalando horizontalmente</h3>
+<h3>6.4 Redis / Fila de tarefas (compartilhado)</h3>
+
+<p>Redis é essencial para cache, sessão, fila de background jobs e rate limiting. Assim como o PostgreSQL, deve ser <strong>compartilhado</strong> entre os projetos para economizar RAM.</p>
+
+<div class="info">
+  <strong>🧠 Por que compartilhado?</strong>
+  <ul>
+    <li>Um Redis com <strong>256 MB</strong> de RAM limite roda tranquilamente 5-10 projetos usando databases separados (<code>SELECT 0</code> a <code>SELECT 15</code>)</li>
+    <li>Cada projeto usa um <code>db</code> diferente — isolamento completo, sem risco de conflito de chave</li>
+    <li>Redis é extremamente leve: uma instância ociosa consome ~5 MB RAM</li>
+    <li>Manutenção centralizada: um container só, um backup só, uma config só</li>
+  </ul>
+</div>
+
+<table>
+  <tr><th>Serviço</th><th>vCPU</th><th>RAM</th><th>Compartilhado?</th></tr>
+  <tr><td>Redis (cache + fila)</td><td>0.25</td><td>256 MB</td><td>✅ Sim — um Redis para todos os projetos</td></tr>
+</table>
+
+<p><strong>RabbitMQ vs Redis:</strong> Para projetos pequenos, Redis com <code>BRPOP/LPUSH</code> (fila) ou Bull/Sidekiq já resolve fila de e-mail, processamento de imagem e jobs agendados. RabbitMQ só é necessário se precisar de roteamento complexo (pub/sub com exchanges, dead letter, múltiplas filas encadeadas). Para o porte dos projetos que rodam na VPS, Redis é suficiente e mais leve.</p>
+
+<pre><code>  redis:
+    image: redis:7-alpine
+    container_name: shared-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --lazyfree-lazy-eviction yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"
+
+volumes:
+  redis_data:</code></pre>
+
+<p>Cada projeto acessa um database diferente configurando no <code>.env</code>:</p>
+
+<pre><code><span class="comment"># Projeto Baluarte → db 0</span>
+REDIS_URL=redis://shared-redis:6379/0
+
+<span class="comment"># Projeto X → db 1</span>
+REDIS_URL=redis://shared-redis:6379/1
+
+<span class="comment"># Projeto Y → db 2</span>
+REDIS_URL=redis://shared-redis:6379/2</code></pre>
+
+<div class="warning">
+  <strong>⚠️ Performance:</strong> Redis é single-threaded. Um Redis com 0.25 vCPU processa ~100k operações/s — muito acima do necessário para projetos pequenos. Se um dia bater limite, troca para 0.5 vCPU ou sobe um segundo Redis dedicado para o projeto pesado.
+</div>
+
+<h3>6.5 Escalando horizontalmente</h3>
 
 <p>Se o Projeto Baluarte começar a precisar de mais capacidade:</p>
 
@@ -589,17 +653,18 @@ server {
   <strong>Escolha:</strong> vertical (aumenta para 0.5 / 512 MB) ou horizontal (adiciona réplica de 0.25).
 </div>
 
-<h3>6.5 Exemplo completo com 3 projetos</h3>
+<h3>6.6 Exemplo completo com 3 projetos</h3>
 
 <table>
   <tr><th>Projeto</th><th>Domínio</th><th>Container</th><th>Porta</th><th>vCPU</th><th>RAM</th></tr>
   <tr><td>Baluarte</td><td>api.baluarte.com.br</td><td>baluarte-core</td><td>8080</td><td>0.25</td><td>256 MB</td></tr>
   <tr><td>Projeto X</td><td>api.projetox.com.br</td><td>projetox-core</td><td>8082</td><td>0.25</td><td>256 MB</td></tr>
   <tr><td>Projeto Y</td><td>api.projetoy.com.br</td><td>projetoy-core</td><td>8083</td><td>0.25</td><td>256 MB</td></tr>
+  <tr><td>Redis (cache + fila)</td><td>compartilhado</td><td>shared-redis</td><td>6379</td><td>0.25</td><td>256 MB</td></tr>
   <tr><td>PostgreSQL</td><td>compartilhado</td><td>shared-postgres</td><td>5432</td><td>1.0</td><td>2 GB</td></tr>
   <tr><td>Nginx</td><td>-</td><td>-</td><td>80/443</td><td>0.25</td><td>128 MB</td></tr>
-  <tr><td><strong>Total usado</strong></td><td></td><td></td><td></td><td><strong>2.25</strong></td><td><strong>~2.9 GB</strong></td></tr>
-  <tr><td>Sobra disponível</td><td></td><td></td><td></td><td>1.75 vCPU</td><td>~5.1 GB RAM</td></tr>
+  <tr><td><strong>Total usado</strong></td><td></td><td></td><td></td><td><strong>2.5</strong></td><td><strong>~3.4 GB</strong></td></tr>
+  <tr><td>Sobra disponível</td><td></td><td></td><td></td><td>1.5 vCPU</td><td>~4.6 GB RAM</td></tr>
 </table>
 
 <p>Ainda sobra recurso para mais projetos ou réplicas extras se precisar escalar.</p>
