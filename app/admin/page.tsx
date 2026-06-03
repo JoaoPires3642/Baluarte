@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { AlertTriangle, ChevronRight } from "lucide-react"
-import { type AdminProduct, type Order, type Variant } from "@/lib/api"
+import { type AdminProductDashboardSummary, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,9 +30,24 @@ const statusColors: Record<string, string> = {
 
 const LOW_STOCK_THRESHOLD = 5
 
-async function getOrders(): Promise<Order[]> {
+async function getAdminHeaders() {
+  const { userId, getToken } = await auth()
+  const token = await getToken()
+  const user = await currentUser()
+  const email = user?.emailAddresses?.[0]?.emailAddress
+
+  if (!userId || !token) return null
+
+  return {
+    Authorization: `Bearer ${token}`,
+    "X-Clerk-User-Id": userId,
+    ...(email && { "X-Clerk-Email": email }),
+  }
+}
+
+async function getOrders(headers: Record<string, string>): Promise<Order[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/orders`, { cache: "no-store" })
+    const res = await fetch(`${API_BASE_URL}/orders?page=0&size=5`, { cache: "no-store", headers })
     if (!res.ok) return []
     const payload = await res.json() as { data: Order[] }
     return payload.data
@@ -41,28 +56,17 @@ async function getOrders(): Promise<Order[]> {
   }
 }
 
-async function getProducts() {
+async function getProductSummary(headers: Record<string, string>): Promise<AdminProductDashboardSummary> {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return []
-
-    const user = await currentUser()
-    const email = user?.emailAddresses?.[0]?.emailAddress
-
-    const res = await fetch(`${API_BASE_URL}/admin/products`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId,
-        ...(email && { "X-Clerk-Email": email }),
-      },
+    const res = await fetch(`${API_BASE_URL}/admin/products/summary?lowStockThreshold=${LOW_STOCK_THRESHOLD}&lowStockLimit=50`, {
+      headers,
       cache: "no-store",
     })
-    if (!res.ok) return []
-    const payload = await res.json() as { data: AdminProduct[] }
+    if (!res.ok) return { totalActiveProducts: 0, lowStockVariants: [] }
+    const payload = await res.json() as { data: AdminProductDashboardSummary }
     return payload.data
   } catch {
-    return []
+    return { totalActiveProducts: 0, lowStockVariants: [] }
   }
 }
 
@@ -72,40 +76,17 @@ function isToday(date: string) {
   return value.toDateString() === today.toDateString()
 }
 
-type LowStockVariant = {
-  productId: string
-  productName: string
-  size: string
-  stockQuantity: number
-}
-
-function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
-  const result: LowStockVariant[] = []
-  for (const product of products) {
-    if (!product.active) continue
-    for (const variant of product.variants) {
-      if (variant.available && variant.stockQuantity <= LOW_STOCK_THRESHOLD) {
-        result.push({
-          productId: product.id,
-          productName: product.modelName,
-          size: variant.size,
-          stockQuantity: variant.stockQuantity,
-        })
-      }
-    }
-  }
-  return result
-}
-
 export default async function AdminDashboard() {
-  const [orders, products] = await Promise.all([getOrders(), getProducts()])
+  const headers = await getAdminHeaders()
+  const [orders, productSummary] = headers
+    ? await Promise.all([getOrders(headers), getProductSummary(headers)])
+    : [[], { totalActiveProducts: 0, lowStockVariants: [] }]
   const paidOrders = orders.filter(order => isToday(order.createdAt) && order.status !== "cancelled" && order.status !== "pending_payment")
 
-  const activeProducts = products.filter((p: AdminProduct) => p.active)
-  const lowStockVariants = getLowStockVariants(products)
+  const lowStockVariants = productSummary.lowStockVariants
 
   const stats = {
-    totalProducts: activeProducts.length,
+    totalProducts: productSummary.totalActiveProducts,
     ordersToday: paidOrders.length,
     revenue: paidOrders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0),
     lowStock: lowStockVariants.length,

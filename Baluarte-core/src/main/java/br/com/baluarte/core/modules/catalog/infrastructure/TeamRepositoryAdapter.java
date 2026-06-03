@@ -28,6 +28,16 @@ public class TeamRepositoryAdapter implements TeamRepository {
     }
 
     @Override
+    public List<Team> findPublicTeams(int limit) {
+        var pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "displayOrder"));
+
+        return jpaRepository.findByCategoryActiveTrueAndActiveTrueOrderByDisplayOrderAsc(pageRequest)
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
     public Optional<Team> findPublicTeamByCategorySlugAndSlug(String categorySlug, String slug) {
         return jpaRepository.findBySlugAndCategorySlugAndCategoryActiveTrueAndActiveTrue(slug, categorySlug)
             .map(this::toDomain);

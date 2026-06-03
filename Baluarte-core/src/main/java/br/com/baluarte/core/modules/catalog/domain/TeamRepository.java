@@ -8,6 +8,8 @@ public interface TeamRepository {
 
     List<Team> findPublicTeamsByCategorySlug(String categorySlug, int limit);
 
+    List<Team> findPublicTeams(int limit);
+
     Optional<Team> findPublicTeamByCategorySlugAndSlug(String categorySlug, String slug);
 
     List<Team> findAllByCategorySlug(String categorySlug);

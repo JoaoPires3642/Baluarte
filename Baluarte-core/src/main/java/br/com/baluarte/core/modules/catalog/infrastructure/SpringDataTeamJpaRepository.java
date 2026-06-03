@@ -13,6 +13,8 @@ public interface SpringDataTeamJpaRepository extends JpaRepository<TeamJpaEntity
         Pageable pageable
     );
 
+    List<TeamJpaEntity> findByCategoryActiveTrueAndActiveTrueOrderByDisplayOrderAsc(Pageable pageable);
+
     Optional<TeamJpaEntity> findBySlugAndCategorySlugAndCategoryActiveTrueAndActiveTrue(String slug, String categorySlug);
 
     Optional<TeamJpaEntity> findBySlug(String slug);

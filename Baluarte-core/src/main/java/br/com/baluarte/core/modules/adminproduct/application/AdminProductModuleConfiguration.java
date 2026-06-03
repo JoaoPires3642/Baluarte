@@ -36,4 +36,9 @@ public class AdminProductModuleConfiguration {
     ListAdminProductsUseCase listAdminProductsUseCase(AdminProductRepository adminProductRepository) {
         return new ListAdminProductsUseCase(adminProductRepository);
     }
+
+    @Bean
+    GetAdminProductDashboardSummaryUseCase getAdminProductDashboardSummaryUseCase(AdminProductRepository adminProductRepository) {
+        return new GetAdminProductDashboardSummaryUseCase(adminProductRepository);
+    }
 }

@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.catalog.infrastructure;
 
 import br.com.baluarte.core.modules.catalog.application.ListPublicModelsByTeamUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicCategoriesUseCase;
+import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsByCategoryUseCase;
 import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
 import br.com.baluarte.core.modules.catalog.domain.TeamRepository;
@@ -14,6 +15,11 @@ public class CatalogModuleConfiguration {
     @Bean
     ListPublicCategoriesUseCase listPublicCategoriesUseCase(CategoryRepository categoryRepository) {
         return new ListPublicCategoriesUseCase(categoryRepository);
+    }
+
+    @Bean
+    ListPublicTeamsUseCase listPublicTeamsUseCase(TeamRepository teamRepository) {
+        return new ListPublicTeamsUseCase(teamRepository);
     }
 
     @Bean

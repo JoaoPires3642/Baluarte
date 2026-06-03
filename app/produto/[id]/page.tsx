@@ -1,4 +1,4 @@
-export const runtime = "edge";
+export const revalidate = 60;
 
 import { notFound } from "next/navigation"
 import { fetchModelDetail, fetchProductById, type ModelDetail } from "@/lib/api"

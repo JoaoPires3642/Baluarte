@@ -1,4 +1,4 @@
-export const runtime = "edge";
+export const revalidate = 60;
 
 import { SearchX } from "lucide-react"
 import { fetchPublicModels, type Model } from "@/lib/api"

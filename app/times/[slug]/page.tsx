@@ -1,4 +1,4 @@
-export const runtime = "edge";
+export const revalidate = 60;
 
 import Link from "next/link"
 import { ShieldCheck } from "lucide-react"

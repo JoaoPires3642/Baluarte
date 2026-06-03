@@ -46,6 +46,14 @@ class CatalogCategoriesIntegrationTest {
     }
 
     @Test
+    void shouldReturnPublicTeamsForHome() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/teams").param("limit", "8"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(8));
+    }
+
+    @Test
     void shouldReturnEmptyTeamsArrayForCategoryWithoutTeams() throws Exception {
         mockMvc.perform(get("/api/v1/catalog/categories/lancamentos/teams"))
             .andExpect(status().isOk())

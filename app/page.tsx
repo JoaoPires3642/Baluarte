@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
 
-export const dynamic = "force-dynamic"
-import { fetchCategories, fetchPublicModels, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
+export const revalidate = 60
+
+import { fetchCategories, fetchPublicModels, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,15 +26,7 @@ async function getData() {
   const categories = categoriesRes?.data ?? []
   const products = modelsRes?.data ?? []
 
-  const teamResponses = await Promise.all(
-    categories.map((category) =>
-      fetchTeamsByCategory(category.slug).catch(() => ({ data: [] as Team[] }))
-    )
-  )
-
-  const teams = teamResponses
-    .flatMap((response) => response.data)
-    .filter((team, index, array) => array.findIndex((item) => item.slug === team.slug) === index)
+  const teams = await fetchPublicTeams(8).then((response) => response.data).catch(() => [] as Team[])
 
   return { categories, teams, products }
 }

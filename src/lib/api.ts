@@ -1,6 +1,14 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+const PUBLIC_CATALOG_CACHE = { next: { revalidate: 60, tags: ["catalog"] } }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+type ApiRequestInit = RequestInit & {
+  next?: {
+    revalidate?: number
+    tags?: string[]
+  }
+}
+
+async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -21,22 +29,26 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // Categories - GET /catalog/categories
 export async function fetchCategories() {
-  return fetchApi<{ data: Category[] }>("/catalog/categories")
+  return fetchApi<{ data: Category[] }>("/catalog/categories", PUBLIC_CATALOG_CACHE)
+}
+
+export async function fetchPublicTeams(limit = 8) {
+  return fetchApi<{ data: Team[] }>(`/catalog/teams?limit=${limit}`, PUBLIC_CATALOG_CACHE)
 }
 
 // Teams by Category - GET /catalog/categories/{categorySlug}/teams
 export async function fetchTeamsByCategory(categorySlug: string) {
-  return fetchApi<{ data: Team[] }>(`/catalog/categories/${categorySlug}/teams`)
+  return fetchApi<{ data: Team[] }>(`/catalog/categories/${categorySlug}/teams`, PUBLIC_CATALOG_CACHE)
 }
 
 // Models (Products) by Team - GET /catalog/teams/{teamSlug}/models
 export async function fetchModelsByTeam(teamSlug: string) {
-  return fetchApi<{ data: Model[] }>(`/catalog/teams/${teamSlug}/models`)
+  return fetchApi<{ data: Model[] }>(`/catalog/teams/${teamSlug}/models`, PUBLIC_CATALOG_CACHE)
 }
 
 // Model Detail - GET /catalog/teams/{teamSlug}/models/{modelId}
 export async function fetchModelDetail(teamSlug: string, modelId: string) {
-  return fetchApi<{ data: ModelDetail }>(`/catalog/teams/${teamSlug}/models/${modelId}`)
+  return fetchApi<{ data: ModelDetail }>(`/catalog/teams/${teamSlug}/models/${modelId}`, PUBLIC_CATALOG_CACHE)
 }
 
 // Simple Model Detail by ID - uses featured endpoint
@@ -69,12 +81,12 @@ export async function fetchProductsByTeam(teamSlug: string) {
 
 // Featured Products - GET /catalog/featured
 export async function fetchFeaturedProducts(limit = 8) {
-  return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`)
+  return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`, PUBLIC_CATALOG_CACHE)
 }
 
 // All Products (for search/sitemap) - uses featured endpoint
 export async function fetchPublicModels() {
-  return fetchApi<{ data: Model[] }>("/catalog/featured?limit=50")
+  return fetchApi<{ data: Model[] }>("/catalog/featured?limit=50", PUBLIC_CATALOG_CACHE)
 }
 
 // Orders - GET /orders
@@ -520,6 +532,16 @@ export interface AdminProduct {
   available: boolean
   stockQuantity: number
   variants: Variant[]
+}
+
+export interface AdminProductDashboardSummary {
+  totalActiveProducts: number
+  lowStockVariants: Array<{
+    productId: string
+    productName: string
+    size: string
+    stockQuantity: number
+  }>
 }
 
 export interface CreateProductRequest {

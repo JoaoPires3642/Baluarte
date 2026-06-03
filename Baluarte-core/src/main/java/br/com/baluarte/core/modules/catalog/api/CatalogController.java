@@ -4,6 +4,7 @@ import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
 import br.com.baluarte.core.modules.adminproduct.api.AdminProductVariantResponse;
 import br.com.baluarte.core.modules.catalog.application.ListPublicCategoriesUseCase;
+import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsUseCase;
 import br.com.baluarte.core.modules.catalog.application.ListPublicTeamsByCategoryUseCase;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import jakarta.validation.constraints.Max;
@@ -29,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class CatalogController {
 
     private final ListPublicCategoriesUseCase listPublicCategoriesUseCase;
+    private final ListPublicTeamsUseCase listPublicTeamsUseCase;
     private final ListPublicTeamsByCategoryUseCase listPublicTeamsByCategoryUseCase;
     private final AdminProductRepository adminProductRepository;
 
@@ -48,10 +50,8 @@ public class CatalogController {
     public ApiSuccessResponse<List<CatalogModelListResponse>> listFeaturedProducts(
         @RequestParam(defaultValue = "8") @Min(1) @Max(50) int limit
     ) {
-        List<CatalogModelListResponse> data = adminProductRepository.findAll()
+        List<CatalogModelListResponse> data = adminProductRepository.findActiveAvailable(limit)
             .stream()
-            .filter(product -> product.active() && product.available())
-            .limit(limit)
             .map(this::toCatalogModelListResponse)
             .toList();
 
@@ -71,18 +71,26 @@ public class CatalogController {
         return ApiSuccessResponse.of(data);
     }
 
+    @GetMapping("/teams")
+    public ApiSuccessResponse<List<TeamResponse>> listTeams(
+        @RequestParam(defaultValue = "8") @Min(1) @Max(100) int limit
+    ) {
+        List<TeamResponse> data = listPublicTeamsUseCase.execute(limit)
+            .stream()
+            .map(TeamResponse::fromApplication)
+            .toList();
+
+        return ApiSuccessResponse.of(data);
+    }
+
     @GetMapping("/teams/{teamSlug}/models")
     public ApiSuccessResponse<List<CatalogModelListResponse>> listModelsByTeam(
         @PathVariable @Pattern(regexp = "^[a-z0-9-]+$") String teamSlug,
         @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit
     ) {
         String normalizedSlug = normalizeSlug(teamSlug);
-        List<CatalogModelListResponse> data = adminProductRepository.findAll()
+        List<CatalogModelListResponse> data = adminProductRepository.findActiveAvailableByTeamSlug(normalizedSlug, limit)
             .stream()
-            .filter(product -> product.active()
-                && product.available()
-                && product.teamSlug().equalsIgnoreCase(normalizedSlug))
-            .limit(limit)
             .map(this::toCatalogModelListResponse)
             .toList();
 

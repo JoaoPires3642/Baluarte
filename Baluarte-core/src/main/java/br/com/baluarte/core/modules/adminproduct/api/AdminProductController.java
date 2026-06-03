@@ -3,8 +3,10 @@ package br.com.baluarte.core.modules.adminproduct.api;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductCommand;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.CreateAdminProductVariantCommand;
+import br.com.baluarte.core.modules.adminproduct.application.AdminProductDashboardSummaryView;
 import br.com.baluarte.core.modules.adminproduct.application.AdminProductValidationException;
 import br.com.baluarte.core.modules.adminproduct.application.DeactivateAdminProductUseCase;
+import br.com.baluarte.core.modules.adminproduct.application.GetAdminProductDashboardSummaryUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.ListAdminProductsUseCase;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductCommand;
 import br.com.baluarte.core.modules.adminproduct.application.UpdateAdminProductUseCase;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,19 +37,22 @@ public class AdminProductController {
     private final UpdateAdminProductUseCase updateAdminProductUseCase;
     private final DeactivateAdminProductUseCase deactivateAdminProductUseCase;
     private final ListAdminProductsUseCase listAdminProductsUseCase;
+    private final GetAdminProductDashboardSummaryUseCase getAdminProductDashboardSummaryUseCase;
 
     public AdminProductController(
         AdminProductRepository adminProductRepository,
         CreateAdminProductUseCase createAdminProductUseCase,
         UpdateAdminProductUseCase updateAdminProductUseCase,
         DeactivateAdminProductUseCase deactivateAdminProductUseCase,
-        ListAdminProductsUseCase listAdminProductsUseCase
+        ListAdminProductsUseCase listAdminProductsUseCase,
+        GetAdminProductDashboardSummaryUseCase getAdminProductDashboardSummaryUseCase
     ) {
         this.adminProductRepository = adminProductRepository;
         this.createAdminProductUseCase = createAdminProductUseCase;
         this.updateAdminProductUseCase = updateAdminProductUseCase;
         this.deactivateAdminProductUseCase = deactivateAdminProductUseCase;
         this.listAdminProductsUseCase = listAdminProductsUseCase;
+        this.getAdminProductDashboardSummaryUseCase = getAdminProductDashboardSummaryUseCase;
     }
 
     @GetMapping
@@ -56,6 +62,16 @@ public class AdminProductController {
             .toList();
 
         return ApiSuccessResponse.of(data);
+    }
+
+    @GetMapping("/summary")
+    public ApiSuccessResponse<AdminProductDashboardSummaryResponse> getDashboardSummary(
+        @RequestParam(defaultValue = "5") int lowStockThreshold,
+        @RequestParam(defaultValue = "50") int lowStockLimit
+    ) {
+        return ApiSuccessResponse.of(toDashboardSummaryResponse(
+            getAdminProductDashboardSummaryUseCase.execute(lowStockThreshold, lowStockLimit)
+        ));
     }
 
     @PostMapping
@@ -173,6 +189,20 @@ public class AdminProductController {
             product.available(),
             product.stockQuantity(),
             variants
+        );
+    }
+
+    private AdminProductDashboardSummaryResponse toDashboardSummaryResponse(AdminProductDashboardSummaryView summary) {
+        return new AdminProductDashboardSummaryResponse(
+            summary.totalActiveProducts(),
+            summary.lowStockVariants().stream()
+                .map(variant -> new AdminProductDashboardSummaryResponse.LowStockVariantResponse(
+                    variant.productId(),
+                    variant.productName(),
+                    variant.size(),
+                    variant.stockQuantity()
+                ))
+                .toList()
         );
     }
 }

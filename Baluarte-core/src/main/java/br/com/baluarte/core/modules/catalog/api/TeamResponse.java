@@ -24,4 +24,5 @@ public record TeamResponse(
             team.logo()
         );
     }
+
 }

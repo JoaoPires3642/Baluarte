@@ -1,6 +1,7 @@
 package br.com.baluarte.core.modules.adminproduct.infrastructure;
 
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
+import br.com.baluarte.core.modules.adminproduct.domain.AdminProductLowStockVariant;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataCategoryJpaRepository;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +56,24 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AdminProduct> findActiveAvailable(int limit) {
+        return productJpaRepository.findByActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminProduct> findActiveAvailableByTeamSlug(String teamSlug, int limit) {
+        return productJpaRepository.findByTeamSlugIgnoreCaseAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(teamSlug, PageRequest.of(0, limit))
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<AdminProduct> findById(UUID id) {
         return productJpaRepository.findById(id).map(this::toDomain);
     }
@@ -64,6 +84,26 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
         return productJpaRepository.findByTeamIdAndActiveTrueAndAvailableTrue(teamId)
             .stream()
             .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countActive() {
+        return productJpaRepository.countByActiveTrue();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminProductLowStockVariant> findLowStockVariants(int threshold, int limit) {
+        return productJpaRepository.findLowStockVariants(threshold, PageRequest.of(0, limit))
+            .stream()
+            .map(variant -> new AdminProductLowStockVariant(
+                variant.getProductId(),
+                variant.getProductName(),
+                variant.getSize(),
+                variant.getStockQuantity() == null ? 0 : variant.getStockQuantity()
+            ))
             .toList();
     }
 

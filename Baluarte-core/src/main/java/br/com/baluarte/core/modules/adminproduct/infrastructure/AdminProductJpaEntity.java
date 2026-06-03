@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "admin_product")
@@ -74,6 +75,7 @@ public class AdminProductJpaEntity {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<AdminProductVariantJpaEntity> variants = new ArrayList<>();
 
     static AdminProductJpaEntity fromDomain(

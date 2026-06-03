@@ -10,7 +10,15 @@ public interface AdminProductRepository {
 
     List<AdminProduct> findAll();
 
+    List<AdminProduct> findActiveAvailable(int limit);
+
+    List<AdminProduct> findActiveAvailableByTeamSlug(String teamSlug, int limit);
+
     Optional<AdminProduct> findById(UUID id);
 
     List<AdminProduct> findActiveAvailableByTeamId(UUID teamId);
+
+    long countActive();
+
+    List<AdminProductLowStockVariant> findLowStockVariants(int threshold, int limit);
 }

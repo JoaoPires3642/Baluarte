@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { Camera, Check, ChevronLeft, ChevronRight, Eye, EyeOff, FolderOpen, PackagePlus, Pencil, Search, Trash2, X } from "lucide-react"
-import { fetchCategories, fetchTeamsByCategory, uploadImage, type Category, type Team, type AdminProduct } from "@/lib/api"
+import { fetchCategories, fetchPublicTeams, uploadImage, type Category, type Team, type AdminProduct } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
 import { resolveMediaUrl } from "@/lib/media"
 import { Button } from "@/components/ui/button"
@@ -137,20 +137,17 @@ export default function AdminProductsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [pData, cData] = await Promise.all([
+      const [pData, cData, tData] = await Promise.all([
         authedFetch("/admin/products").catch(err => {
           console.error("Failed to load admin products", err)
           return null as unknown as { data: AdminProduct[] }
         }),
         fetchCategories(),
+        fetchPublicTeams(100),
       ])
       if (pData) setProducts(pData.data)
       setCategories(cData.data)
-      const allTeams: Team[] = []
-      for (const cat of cData.data) {
-        try { const t = await fetchTeamsByCategory(cat.slug); allTeams.push(...t.data) } catch { /* skip */ }
-      }
-      setTeams(allTeams)
+      setTeams(tData.data)
     } catch (err) {
       console.error("Failed to load data", err)
     } finally {
