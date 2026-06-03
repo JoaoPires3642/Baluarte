@@ -368,29 +368,29 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   </tr>
   <tr>
     <td><strong>Projeto A</strong> (ex: Baluarte)</td>
-    <td>0.5</td>
-    <td>512 MB</td>
+    <td>0.25</td>
+    <td>256 MB</td>
     <td>~2 GB (uploads)</td>
     <td>❌ Cada projeto tem seu container</td>
   </tr>
   <tr>
     <td><strong>Projeto B</strong></td>
-    <td>0.5</td>
-    <td>512 MB</td>
+    <td>0.25</td>
+    <td>256 MB</td>
     <td>Variável</td>
     <td>❌ Container separado</td>
   </tr>
   <tr>
     <td><strong>Projeto C</strong></td>
-    <td>0.5</td>
-    <td>512 MB</td>
+    <td>0.25</td>
+    <td>256 MB</td>
     <td>Variável</td>
     <td>❌ Container separado</td>
   </tr>
   <tr>
     <td><strong>Projeto D</strong></td>
-    <td>0.5</td>
-    <td>512 MB</td>
+    <td>0.25</td>
+    <td>256 MB</td>
     <td>Variável</td>
     <td>❌ Container separado</td>
   </tr>
@@ -403,15 +403,15 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   </tr>
   <tr>
     <td><strong>Reserva (sobra)</strong></td>
-    <td>0.5</td>
-    <td>~1.5 GB</td>
+    <td>1.5</td>
+    <td>~4.6 GB</td>
     <td>-</td>
     <td>-</td>
   </tr>
   <tr>
     <td><strong>Total</strong></td>
     <td><strong>4.0</strong></td>
-    <td><strong>~6.5 GB</strong></td>
+    <td><strong>~3.4 GB</strong></td>
     <td>-</td>
     <td>-</td>
   </tr>
@@ -428,34 +428,33 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   </ul>
 </div>
 
-<h3>6.2 Capacidade estimada por container (0.5 vCPU / 512 MB RAM)</h3>
+<h3>6.2 Capacidade estimada por container (0.25 vCPU / 256 MB RAM)</h3>
 
-<p>Com <strong>0.5 vCPU e 512 MB RAM</strong>, um backend Spring Boot nativo (GraalVM) aguenta confortavelmente:</p>
+<p>Com <strong>0.25 vCPU e 256 MB RAM</strong>, um backend Spring Boot nativo (GraalVM) atende bem projetos pequenos:</p>
 
 <table>
-  <tr><th>Cenário</th><th>Requisições simultâneas</th><th>Req/s sustentados</th><th>Tempo médio de resposta</th></tr>
-  <tr><td>API com consultas simples (catálogo, busca)</td><td>~30</td><td>~100-200</td><td>~50ms</td></tr>
-  <tr><td>API com consultas pesadas (relatórios, admin)</td><td>~10</td><td>~30-50</td><td>~200ms</td></tr>
-  <tr><td>Checkout (Mercado Pago + SuperFrete)</td><td>~5</td><td>~10-20</td><td>~500ms (depende externo)</td></tr>
-  <tr><td>Upload de imagens</td><td>~3</td><td>~5-10</td><td>~1-2s (depende tamanho)</td></tr>
+  <tr><th>Cenário</th><th>Usuários simultâneos</th><th>Req/s sustentados</th><th>Tempo médio de resposta</th></tr>
+  <tr><td>API com consultas simples (catálogo, busca)</td><td>~10-15</td><td>~30-50</td><td>~80ms</td></tr>
+  <tr><td>API com consultas pesadas (relatórios, admin)</td><td>~5</td><td>~10-20</td><td>~300ms</td></tr>
+  <tr><td>Checkout (Mercado Pago + SuperFrete)</td><td>~3</td><td>~5-10</td><td>~500ms (depende externo)</td></tr>
+  <tr><td>Upload de imagens</td><td>~2</td><td>~3-5</td><td>~1-2s (depende tamanho)</td></tr>
 </table>
 
 <div class="info">
-  <strong>📊 Na prática para um e-commerce:</strong>
+  <strong>📊 Na prática para projetos pequenos:</strong>
   <ul>
-    <li>Uma loja com <strong>~500-1000 visitas/dia</strong> não passa de 5-10 req/s nos picos</li>
-    <li>Com 0.5 vCPU, você aguenta <strong>folgadamente</strong> até ~50 req/s sustentados</li>
-    <li><strong>50 req/s</strong> equivale a ~180 mil requisições/hora — mais que qualquer e-commerce pequeno-médio precisa</li>
-    <li>Se passar disso, adiciona uma réplica (mais 0.5 vCPU) e o nginx faz o balanceamento</li>
+    <li>10 usuários simultâneos equivale a dezenas de req/s — mais que suficiente para um site institucional ou loja com até ~200 visitas/dia</li>
+    <li><strong>Se estourar:</strong> aumenta para 0.5 vCPU / 512 MB (vertical, sem réplica extra)</li>
+    <li>Ou adiciona uma réplica de 0.25 (horizontal) se preferir distribuir a carga</li>
   </ul>
 </div>
 
 <table>
-  <tr><th>Projeto</th><th>Tráfego estimado</th><th>vCPU necessário</th><th>RAM necessária</th><th>Container</th></tr>
-  <tr><td>Loja virtual pequena (&lt; 500 visitas/dia)</td><td>~2-5 req/s pico</td><td>0.25</td><td>256 MB</td><td>1 container</td></tr>
-  <tr><td>Loja virtual média (~1000 visitas/dia)</td><td>~10-20 req/s pico</td><td>0.5</td><td>512 MB</td><td>1 container</td></tr>
-  <tr><td>Loja grande (~5000 visitas/dia)</td><td>~50-100 req/s pico</td><td>1.0</td><td>1 GB</td><td>2 containers (0.5 cada)</td></tr>
-  <tr><td>API pública com ~10k req/s</td><td>~10000 req/s</td><td>~8+</td><td>~8+ GB</td><td>Múltiplas VPS</td></tr>
+  <tr><th>Projeto</th><th>vCPU</th><th>RAM</th><th>Comporta</th></tr>
+  <tr><td>Landing page / blog cms</td><td>0.125</td><td>128 MB</td><td>~5 simultâneos</td></tr>
+  <tr><td>Loja pequena / sistema interno</td><td><strong>0.25</strong></td><td><strong>256 MB</strong></td><td><strong>~10-15 simultâneos</strong></td></tr>
+  <tr><td>Loja média / API pública</td><td>0.5</td><td>512 MB</td><td>~30 simultâneos</td></tr>
+  <tr><td>Alta demanda (+100 simultâneos)</td><td>1.0+</td><td>1 GB+</td><td>Múltiplos containers</td></tr>
 </table>
 
 <div class="warning">
@@ -504,18 +503,33 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "512M"
-        reservations:
           cpus: "0.25"
           memory: "256M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"
 
 volumes:
   postgres_data:
   baluarte_uploads:</code></pre>
 
 <div class="warning">
-  <strong>⚠️ Modo swarm vs docker compose:</strong> <code>deploy.resources</code> funciona nativamente no Docker Swarm. No Docker Compose standalone (<code>docker compose up</code>), use <code>--compatibility</code> ou defina os limites via flags da plataforma (Contabo usa Docker Engine padrão). Alternativa: use <code>docker run --cpus="0.5" --memory="512m"</code> ou um orquestrador leve como <strong>Nomad</strong> ou <strong>K3s</strong>.
+  <strong>⚠️ deploy.resources — o que é cada coisa:</strong>
+  <ul>
+    <li><strong>limits:</strong> o máximo que o container pode usar. Se ele passar de 256 MB RAM, o Docker mata o processo (OOMKill).</li>
+    <li><strong>reservations:</strong> o mínimo garantido que o Docker reserva para o container. O sistema garante que ele sempre terá pelo menos 128 MB livres.</li>
+    <li>Na Contabo (Docker Engine standalone), use a flag <code>--compatibility</code> ou declare manualmente com <code>docker run --cpus="0.25" --memory="256m"</code>.</li>
+  </ul>
+</div>
+
+<div class="info">
+  <strong>🧠 PostgreSQL 1 vCPU / 2 GB RAM — aguenta quantos projetos?</strong>
+  <ul>
+    <li>Um PostgreSQL bem configurado com 2 GB de RAM (<code>shared_buffers = 512MB</code>, <code>effective_cache_size = 1.5GB</code>) roda confortavelmente <strong>10-15 databases pequenos</strong> sem competir recurso</li>
+    <li>Projetos do tipo loja virtual / sistema interno têm databases pequenos (algumas centenas de MB cada)</li>
+    <li>O Postgres usa <strong>connection pooling</strong> — cada conexão ativa consome ~10 MB. Com 2 GB, você tem centenas de conexões simultâneas tranquilamente</li>
+    <li><strong>Não vai quebrar.</strong> 1 vCPU e 2 GB RAM é suficiente para dezenas de projetos pequenos. Se um dia bater limite, sobe para 2 vCPU / 4 GB</li>
+  </ul>
 </div>
 
 <h3>6.4 Escalando horizontalmente</h3>
@@ -523,7 +537,7 @@ volumes:
 <p>Se o Projeto Baluarte começar a precisar de mais capacidade:</p>
 
 <pre><code><span class="comment"># Em vez de aumentar os limites do container (vertical scaling),
-# adicionamos outra instância com 0.5 vCPU + load balance interno</span>
+# adicionamos outra instância com 0.25 vCPU + load balance interno</span>
 
   baluarte-core-2:
     image: ghcr.io/joaopires3642/baluarte-core-native:latest
@@ -540,11 +554,11 @@ volumes:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "512M"
-        reservations:
           cpus: "0.25"
-          memory: "256M"</code></pre>
+          memory: "256M"
+        reservations:
+          cpus: "0.125"
+          memory: "128M"</code></pre>
 
 <p>Depois configura o nginx para fazer balanceamento entre as duas instâncias:</p>
 
@@ -566,26 +580,26 @@ server {
 }</code></pre>
 
 <div class="info">
-  <strong>📈 Quando escalar:</strong> Com 0.5 vCPU e 512 MB RAM, um backend nativo Spring Boot aguenta dezenas de requisições simultâneas. Você só precisará de réplicas se:<br>
+  <strong>📈 Quando escalar:</strong> Com 0.25 vCPU e 256 MB RAM, um backend nativo Spring Boot segura ~10-15 usuários simultâneos. Você só precisará de réplicas se:<br>
   <ul>
-    <li>O site estiver recebendo picos > 100 req/s sustentados</li>
-    <li>O CPU do container ficar consistentemente > 80%</li>
+    <li>O container estiver batendo > 80% de CPU consistentemente</li>
+    <li>A RAM estiver próximo do limite (OOMKill)</li>
     <li>O tempo de resposta médio passar de 1s</li>
   </ul>
-  Até lá, 0.5 vCPU é mais que suficiente para um e-commerce de pequeno-médio porte.
+  <strong>Escolha:</strong> vertical (aumenta para 0.5 / 512 MB) ou horizontal (adiciona réplica de 0.25).
 </div>
 
 <h3>6.5 Exemplo completo com 3 projetos</h3>
 
 <table>
   <tr><th>Projeto</th><th>Domínio</th><th>Container</th><th>Porta</th><th>vCPU</th><th>RAM</th></tr>
-  <tr><td>Baluarte</td><td>api.baluarte.com.br</td><td>baluarte-core</td><td>8080</td><td>0.5</td><td>512 MB</td></tr>
-  <tr><td>Projeto X</td><td>api.projetox.com.br</td><td>projetox-core</td><td>8082</td><td>0.5</td><td>512 MB</td></tr>
-  <tr><td>Projeto Y</td><td>api.projetoy.com.br</td><td>projetoy-core</td><td>8083</td><td>0.5</td><td>512 MB</td></tr>
+  <tr><td>Baluarte</td><td>api.baluarte.com.br</td><td>baluarte-core</td><td>8080</td><td>0.25</td><td>256 MB</td></tr>
+  <tr><td>Projeto X</td><td>api.projetox.com.br</td><td>projetox-core</td><td>8082</td><td>0.25</td><td>256 MB</td></tr>
+  <tr><td>Projeto Y</td><td>api.projetoy.com.br</td><td>projetoy-core</td><td>8083</td><td>0.25</td><td>256 MB</td></tr>
   <tr><td>PostgreSQL</td><td>compartilhado</td><td>shared-postgres</td><td>5432</td><td>1.0</td><td>2 GB</td></tr>
   <tr><td>Nginx</td><td>-</td><td>-</td><td>80/443</td><td>0.25</td><td>128 MB</td></tr>
-  <tr><td><strong>Total usado</strong></td><td></td><td></td><td></td><td><strong>3.25</strong></td><td><strong>~3.7 GB</strong></td></tr>
-  <tr><td>Sobra disponível</td><td></td><td></td><td></td><td>0.75 vCPU</td><td>~4.3 GB RAM</td></tr>
+  <tr><td><strong>Total usado</strong></td><td></td><td></td><td></td><td><strong>2.25</strong></td><td><strong>~2.9 GB</strong></td></tr>
+  <tr><td>Sobra disponível</td><td></td><td></td><td></td><td>1.75 vCPU</td><td>~5.1 GB RAM</td></tr>
 </table>
 
 <p>Ainda sobra recurso para mais projetos ou réplicas extras se precisar escalar.</p>
