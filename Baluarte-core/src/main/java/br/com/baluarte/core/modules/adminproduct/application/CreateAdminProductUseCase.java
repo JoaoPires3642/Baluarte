@@ -32,6 +32,9 @@ public class CreateAdminProductUseCase {
 
     public AdminProduct execute(CreateAdminProductCommand command) {
         List<String> errors = validate(command);
+        if (command.featured() && adminProductRepository.countFeaturedExcept(null) >= 10) {
+            errors.add("featured limite maximo de 10 produtos em destaque atingido");
+        }
         if (!errors.isEmpty()) {
             throw new AdminProductValidationException(errors);
         }
@@ -72,6 +75,7 @@ public class CreateAdminProductUseCase {
             command.customizationEnabled(),
             normalizeTemplate(command.customizationTemplatePng()),
             normalizeTemplate(command.customizationTemplateMetadata()),
+            command.featured(),
             true,
             stockQuantity > 0,
             stockQuantity,

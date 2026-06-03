@@ -92,6 +92,7 @@ type FormData = {
   teamSlug: string
   imageUrl: string
   imageUrls: string[]
+  featured: boolean
   variants: Record<string, string>
 }
 
@@ -104,6 +105,7 @@ const emptyForm: FormData = {
   teamSlug: "",
   imageUrl: "",
   imageUrls: [],
+  featured: false,
   variants: Object.fromEntries(SIZES.map(size => [size, "0"])),
 }
 
@@ -159,6 +161,7 @@ export default function AdminProductsPage() {
 
   const router = useRouter()
   const searchParams = useSearchParams()
+  const featuredCount = products.filter(product => product.featured).length
 
   useEffect(() => {
     if (loading || products.length === 0) return
@@ -191,6 +194,7 @@ export default function AdminProductsPage() {
       teamSlug: product.teamSlug,
       imageUrl: imageUrls.join("\n"),
       imageUrls,
+      featured: Boolean(product.featured),
       variants: Object.fromEntries(
         SIZES.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])
       ),
@@ -291,6 +295,7 @@ export default function AdminProductsPage() {
         imageUrl: imageUrls[0],
         images: imageUrls,
         customizationEnabled: false,
+        featured: form.featured,
         variants,
       }
 
@@ -374,6 +379,7 @@ export default function AdminProductsPage() {
                   <th className="pb-3 text-left text-sm font-medium">Time</th>
                   <th className="pb-3 text-left text-sm font-medium">Preço</th>
                   <th className="pb-3 text-left text-sm font-medium">Estoque</th>
+                  <th className="pb-3 text-left text-sm font-medium">Destaque</th>
                   <th className="pb-3 text-left text-sm font-medium">Status</th>
                   <th className="pb-3 text-right text-sm font-medium">Ações</th>
                 </tr>
@@ -386,6 +392,9 @@ export default function AdminProductsPage() {
                     <td className="py-3">R$ {product.price.toFixed(2).replace(".", ",")}</td>
                     <td className="py-3">
                       <span className={product.stockQuantity < 10 ? "text-red-500 font-medium" : ""}>{product.stockQuantity}</span>
+                    </td>
+                    <td className="py-3">
+                      {product.featured ? <Badge variant="secondary">Destaque</Badge> : <span className="text-sm text-slate-400">-</span>}
                     </td>
                     <td className="py-3">
                       <Badge variant={product.active ? "success" : "secondary"}>{product.active ? "Ativo" : "Inativo"}</Badge>
@@ -404,7 +413,7 @@ export default function AdminProductsPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">Nenhum produto encontrado</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-slate-500">Nenhum produto encontrado</td></tr>
                 )}
               </tbody>
             </table>
@@ -416,7 +425,9 @@ export default function AdminProductsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm truncate">{product.modelName}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{product.teamSlug}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {product.teamSlug}{product.featured ? " - Destaque" : ""}
+                    </p>
                   </div>
                   <Badge variant={product.active ? "success" : "secondary"} className="shrink-0 text-[10px]">{product.active ? "Ativo" : "Inativo"}</Badge>
                 </div>
@@ -479,6 +490,21 @@ export default function AdminProductsPage() {
                 </select>
               </div>
             </div>
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <input
+                type="checkbox"
+                checked={form.featured}
+                disabled={!form.featured && featuredCount >= 10}
+                onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))}
+                className="mt-1"
+              />
+              <span>
+                <span className="block font-semibold text-slate-800">Marcar como destaque</span>
+                <span className="block text-xs text-slate-500">
+                  {featuredCount}/10 produtos em destaque. Esses produtos aparecem na seção Destaque da home.
+                </span>
+              </span>
+            </label>
           </div>
         )}
 

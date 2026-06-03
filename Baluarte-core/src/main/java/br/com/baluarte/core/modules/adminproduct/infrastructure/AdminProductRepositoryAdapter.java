@@ -58,9 +58,35 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
     @Transactional(readOnly = true)
     public List<AdminProduct> findActiveAvailable(int limit) {
         return productJpaRepository.findByActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
+            .getContent()
             .stream()
             .map(this::toDomain)
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminProduct> findFeaturedActiveAvailable(int limit) {
+        return productJpaRepository.findByFeaturedTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AdminProduct> findPublicProducts(String query, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        var products = query == null || query.isBlank()
+            ? productJpaRepository.findByActiveTrueAndAvailableTrueOrderByCreatedAtDesc(pageable)
+            : productJpaRepository.searchActiveAvailable(query.trim().toLowerCase(java.util.Locale.ROOT), pageable);
+        return products.map(this::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countFeaturedExcept(UUID productId) {
+        return productJpaRepository.countFeaturedExcept(productId);
     }
 
     @Override
@@ -123,6 +149,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             Boolean.TRUE.equals(entity.getCustomizationEnabled()),
             entity.getCustomizationTemplatePng(),
             entity.getCustomizationTemplateMetadata(),
+            Boolean.TRUE.equals(entity.getFeatured()),
             Boolean.TRUE.equals(entity.getActive()),
             Boolean.TRUE.equals(entity.getAvailable()),
             entity.getStockQuantity(),

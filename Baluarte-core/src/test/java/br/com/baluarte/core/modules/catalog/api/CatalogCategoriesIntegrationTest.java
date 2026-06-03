@@ -77,6 +77,16 @@ class CatalogCategoriesIntegrationTest {
     }
 
     @Test
+    void shouldReturnPaginatedPublicProducts() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/products").param("page", "0").param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.meta.page").value(0))
+            .andExpect(jsonPath("$.meta.size").value(10))
+            .andExpect(jsonPath("$.meta.total").isNumber());
+    }
+
+    @Test
     void shouldReturnEmptyModelsArrayForTeamWithoutAvailableItems() throws Exception {
         mockMvc.perform(get("/api/v1/catalog/teams/barcelona/models"))
             .andExpect(status().isOk())

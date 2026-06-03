@@ -19,6 +19,7 @@ public record CatalogModelDetailResponse(
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,
+    boolean featured,
     boolean available,
     int stockQuantity,
     List<AdminProductVariantResponse> variants,

@@ -3,7 +3,7 @@ import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } fro
 
 export const revalidate = 60
 
-import { fetchBestSellers, fetchCategories, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
+import { fetchBestSellers, fetchCategories, fetchFeaturedProducts, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -17,22 +17,24 @@ type DisplayModel = Model & {
 
 async function getData() {
   const categoriesRes = await fetchCategories().catch(() => null)
-  const modelsRes = await fetchBestSellers(4).catch(() => null)
+  const featuredRes = await fetchFeaturedProducts(10).catch(() => null)
+  const bestSellersRes = await fetchBestSellers(4).catch(() => null)
 
-  if (!categoriesRes && !modelsRes) {
-    return { categories: [], teams: [], products: [] }
+  if (!categoriesRes && !featuredRes && !bestSellersRes) {
+    return { categories: [], teams: [], featuredProducts: [], bestSellers: [] }
   }
 
   const categories = categoriesRes?.data ?? []
-  const products = modelsRes?.data ?? []
+  const featuredProducts = featuredRes?.data ?? []
+  const bestSellers = bestSellersRes?.data ?? []
 
   const teams = await fetchPublicTeams(8).then((response) => response.data).catch(() => [] as Team[])
 
-  return { categories, teams, products }
+  return { categories, teams, featuredProducts, bestSellers }
 }
 
 export default async function Home() {
-  const { categories, teams, products } = await getData()
+  const { categories, teams, featuredProducts, bestSellers } = await getData()
 
   const displayCategories = categories.map((category: Category) => {
     const normalizedSlug = String(category.slug).toLowerCase()
@@ -51,7 +53,8 @@ export default async function Home() {
     }
   })
 
-  const displayProducts = products.filter(product => product.active !== false && product.available !== false)
+  const displayFeaturedProducts = featuredProducts.filter(product => product.active !== false && product.available !== false)
+  const displayBestSellers = bestSellers.filter(product => product.active !== false && product.available !== false)
   const displayTeams = teams.slice(0, 8)
   const categoryLabels = new Map(categories.map((category: Category) => [category.slug, category.name]))
   const categoryIcons = [Trophy, Globe2, Sparkles, Shirt]
@@ -106,7 +109,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Categories */}
       <section id="categorias" className="section-shell">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -177,7 +179,32 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Featured Products */}
+      {displayFeaturedProducts.length > 0 ? (
+        <section className="section-shell">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow">Curadoria</p>
+              <h2 className="mt-3 text-3xl font-extrabold uppercase tracking-[-0.04em] text-slate-900">Destaques</h2>
+              <p className="mt-2 text-slate-500">Produtos selecionados pela equipe Baluarte</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+            {displayFeaturedProducts.slice(0, 4).map((product: DisplayModel) => (
+              <ProductCard
+                key={product.id}
+                href={`/produto/${product.id}?team=${encodeURIComponent(product.teamSlug || "")}`}
+                teamLabel={product.teamSlug || "Baluarte"}
+                title={product.modelName || product.name || "Produto Baluarte"}
+                price={Number(product.price)}
+                originalPrice={product.originalPrice ?? null}
+                imageUrl={product.thumbnailUrl || product.imageUrl || product.image}
+                badge="Destaque"
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="section-shell">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -190,9 +217,9 @@ export default async function Home() {
           </Link>
         </div>
 
-        {displayProducts.length > 0 ? (
+        {displayBestSellers.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          {displayProducts.slice(0, 4).map((product: DisplayModel) => {
+          {displayBestSellers.slice(0, 4).map((product: DisplayModel) => {
             return (
             <ProductCard
               key={product.id}
@@ -211,7 +238,6 @@ export default async function Home() {
         )}
       </section>
 
-      {/* Banner Promotional */}
       <section className="section-shell">
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="border-0 bg-[#0f274d] p-1 text-white lg:col-span-2">
@@ -270,10 +296,7 @@ export default async function Home() {
 }
 
 function categoryLabel(categorySlug: string | undefined, categoryLabels: Map<string, string>) {
-  if (!categorySlug) return undefined
-  return categoryLabels.get(categorySlug) || categorySlug.split("-").map(capitalize).join(" ")
+  return categorySlug ? categoryLabels.get(categorySlug) || categorySlug.split("-").map(capitalize).join(" ") : undefined
 }
 
-function capitalize(value: string) {
-  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value
-}
+function capitalize(value: string) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : value }

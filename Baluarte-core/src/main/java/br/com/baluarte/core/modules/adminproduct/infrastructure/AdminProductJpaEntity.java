@@ -63,6 +63,9 @@ public class AdminProductJpaEntity {
     private String customizationTemplateMetadata;
 
     @Column(nullable = false)
+    private Boolean featured;
+
+    @Column(nullable = false)
     private Boolean active;
 
     @Column(nullable = false)
@@ -96,6 +99,7 @@ public class AdminProductJpaEntity {
         entity.customizationEnabled = product.customizationEnabled();
         entity.customizationTemplatePng = product.customizationTemplatePng();
         entity.customizationTemplateMetadata = product.customizationTemplateMetadata();
+        entity.featured = product.featured();
         entity.active = product.active();
         entity.available = product.available();
         entity.stockQuantity = product.stockQuantity();
@@ -122,6 +126,7 @@ public class AdminProductJpaEntity {
         this.customizationEnabled = product.customizationEnabled();
         this.customizationTemplatePng = product.customizationTemplatePng();
         this.customizationTemplateMetadata = product.customizationTemplateMetadata();
+        this.featured = product.featured();
         this.active = product.active();
         this.available = product.available();
         this.stockQuantity = product.stockQuantity();

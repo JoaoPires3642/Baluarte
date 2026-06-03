@@ -12,6 +12,12 @@ public interface AdminProductRepository {
 
     List<AdminProduct> findActiveAvailable(int limit);
 
+    List<AdminProduct> findFeaturedActiveAvailable(int limit);
+
+    org.springframework.data.domain.Page<AdminProduct> findPublicProducts(String query, int page, int size);
+
+    long countFeaturedExcept(java.util.UUID productId);
+
     List<AdminProduct> findActiveAvailableByTeamSlug(String teamSlug, int limit);
 
     Optional<AdminProduct> findById(UUID id);

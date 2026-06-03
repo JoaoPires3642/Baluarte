@@ -19,6 +19,7 @@ public record UpdateAdminProductRequest(
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,
+    boolean featured,
     @NotNull @Valid List<CreateAdminProductVariantRequest> variants
 ) {
 }

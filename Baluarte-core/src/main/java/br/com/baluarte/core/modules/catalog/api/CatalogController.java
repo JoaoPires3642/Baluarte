@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.validation.annotation.Validated;
@@ -55,14 +56,33 @@ public class CatalogController {
 
     @GetMapping("/featured")
     public ApiSuccessResponse<List<CatalogModelListResponse>> listFeaturedProducts(
-        @RequestParam(defaultValue = "8") @Min(1) @Max(50) int limit
+        @RequestParam(defaultValue = "8") @Min(1) @Max(10) int limit
     ) {
-        List<CatalogModelListResponse> data = adminProductRepository.findActiveAvailable(limit)
+        List<CatalogModelListResponse> data = adminProductRepository.findFeaturedActiveAvailable(limit)
             .stream()
             .map(product -> toCatalogModelListResponse(product, 0))
             .toList();
 
         return ApiSuccessResponse.of(data);
+    }
+
+    @GetMapping("/products")
+    public ApiSuccessResponse<List<CatalogModelListResponse>> listProducts(
+        @RequestParam(defaultValue = "0") @Min(0) int page,
+        @RequestParam(defaultValue = "10") @Min(1) @Max(10) int size,
+        @RequestParam(defaultValue = "") String q
+    ) {
+        Page<AdminProduct> products = adminProductRepository.findPublicProducts(q, page, size);
+        List<CatalogModelListResponse> data = products.getContent().stream()
+            .map(product -> toCatalogModelListResponse(product, 0))
+            .toList();
+
+        return new ApiSuccessResponse<>(data, Map.of(
+            "page", products.getNumber(),
+            "size", products.getSize(),
+            "total", products.getTotalElements(),
+            "totalPages", products.getTotalPages()
+        ));
     }
 
     @GetMapping("/best-sellers")
@@ -145,6 +165,15 @@ public class CatalogController {
         return ApiSuccessResponse.of(toCatalogModelDetailResponse(product));
     }
 
+    @GetMapping("/products/{modelId}")
+    public ApiSuccessResponse<CatalogModelDetailResponse> getModelById(@PathVariable UUID modelId) {
+        AdminProduct product = adminProductRepository.findById(modelId)
+            .filter(item -> item.active() && item.available())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Modelo nao encontrado"));
+
+        return ApiSuccessResponse.of(toCatalogModelDetailResponse(product));
+    }
+
     private CatalogModelListResponse toCatalogModelListResponse(AdminProduct product, long salesCount) {
         List<AdminProductVariantResponse> variants = product.variants().stream()
             .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
@@ -163,6 +192,7 @@ public class CatalogController {
             product.customizationEnabled(),
             product.customizationTemplatePng(),
             product.customizationTemplateMetadata(),
+            product.featured(),
             product.available(),
             product.stockQuantity(),
             variants,
@@ -189,6 +219,7 @@ public class CatalogController {
             product.customizationEnabled(),
             product.customizationTemplatePng(),
             product.customizationTemplateMetadata(),
+            product.featured(),
             product.available(),
             product.stockQuantity(),
             variants,

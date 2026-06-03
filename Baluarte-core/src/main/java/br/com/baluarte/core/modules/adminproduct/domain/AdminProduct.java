@@ -20,6 +20,7 @@ public record AdminProduct(
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,
+    boolean featured,
     boolean active,
     boolean available,
     int stockQuantity,

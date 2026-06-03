@@ -39,6 +39,11 @@ public class UpdateAdminProductUseCase {
         AdminProduct existing = adminProductRepository.findById(command.productId())
             .orElseThrow(() -> new AdminProductValidationException(List.of("productId produto nao encontrado")));
 
+        if (command.featured() && adminProductRepository.countFeaturedExcept(existing.id()) >= 10) {
+            errors.add("featured limite maximo de 10 produtos em destaque atingido");
+            throw new AdminProductValidationException(errors);
+        }
+
         String categorySlug = normalize(command.categorySlug());
         String teamSlug = normalize(command.teamSlug());
 
@@ -76,6 +81,7 @@ public class UpdateAdminProductUseCase {
             command.customizationEnabled(),
             normalizeTemplate(command.customizationTemplatePng()),
             normalizeTemplate(command.customizationTemplateMetadata()),
+            command.featured(),
             existing.active(),
             existing.active() && stockQuantity > 0,
             stockQuantity,

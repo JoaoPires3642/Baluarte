@@ -53,25 +53,7 @@ export async function fetchModelDetail(teamSlug: string, modelId: string) {
 
 // Simple Model Detail by ID - uses featured endpoint
 export async function fetchProductById(modelId: string) {
-  const res = await fetchFeaturedProducts(50)
-  const product = res.data.find((p: Model) => p.id === modelId)
-  if (product) {
-    try {
-      const detail = await fetchModelDetail(product.teamSlug, modelId)
-      return {
-        data: {
-          ...product,
-          ...detail.data,
-          thumbnailUrl: detail.data.thumbnailUrl || product.thumbnailUrl || product.imageUrl,
-          imageUrl: detail.data.imageUrl || product.imageUrl,
-          images: detail.data.images,
-        },
-      }
-    } catch {
-      return { data: product }
-    }
-  }
-  throw new Error("Product not found")
+  return fetchApi<{ data: ModelDetail }>(`/catalog/products/${modelId}`, PUBLIC_CATALOG_CACHE)
 }
 
 // Public Products by Team - GET /catalog/teams/{teamSlug}/products
@@ -88,9 +70,21 @@ export async function fetchBestSellers(limit = 8) {
   return fetchApi<{ data: Model[] }>(`/catalog/best-sellers?limit=${limit}`, PUBLIC_CATALOG_CACHE)
 }
 
-// All Products (for search/sitemap) - uses featured endpoint
+export interface PublicModelsPageMeta {
+  page: number
+  size: number
+  total: number
+  totalPages: number
+}
+
+export async function fetchPublicModelsPage(page = 0, size = 10, query = "") {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (query.trim()) params.set("q", query.trim())
+  return fetchApi<{ data: Model[]; meta: PublicModelsPageMeta }>(`/catalog/products?${params}`, PUBLIC_CATALOG_CACHE)
+}
+
 export async function fetchPublicModels() {
-  return fetchApi<{ data: Model[] }>("/catalog/featured?limit=50", PUBLIC_CATALOG_CACHE)
+  return fetchPublicModelsPage(0, 10)
 }
 
 // Orders - GET /orders
@@ -357,6 +351,7 @@ export interface Model {
   customizationEnabled?: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: string
+  featured?: boolean
   available?: boolean
   active?: boolean
   stockQuantity?: number
@@ -365,7 +360,7 @@ export interface Model {
   salesCount?: number
 }
 
-export interface ModelDetail extends Model {}
+export type ModelDetail = Model
 
 export interface Variant {
   size: string
@@ -535,6 +530,7 @@ export interface AdminProduct {
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
+  featured?: boolean
   active: boolean
   available: boolean
   stockQuantity: number
@@ -563,6 +559,7 @@ export interface CreateProductRequest {
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
+  featured?: boolean
   variants: Array<{ size: string; stockQuantity: number }>
 }
 
@@ -578,6 +575,7 @@ export interface UpdateProductRequest {
   customizationEnabled: boolean
   customizationTemplatePng?: string
   customizationTemplateMetadata?: Record<string, unknown> | null
+  featured?: boolean
   variants: Array<{ size: string; stockQuantity: number }>
 }
 

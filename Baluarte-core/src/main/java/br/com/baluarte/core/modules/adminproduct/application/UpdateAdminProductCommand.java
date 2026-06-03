@@ -17,6 +17,7 @@ public record UpdateAdminProductCommand(
     boolean customizationEnabled,
     String customizationTemplatePng,
     String customizationTemplateMetadata,
+    boolean featured,
     List<CreateAdminProductVariantCommand> variants
 ) {
 }
