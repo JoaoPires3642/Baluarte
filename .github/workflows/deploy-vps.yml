@@ -1,12 +1,17 @@
 name: Build & Deploy VPS
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - "Baluarte-core/**"
       - ".github/workflows/deploy-vps.yml"
+
+concurrency:
+  group: deploy-vps-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -91,4 +96,16 @@ jobs:
             cd /home/deploy/baluarte
             docker compose pull core
             docker compose up -d --no-deps core
-            docker image prune -f
+
+            echo "Aguardando health check..."
+            for i in $(seq 1 12); do
+              sleep 5
+              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                echo "Deploy OK — container saudável"
+                docker image prune -f --filter "until=24h"
+                exit 0
+              fi
+            done
+
+            echo "Deploy FAILED — health check não respondeu após 60s"
+            exit 1
