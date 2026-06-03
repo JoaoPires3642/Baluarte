@@ -428,7 +428,41 @@ APP_MEDIA_UPLOAD_DIR=/var/www/uploads</code></pre>
   </ul>
 </div>
 
-<h3>6.2 docker-compose com limites de recurso</h3>
+<h3>6.2 Capacidade estimada por container (0.5 vCPU / 512 MB RAM)</h3>
+
+<p>Com <strong>0.5 vCPU e 512 MB RAM</strong>, um backend Spring Boot nativo (GraalVM) aguenta confortavelmente:</p>
+
+<table>
+  <tr><th>Cenário</th><th>Requisições simultâneas</th><th>Req/s sustentados</th><th>Tempo médio de resposta</th></tr>
+  <tr><td>API com consultas simples (catálogo, busca)</td><td>~30</td><td>~100-200</td><td>~50ms</td></tr>
+  <tr><td>API com consultas pesadas (relatórios, admin)</td><td>~10</td><td>~30-50</td><td>~200ms</td></tr>
+  <tr><td>Checkout (Mercado Pago + SuperFrete)</td><td>~5</td><td>~10-20</td><td>~500ms (depende externo)</td></tr>
+  <tr><td>Upload de imagens</td><td>~3</td><td>~5-10</td><td>~1-2s (depende tamanho)</td></tr>
+</table>
+
+<div class="info">
+  <strong>📊 Na prática para um e-commerce:</strong>
+  <ul>
+    <li>Uma loja com <strong>~500-1000 visitas/dia</strong> não passa de 5-10 req/s nos picos</li>
+    <li>Com 0.5 vCPU, você aguenta <strong>folgadamente</strong> até ~50 req/s sustentados</li>
+    <li><strong>50 req/s</strong> equivale a ~180 mil requisições/hora — mais que qualquer e-commerce pequeno-médio precisa</li>
+    <li>Se passar disso, adiciona uma réplica (mais 0.5 vCPU) e o nginx faz o balanceamento</li>
+  </ul>
+</div>
+
+<table>
+  <tr><th>Projeto</th><th>Tráfego estimado</th><th>vCPU necessário</th><th>RAM necessária</th><th>Container</th></tr>
+  <tr><td>Loja virtual pequena (&lt; 500 visitas/dia)</td><td>~2-5 req/s pico</td><td>0.25</td><td>256 MB</td><td>1 container</td></tr>
+  <tr><td>Loja virtual média (~1000 visitas/dia)</td><td>~10-20 req/s pico</td><td>0.5</td><td>512 MB</td><td>1 container</td></tr>
+  <tr><td>Loja grande (~5000 visitas/dia)</td><td>~50-100 req/s pico</td><td>1.0</td><td>1 GB</td><td>2 containers (0.5 cada)</td></tr>
+  <tr><td>API pública com ~10k req/s</td><td>~10000 req/s</td><td>~8+</td><td>~8+ GB</td><td>Múltiplas VPS</td></tr>
+</table>
+
+<div class="warning">
+  <strong>⚠️ Esta estimativa considera um backend nativo Spring Boot (GraalVM).</strong> A imagem JVM consome ~2-3x mais RAM e pode precisar de ~1 GB para o mesmo throughput. Sempre monitore o uso real com <code>docker stats</code> e ajuste os limites conforme necessário.
+</div>
+
+<h3>6.3 docker-compose com limites de recurso</h3>
 
 <pre><code>services:
   db:
@@ -484,7 +518,7 @@ volumes:
   <strong>⚠️ Modo swarm vs docker compose:</strong> <code>deploy.resources</code> funciona nativamente no Docker Swarm. No Docker Compose standalone (<code>docker compose up</code>), use <code>--compatibility</code> ou defina os limites via flags da plataforma (Contabo usa Docker Engine padrão). Alternativa: use <code>docker run --cpus="0.5" --memory="512m"</code> ou um orquestrador leve como <strong>Nomad</strong> ou <strong>K3s</strong>.
 </div>
 
-<h3>6.3 Escalando horizontalmente</h3>
+<h3>6.4 Escalando horizontalmente</h3>
 
 <p>Se o Projeto Baluarte começar a precisar de mais capacidade:</p>
 
@@ -541,7 +575,7 @@ server {
   Até lá, 0.5 vCPU é mais que suficiente para um e-commerce de pequeno-médio porte.
 </div>
 
-<h3>6.4 Exemplo completo com 3 projetos</h3>
+<h3>6.5 Exemplo completo com 3 projetos</h3>
 
 <table>
   <tr><th>Projeto</th><th>Domínio</th><th>Container</th><th>Porta</th><th>vCPU</th><th>RAM</th></tr>
