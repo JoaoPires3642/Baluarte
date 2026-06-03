@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 BACKUP_DIR="/home/deploy/baluarte/backups"
 DB_NAME="baluarte"
