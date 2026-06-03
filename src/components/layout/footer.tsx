@@ -34,20 +34,20 @@ export function Footer() {
           <div className="space-y-4">
             <h4 className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Categorias</h4>
             <ul className="space-y-2 text-sm font-medium text-slate-100">
-              <li><Link href="/categorias/nacionais" className="hover:text-red-100">Times Nacionais</Link></li>
-              <li><Link href="/categorias/estrangeiros" className="hover:text-red-100">Times Estrangeiros</Link></li>
-              <li><Link href="/categorias/selecoes" className="hover:text-red-100">Seleções</Link></li>
-              <li><Link href="/categorias/treino" className="hover:text-red-100">Treino</Link></li>
+              <li><Link href="/categorias/nacionais" className="text-slate-100 hover:text-red-100">Times Nacionais</Link></li>
+              <li><Link href="/categorias/estrangeiros" className="text-slate-100 hover:text-red-100">Times Estrangeiros</Link></li>
+              <li><Link href="/categorias/selecoes" className="text-slate-100 hover:text-red-100">Seleções</Link></li>
+              <li><Link href="/categorias/treino" className="text-slate-100 hover:text-red-100">Treino</Link></li>
             </ul>
           </div>
 
           <div className="space-y-4">
             <h4 className="text-sm font-extrabold uppercase tracking-[0.18em] text-white">Atendimento</h4>
             <ul className="space-y-2 text-sm font-medium text-slate-100">
-              <li><Link href="/contato" className="hover:text-red-100">Fale Conosco</Link></li>
-              <li><Link href="/perguntas" className="hover:text-red-100">Perguntas Frequentes</Link></li>
-              <li><Link href="/trocas" className="hover:text-red-100">Política de Trocas</Link></li>
-              <li><Link href="/privacidade" className="hover:text-red-100">Privacidade</Link></li>
+              <li><Link href="/contato" className="text-slate-100 hover:text-red-100">Fale Conosco</Link></li>
+              <li><Link href="/perguntas" className="text-slate-100 hover:text-red-100">Perguntas Frequentes</Link></li>
+              <li><Link href="/trocas" className="text-slate-100 hover:text-red-100">Política de Trocas</Link></li>
+              <li><Link href="/privacidade" className="text-slate-100 hover:text-red-100">Privacidade</Link></li>
             </ul>
           </div>
 
