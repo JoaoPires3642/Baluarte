@@ -45,21 +45,16 @@ public class InternalRoleResolver {
         AuthUserJpaEntity user;
         if (existingUser != null) {
             user = existingUser;
+            boolean emailChanged = !user.getEmail().equals(normalizedEmail);
             user.touchEmail(normalizedEmail);
+            if (emailChanged) {
+                authUserRepository.save(user);
+            }
         } else {
-            log.warn("Creating new auth_user: clerkUserId={}, email={}", normalizedUserId, normalizedEmail);
             user = AuthUserJpaEntity.createDefaultCustomer(normalizedUserId, normalizedEmail);
+            authUserRepository.saveAndFlush(user);
+            log.info("Created auth_user: clerkUserId={}, email={}", normalizedUserId, normalizedEmail);
         }
-
-        user = authUserRepository.saveAndFlush(user);
-        boolean persisted = authUserRepository.existsById(normalizedUserId);
-        log.warn(
-            "Saved auth_user: clerkUserId={}, email={}, role={}, persisted={}",
-            user.getClerkUserId(),
-            user.getEmail(),
-            user.getRole(),
-            persisted
-        );
 
         boolean adminFromAllowlist = adminClerkUserIds.contains(normalizedUserId) || adminEmails.contains(normalizedEmail);
         if (adminFromAllowlist) {

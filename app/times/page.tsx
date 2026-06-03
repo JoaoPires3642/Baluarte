@@ -1,7 +1,5 @@
 import Link from "next/link"
 import { fetchCategories, fetchTeamsByCategory, type Team, type Category } from "@/lib/api"
-
-export const dynamic = "force-dynamic"
 import { ChevronRight, ShieldCheck } from "lucide-react"
 import { Card } from "@/components/ui/card"
 

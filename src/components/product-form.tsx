@@ -51,7 +51,7 @@ function parseCustomizationMetadata(rawMetadata?: string): CustomizationMetadata
 
 export function ProductForm({ product }: ProductFormProps) {
   const router = useRouter()
-  const { addItem } = useCart()
+  const { items, addItem } = useCart()
   const { showToast } = useToast()
   const [selectedSize, setSelectedSize] = useState<string>("")
   const [personalizationEnabled, setPersonalizationEnabled] = useState(false)
@@ -97,6 +97,9 @@ export function ProductForm({ product }: ProductFormProps) {
     (customNumberCount * customNumberPrice)
 
   const finalPrice = Number(product.price) + (personalizationEnabled ? personalizationExtra : 0)
+  const selectedVariant = product.variants?.find((variant) => variant.size === selectedSize)
+  const selectedStockQuantity = selectedVariant?.stockQuantity
+  const selectedCartQuantity = items.find((item) => item.id === product.id && item.size === selectedSize)?.quantity || 0
 
   const buildCartItem = (): CartItem => {
     const productName = product.modelName || displayProduct.name || "Produto"
@@ -110,9 +113,23 @@ export function ProductForm({ product }: ProductFormProps) {
       teamName: product.teamSlug,
       size: selectedSize,
       quantity: 1,
-        customNames: personalizationEnabled && customName.trim() ? customName.trim().split(/\s+/).filter(Boolean) : [],
-        customNumber: personalizationEnabled ? customNumber.trim() || undefined : undefined,
+      stockQuantity: selectedStockQuantity,
+      customNames: personalizationEnabled && customName.trim() ? customName.trim().split(/\s+/).filter(Boolean) : [],
+      customNumber: personalizationEnabled ? customNumber.trim() || undefined : undefined,
     }
+  }
+
+  const canAddSelectedSize = () => {
+    if (typeof selectedStockQuantity !== "number") return true
+    if (selectedStockQuantity <= 0) {
+      showToast("Tamanho sem estoque", "error")
+      return false
+    }
+    if (selectedCartQuantity >= selectedStockQuantity) {
+      showToast(`Estoque disponível para este tamanho: ${selectedStockQuantity}`, "error")
+      return false
+    }
+    return true
   }
 
   const handleAddToCart = () => {
@@ -121,6 +138,8 @@ export function ProductForm({ product }: ProductFormProps) {
       showToast("Selecione um tamanho", "error")
       return
     }
+
+    if (!canAddSelectedSize()) return
 
     const item = buildCartItem()
 
@@ -134,6 +153,8 @@ export function ProductForm({ product }: ProductFormProps) {
       showToast("Selecione um tamanho", "error")
       return
     }
+
+    if (!canAddSelectedSize()) return
 
     const item = buildCartItem()
 
@@ -257,16 +278,22 @@ export function ProductForm({ product }: ProductFormProps) {
       <div className="hidden space-y-3 sm:block">
         <Label>Tamanho *</Label>
         <div className="flex flex-wrap gap-2">
-          {sizes.map((size) => (
-            <Button
-              key={size}
-              variant={selectedSize === size ? "default" : "outline"}
-              className="w-12"
-              onClick={() => setSelectedSize(size)}
-            >
-              {size}
-            </Button>
-          ))}
+          {sizes.map((size) => {
+            const variant = product.variants?.find((item) => item.size === size)
+            const withoutStock = typeof variant?.stockQuantity === "number" && variant.stockQuantity <= 0
+
+            return (
+              <Button
+                key={size}
+                variant={selectedSize === size ? "default" : "outline"}
+                className="w-12"
+                disabled={withoutStock}
+                onClick={() => setSelectedSize(size)}
+              >
+                {size}
+              </Button>
+            )
+          })}
         </div>
       </div>
 
@@ -449,19 +476,25 @@ export function ProductForm({ product }: ProductFormProps) {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {sizes.map((size) => (
-                <Button
-                  key={size}
-                  variant={selectedSize === size ? "default" : "outline"}
-                  className="min-w-[64px]"
-                  onClick={() => {
-                    setSelectedSize(size)
-                    setShowMobileSizeSheet(false)
-                  }}
-                >
-                  {size}
-                </Button>
-              ))}
+              {sizes.map((size) => {
+                const variant = product.variants?.find((item) => item.size === size)
+                const withoutStock = typeof variant?.stockQuantity === "number" && variant.stockQuantity <= 0
+
+                return (
+                  <Button
+                    key={size}
+                    variant={selectedSize === size ? "default" : "outline"}
+                    className="min-w-[64px]"
+                    disabled={withoutStock}
+                    onClick={() => {
+                      setSelectedSize(size)
+                      setShowMobileSizeSheet(false)
+                    }}
+                  >
+                    {size}
+                  </Button>
+                )
+              })}
             </div>
           </div>
         </div>

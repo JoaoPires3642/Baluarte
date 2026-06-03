@@ -28,6 +28,15 @@ export default function CartPage() {
     showToast("Produto removido do carrinho", "info")
   }
 
+  const handleIncreaseQuantity = (id: string, size: string, quantity: number, stockQuantity?: number) => {
+    if (typeof stockQuantity === "number" && quantity >= stockQuantity) {
+      showToast(`Estoque disponível para este tamanho: ${stockQuantity}`, "error")
+      return
+    }
+
+    updateQuantity(id, size, quantity + 1)
+  }
+
   const handleShippingSearch = async () => {
     if (shippingCep.replace(/\D/g, "").length !== 8) {
       showToast("Informe um CEP valido", "error")
@@ -86,6 +95,7 @@ export default function CartPage() {
             const namesLineTotal = namesCount * 25 * item.quantity
             const numberLineTotal = numberCount * 25 * item.quantity
             const lineTotal = item.price * item.quantity
+            const reachedStockLimit = typeof item.stockQuantity === "number" && item.quantity >= item.stockQuantity
 
             return (
             <Card key={`${item.id}-${item.size}`} className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm shadow-slate-900/5">
@@ -135,10 +145,12 @@ export default function CartPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => updateQuantity(item.id, item.size, item.quantity + 1)}
+                        onClick={() => handleIncreaseQuantity(item.id, item.size, item.quantity, item.stockQuantity)}
+                        disabled={reachedStockLimit}
                       >
                         +
                       </Button>
+                      {reachedStockLimit ? <span className="text-xs font-medium text-red-600">Estoque maximo: {item.stockQuantity}</span> : null}
                        <Button 
                          variant="ghost" 
                          size="sm" 

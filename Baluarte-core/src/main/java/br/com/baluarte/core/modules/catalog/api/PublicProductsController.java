@@ -30,14 +30,9 @@ public class PublicProductsController {
         @PathVariable @Pattern(regexp = "^[a-z0-9-]+$") String teamSlug,
         @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit
     ) {
-        // Get all products for this team that are active and available (public visibility)
         String normalizedSlug = normalizeSlug(teamSlug);
-        List<CatalogModelView> data = adminProductRepository.findAll()
+        List<CatalogModelView> data = adminProductRepository.findActiveAvailableByTeamSlug(normalizedSlug, limit)
             .stream()
-            .filter(product -> product.active() 
-                && product.available() 
-                && product.teamSlug().equalsIgnoreCase(normalizedSlug))
-            .limit(limit)
             .map(this::toProductView)
             .toList();
 

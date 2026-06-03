@@ -27,12 +27,6 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    if (isSignedIn) {
-      fetch("/api/admin/auth/me").catch(() => {})
-    }
-  }, [isSignedIn])
-
-  useEffect(() => {
     const updateHeaderState = () => {
       const width = window.innerWidth
       const isMobile = width < 640

@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<CheckoutOrderJpaEntity, String> {
-    @EntityGraph(attributePaths = "items")
     Page<CheckoutOrderJpaEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     @EntityGraph(attributePaths = "items")
@@ -24,6 +23,5 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
     @EntityGraph(attributePaths = "items")
     Optional<CheckoutOrderJpaEntity> findByOrderIdAndClerkUserId(String orderId, String clerkUserId);
 
-    @EntityGraph(attributePaths = "items")
     List<CheckoutOrderJpaEntity> findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(String status, LocalDateTime createdAt, Pageable pageable);
 }

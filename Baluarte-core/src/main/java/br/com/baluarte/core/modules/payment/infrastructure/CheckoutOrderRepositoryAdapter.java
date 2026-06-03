@@ -6,7 +6,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +50,9 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     @Override
     @Transactional(readOnly = true)
     public List<CheckoutOrder> findAll(int page, int size) {
-        return jpaRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)).stream()
+        List<CheckoutOrderJpaEntity> orders = jpaRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)).getContent();
+        loadItems(orders);
+        return orders.stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }
@@ -63,11 +67,13 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     @Transactional(readOnly = true)
     public List<CheckoutOrder> findPendingPaymentCreatedBefore(Instant cutoff, int limit) {
         LocalDateTime cutoffDateTime = LocalDateTime.ofInstant(cutoff, ZoneOffset.UTC);
-        return jpaRepository.findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
+        List<CheckoutOrderJpaEntity> orders = jpaRepository.findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(
                 "pending_payment",
                 cutoffDateTime,
                 PageRequest.of(0, limit)
-            ).stream()
+            );
+        loadItems(orders);
+        return orders.stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }
@@ -117,5 +123,23 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
         saved.setItems(order.getItems());
         return saved;
+    }
+
+    private void loadItems(List<CheckoutOrderJpaEntity> orders) {
+        if (orders.isEmpty()) {
+            return;
+        }
+
+        List<String> orderIds = orders.stream()
+            .map(CheckoutOrderJpaEntity::getOrderId)
+            .toList();
+        Map<String, List<CheckoutOrderItemJpaEntity>> itemsByOrderId = itemRepository.findByOrderIdIn(orderIds)
+            .stream()
+            .collect(Collectors.groupingBy(CheckoutOrderItemJpaEntity::getOrderId));
+
+        orders.forEach(order -> {
+            order.getItems().clear();
+            order.getItems().addAll(itemsByOrderId.getOrDefault(order.getOrderId(), List.of()));
+        });
     }
 }

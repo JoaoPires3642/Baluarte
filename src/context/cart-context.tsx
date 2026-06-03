@@ -11,6 +11,7 @@ export type CartItem = {
   teamName?: string
   size: string
   quantity: number
+  stockQuantity?: number
   customNames?: string[]
   customNumber?: string
 }
@@ -26,6 +27,11 @@ type CartContextType = {
 
 const CartContext = createContext<CartContextType | null>(null)
 const CART_STORAGE_KEY = "baluarte.cart.v1"
+
+function clampQuantity(quantity: number, stockQuantity?: number) {
+  if (typeof stockQuantity !== "number") return quantity
+  return Math.min(quantity, Math.max(0, stockQuantity))
+}
 
 function readStoredCart() {
   if (typeof window === "undefined") return []
@@ -56,11 +62,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) {
         return prev.map((i) =>
           i.id === item.id && i.size === item.size
-            ? { ...i, quantity: i.quantity + item.quantity }
+            ? {
+                ...i,
+                stockQuantity: item.stockQuantity ?? i.stockQuantity,
+                quantity: clampQuantity(i.quantity + item.quantity, item.stockQuantity ?? i.stockQuantity),
+              }
             : i
         )
       }
-      return [...prev, item]
+      return [...prev, { ...item, quantity: clampQuantity(item.quantity, item.stockQuantity) }]
     })
   }
 
@@ -73,7 +83,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem(id, size)
       return
     }
-    setItems((prev) => prev.map((i) => (i.id === id && i.size === size ? { ...i, quantity } : i)))
+    setItems((prev) => prev.map((i) => (i.id === id && i.size === size ? { ...i, quantity: clampQuantity(quantity, i.stockQuantity) } : i)))
   }
 
   const clear = () => setItems([])
