@@ -3,7 +3,7 @@ import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } fro
 
 export const revalidate = 60
 
-import { fetchCategories, fetchPublicModels, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
+import { fetchBestSellers, fetchCategories, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -17,7 +17,7 @@ type DisplayModel = Model & {
 
 async function getData() {
   const categoriesRes = await fetchCategories().catch(() => null)
-  const modelsRes = await fetchPublicModels().catch(() => null)
+  const modelsRes = await fetchBestSellers(4).catch(() => null)
 
   if (!categoriesRes && !modelsRes) {
     return { categories: [], teams: [], products: [] }
@@ -53,6 +53,7 @@ export default async function Home() {
 
   const displayProducts = products.filter(product => product.active !== false && product.available !== false)
   const displayTeams = teams.slice(0, 8)
+  const categoryLabels = new Map(categories.map((category: Category) => [category.slug, category.name]))
   const categoryIcons = [Trophy, Globe2, Sparkles, Shirt]
 
   return (
@@ -201,7 +202,7 @@ export default async function Home() {
               price={Number(product.price)}
               originalPrice={product.originalPrice ?? null}
               imageUrl={product.thumbnailUrl || product.imageUrl || product.image}
-              badge="Seleção"
+              badge={categoryLabel(product.categorySlug, categoryLabels)}
             />
           )})}
         </div>
@@ -266,4 +267,13 @@ export default async function Home() {
       </section>
     </div>
   )
+}
+
+function categoryLabel(categorySlug: string | undefined, categoryLabels: Map<string, string>) {
+  if (!categorySlug) return undefined
+  return categoryLabels.get(categorySlug) || categorySlug.split("-").map(capitalize).join(" ")
+}
+
+function capitalize(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value
 }

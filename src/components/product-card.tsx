@@ -16,6 +16,11 @@ type ProductCardProps = {
 
 export function ProductCard({ href, teamLabel, title, price, originalPrice, imageUrl, badge }: ProductCardProps) {
   const mediaUrl = resolveMediaUrl(imageUrl || undefined)
+  const badgeClasses = [
+    "absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-full bg-[#c3222a]",
+    "px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white",
+    "shadow-lg shadow-red-950/20 sm:px-3 sm:text-[11px] sm:tracking-[0.18em]",
+  ].join(" ")
   const discountPercent = originalPrice && originalPrice > price
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : null
@@ -40,7 +45,7 @@ export function ProductCard({ href, teamLabel, title, price, originalPrice, imag
           )}
 
           {badge ? (
-            <div className="absolute left-3 top-3 rounded-full bg-[#c3222a] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white shadow-lg shadow-red-950/20">
+            <div className={badgeClasses}>
               {badge}
             </div>
           ) : null}

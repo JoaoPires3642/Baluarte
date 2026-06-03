@@ -2,11 +2,13 @@ package br.com.baluarte.core.modules.catalog.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.AdminProductVariantResponse;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 public record CatalogModelDetailResponse(
     UUID id,
+    String categorySlug,
     String teamSlug,
     String modelName,
     String description,
@@ -19,6 +21,8 @@ public record CatalogModelDetailResponse(
     String customizationTemplateMetadata,
     boolean available,
     int stockQuantity,
-    List<AdminProductVariantResponse> variants
+    List<AdminProductVariantResponse> variants,
+    LocalDateTime createdAt,
+    long salesCount
 ) {
 }

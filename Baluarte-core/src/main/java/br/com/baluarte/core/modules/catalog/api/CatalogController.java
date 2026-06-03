@@ -10,11 +10,17 @@ import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +39,7 @@ public class CatalogController {
     private final ListPublicTeamsUseCase listPublicTeamsUseCase;
     private final ListPublicTeamsByCategoryUseCase listPublicTeamsByCategoryUseCase;
     private final AdminProductRepository adminProductRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping("/categories")
     public ApiSuccessResponse<List<CategoryResponse>> listCategories(
@@ -52,9 +59,37 @@ public class CatalogController {
     ) {
         List<CatalogModelListResponse> data = adminProductRepository.findActiveAvailable(limit)
             .stream()
-            .map(this::toCatalogModelListResponse)
+            .map(product -> toCatalogModelListResponse(product, 0))
             .toList();
 
+        return ApiSuccessResponse.of(data);
+    }
+
+    @GetMapping("/best-sellers")
+    public ApiSuccessResponse<List<CatalogModelListResponse>> listBestSellers(
+        @RequestParam(defaultValue = "8") @Min(1) @Max(50) int limit
+    ) {
+        List<ProductSales> sales = findBestSellerSales(limit);
+        Map<String, Long> salesByProductId = sales.stream()
+            .collect(Collectors.toMap(ProductSales::productId, ProductSales::salesCount));
+        Map<UUID, AdminProduct> productsById = sales.stream()
+            .map(ProductSales::productId)
+            .map(this::parseProductId)
+            .flatMap(Optional::stream)
+            .map(adminProductRepository::findById)
+            .flatMap(Optional::stream)
+            .filter(product -> product.active() && product.available())
+            .collect(Collectors.toMap(AdminProduct::id, Function.identity()));
+
+        List<CatalogModelListResponse> data = new ArrayList<>();
+        for (ProductSales item : sales) {
+            AdminProduct product = parseProductId(item.productId())
+                .map(productsById::get)
+                .orElse(null);
+            if (product != null) {
+                data.add(toCatalogModelListResponse(product, salesByProductId.getOrDefault(item.productId(), 0L)));
+            }
+        }
         return ApiSuccessResponse.of(data);
     }
 
@@ -91,7 +126,7 @@ public class CatalogController {
         String normalizedSlug = normalizeSlug(teamSlug);
         List<CatalogModelListResponse> data = adminProductRepository.findActiveAvailableByTeamSlug(normalizedSlug, limit)
             .stream()
-            .map(this::toCatalogModelListResponse)
+            .map(product -> toCatalogModelListResponse(product, 0))
             .toList();
 
         return ApiSuccessResponse.of(data);
@@ -110,13 +145,14 @@ public class CatalogController {
         return ApiSuccessResponse.of(toCatalogModelDetailResponse(product));
     }
 
-    private CatalogModelListResponse toCatalogModelListResponse(AdminProduct product) {
+    private CatalogModelListResponse toCatalogModelListResponse(AdminProduct product, long salesCount) {
         List<AdminProductVariantResponse> variants = product.variants().stream()
             .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
             .toList();
 
         return new CatalogModelListResponse(
             product.id(),
+            product.categorySlug(),
             product.teamSlug(),
             product.modelName(),
             product.description(),
@@ -129,7 +165,9 @@ public class CatalogController {
             product.customizationTemplateMetadata(),
             product.available(),
             product.stockQuantity(),
-            variants
+            variants,
+            product.createdAt(),
+            salesCount
         );
     }
 
@@ -140,6 +178,7 @@ public class CatalogController {
 
         return new CatalogModelDetailResponse(
             product.id(),
+            product.categorySlug(),
             product.teamSlug(),
             product.modelName(),
             product.description(),
@@ -152,11 +191,38 @@ public class CatalogController {
             product.customizationTemplateMetadata(),
             product.available(),
             product.stockQuantity(),
-            variants
+            variants,
+            product.createdAt(),
+            0
         );
+    }
+
+    private List<ProductSales> findBestSellerSales(int limit) {
+        return jdbcTemplate.query("""
+            select item.product_id, sum(item.quantity) as sales_count
+              from checkout_order_item item
+              join checkout_order order_data on order_data.order_id = item.order_id
+             where order_data.status in ('paid', 'processing', 'shipped', 'delivered')
+             group by item.product_id
+             order by sales_count desc
+             limit ?
+            """,
+            (rs, rowNum) -> new ProductSales(rs.getString("product_id"), rs.getLong("sales_count")),
+            limit
+        );
+    }
+
+    private Optional<UUID> parseProductId(String productId) {
+        try {
+            return Optional.of(UUID.fromString(productId));
+        } catch (IllegalArgumentException exception) {
+            return Optional.empty();
+        }
     }
 
     private String normalizeSlug(String slug) {
         return slug == null ? "" : slug.trim().toLowerCase(Locale.ROOT);
     }
+
+    private record ProductSales(String productId, long salesCount) {}
 }

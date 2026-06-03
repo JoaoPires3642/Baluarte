@@ -69,6 +69,14 @@ class CatalogCategoriesIntegrationTest {
     }
 
     @Test
+    void shouldNotReturnBestSellersWithoutPaidSales() throws Exception {
+        mockMvc.perform(get("/api/v1/catalog/best-sellers"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray())
+            .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
     void shouldReturnEmptyModelsArrayForTeamWithoutAvailableItems() throws Exception {
         mockMvc.perform(get("/api/v1/catalog/teams/barcelona/models"))
             .andExpect(status().isOk())

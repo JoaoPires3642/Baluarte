@@ -84,6 +84,10 @@ export async function fetchFeaturedProducts(limit = 8) {
   return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`, PUBLIC_CATALOG_CACHE)
 }
 
+export async function fetchBestSellers(limit = 8) {
+  return fetchApi<{ data: Model[] }>(`/catalog/best-sellers?limit=${limit}`, PUBLIC_CATALOG_CACHE)
+}
+
 // All Products (for search/sitemap) - uses featured endpoint
 export async function fetchPublicModels() {
   return fetchApi<{ data: Model[] }>("/catalog/featured?limit=50", PUBLIC_CATALOG_CACHE)
@@ -341,6 +345,7 @@ export interface Team {
 
 export interface Model {
   id: string
+  categorySlug?: string
   teamSlug: string
   modelName: string
   description?: string
@@ -356,6 +361,8 @@ export interface Model {
   active?: boolean
   stockQuantity?: number
   variants?: Variant[]
+  createdAt?: string
+  salesCount?: number
 }
 
 export interface ModelDetail extends Model {}

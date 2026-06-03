@@ -52,6 +52,7 @@ export default async function TeamPage({ params }: Props) {
               price={Number(model.price)}
               originalPrice={model.originalPrice ?? null}
               imageUrl={model.thumbnailUrl || model.imageUrl || model.image}
+              badge={isNewRelease(model.createdAt) ? "Lançamento" : undefined}
             />
         )})}
       </div>
@@ -64,4 +65,11 @@ export default async function TeamPage({ params }: Props) {
       ) : null}
     </div>
   )
+}
+
+function isNewRelease(createdAt: string | undefined) {
+  if (!createdAt) return false
+  const createdTime = new Date(createdAt).getTime()
+  if (Number.isNaN(createdTime)) return false
+  return Date.now() - createdTime <= 7 * 24 * 60 * 60 * 1000
 }
