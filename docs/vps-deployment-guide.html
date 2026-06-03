@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guia de Deploy — Baluarte em VPS (Contabo)</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --green: #4ade80;
+    --red: #f87171;
+    --yellow: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; color: var(--accent); }
+  .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
+  h2 {
+    font-size: 1.35rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+  }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--green); }
+  p { margin-bottom: 1rem; color: var(--text); }
+  ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+  li { margin-bottom: 0.35rem; }
+  code {
+    background: var(--surface);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: var(--yellow);
+  }
+  pre {
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  .info {
+    background: #0c4a6e;
+    border-left: 4px solid var(--accent);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1rem;
+  }
+  .warning {
+    background: #451a03;
+    border-left: 4px solid var(--yellow);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1rem;
+  }
+  .danger {
+    background: #450a0a;
+    border-left: 4px solid var(--red);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+  th, td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: var(--surface); color: var(--accent); font-weight: 600; }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .tag-green { background: #14532d; color: var(--green); }
+  .tag-yellow { background: #451a03; color: var(--yellow); }
+  .tag-red { background: #450a0a; color: var(--red); }
+  .cmd { color: var(--green); }
+  .comment { color: var(--text-muted); font-style: italic; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  @media (max-width: 600px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>☁️ Guia de Deploy — Baluarte em VPS (Contabo)</h1>
+<p class="subtitle">
+  Migração do Railway + Vercel para uma VPS Contabo VPS S (4 vCPU, 8GB RAM, 75GB NVMe, €4,50/mês).<br>
+  Inclui: setup inicial, domínio, CI/CD, banco, backups, monitoramento e precificação.
+</p>
+
+<!-- ============================================================ -->
+<h2>1. Especificação da VPS</h2>
+
+<p>A Contabo VPS S tem a seguinte configuração por €4,50/mês (~R$28-30):</p>
+
+<table>
+  <tr><th>Recurso</th><th>Valor</th></tr>
+  <tr><td>vCPU</td><td>4 núcleos dedicados</td></tr>
+  <tr><td>RAM</td><td>8 GB</td></tr>
+  <tr><td>Armazenamento</td><td>75 GB NVMe ou 150 GB SSD</td></tr>
+  <tr><td>Porta</td><td>200 Mbit/s</td></tr>
+  <tr><td>Snapshot</td><td>1 incluso</td></tr>
+  <tr><td>Tráfego</td><td>32 TB/mês</td></tr>
+  <tr><td>Sistema</td><td>Ubuntu 24.04 LTS (recomendado)</td></tr>
+</table>
+
+<div class="info">
+  <strong>💡 Custo-benefício:</strong> Com €4,50 você roda Baluarte (backend + banco + Redis + frontend) + até 2 projetos pequenos sem custo extra. No Railway, cada projeto ou serviço extra consome do crédito.
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Setup Inicial da VPS</h2>
+
+<h3>2.1 Acessar a VPS</h3>
+<p>Após contratar a Contabo, você recebe o IP e senha root por e-mail.</p>
+<pre><code><span class="cmd">ssh</span> root@<span class="comment">&lt;ip-da-vps&gt;</span></code></pre>
+
+<h3>2.2 Primeiros passos</h3>
+<pre><code><span class="cmd">apt update && apt upgrade -y</span>
+<span class="cmd">apt install -y docker.io docker-compose-v2 nginx certbot \
+  python3-certbot-nginx ufw htop neofetch postgresql-client</span>
+
+<span class="comment"># Cria usuário não-root para segurança</span>
+<span class="cmd">adduser deploy</span>
+<span class="cmd">usermod -aG docker deploy</span>
+<span class="cmd">usermod -aG sudo deploy</span></code></pre>
+
+<h3>2.3 Firewall (UFW)</h3>
+<pre><code><span class="cmd">ufw default deny incoming</span>
+<span class="cmd">ufw default allow outgoing</span>
+<span class="cmd">ufw allow ssh</span>
+<span class="cmd">ufw allow 80/tcp</span>
+<span class="cmd">ufw allow 443/tcp</span>
+<span class="cmd">ufw --force enable</span>
+<span class="cmd">ufw status verbose</span></code></pre>
+
+<div class="info">
+  <strong>🔒 Portas:</strong> Apenas 22 (SSH), 80 (HTTP) e 443 (HTTPS) abertas. O Docker expõe internamente 8080, 3000, 5432, etc., mas o nginx faz o proxy reverso e só libera 80/443.
+</div>
+
+<h3>2.4 SSH Key (acesso sem senha)</h3>
+<pre><code><span class="comment"># No seu computador local:</span>
+<span class="cmd">ssh-copy-id deploy@&lt;ip-da-vps&gt;</span>
+<span class="comment"># Ou copie manualmente a chave pública para ~/.ssh/authorized_keys</span>
+
+<span class="comment"># Na VPS, desabilite login por senha:</span>
+<span class="cmd">sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config</span>
+<span class="cmd">sudo systemctl restart sshd</span></code></pre>
+
+<!-- ============================================================ -->
+<h2>3. Domínio e SSL</h2>
+
+<h3>3.1 Apontar o DNS</h3>
+<p>No painel do seu provedor de domínio, crie os seguintes registros:</p>
+<table>
+  <tr><th>Tipo</th><th>Nome</th><th>Valor</th></tr>
+  <tr><td>A</td><td><code>@</code></td><td><code>&lt;ip-da-vps&gt;</code></td></tr>
+  <tr><td>A</td><td><code>api</code></td><td><code>&lt;ip-da-vps&gt;</code></td></tr>
+  <tr><td>A</td><td><code>www</code></td><td><code>&lt;ip-da-vps&gt;</code></td></tr>
+</table>
+<p>Se usar Cloudflare, coloque o DNS proxy como <strong>DNS only</strong> (nuvem cinza) até o SSL estar configurado, depois mude para <strong>Proxied</strong> (nuvem laranja).</p>
+
+<h3>3.2 Configurar nginx</h3>
+<pre><code><span class="cmd">sudo nano /etc/nginx/sites-available/baluarte</span></code></pre>
+
+<pre><code>server {
+    listen 80;
+    server_name seudominio.com.br api.seudominio.com.br;
+
+    # Frontend Next.js
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # API Backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Uploads
+    location /uploads/ {
+        alias /var/www/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+}</code></pre>
+
+<pre><code><span class="cmd">sudo ln -s /etc/nginx/sites-available/baluarte /etc/nginx/sites-enabled/</span>
+<span class="cmd">sudo nginx -t</span>
+<span class="cmd">sudo systemctl reload nginx</span></code></pre>
+
+<h3>3.3 SSL com Certbot</h3>
+<pre><code><span class="cmd">sudo certbot --nginx -d seudominio.com.br -d www.seudominio.com.br</span>
+<span class="cmd">sudo certbot --nginx -d api.seudominio.com.br</span>
+
+<span class="comment"># Verifica renovação automática</span>
+<span class="cmd">sudo certbot renew --dry-run</span></code></pre>
+
+<div class="info">
+  <strong>🔁 Renovação automática:</strong> O Certbot cria um systemd timer que renova automaticamente. Para verificar: <code>systemctl list-timers | grep certbot</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Docker Compose — Produção</h2>
+
+<h3>4.1 Estrutura na VPS</h3>
+<pre><code>/home/deploy/baluarte/
+├── docker-compose.yml
+├── .env              <span class="comment"># variáveis reais (NÃO versionado)</span>
+├── backups/          <span class="comment"># dumps do banco</span>
+└── data/
+    └── uploads/      <span class="comment"># imagens enviadas</span></code></pre>
+
+<h3>4.2 docker-compose.yml (otimizado para VPS)</h3>
+<pre><code>services:
+  db:
+    image: postgres:16-alpine
+    container_name: baluarte-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: baluarte
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d baluarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  core:
+    image: ghcr.io/joaopires3642/baluarte-core-native:latest
+    container_name: baluarte-core
+    restart: unless-stopped
+    pull_policy: always
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - uploads_data:/var/www/uploads
+
+  frontend:
+    image: ghcr.io/joaopires3642/baluarte-next:latest
+    container_name: baluarte-next
+    restart: unless-stopped
+    pull_policy: always
+    env_file: .env
+    depends_on:
+      - core
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  postgres_data:
+  uploads_data:</code></pre>
+
+<div class="danger">
+  <strong>⚠️ Segurança:</strong> Use <code>127.0.0.1:5432:5432</code> em vez de <code>5432:5432</code>. Isso impede acesso externo direto ao PostgreSQL. Apenas o backend consegue conectar.
+</div>
+
+<h3>4.3 Arquivo .env (exemplo)</h3>
+<pre><code><span class="comment"># Banco</span>
+POSTGRES_USER=baluarte
+POSTGRES_PASSWORD=&lt;senha-forte-32-caracteres&gt;
+
+<span class="comment"># Spring Boot</span>
+SPRING_PROFILES_ACTIVE=prod
+SPRING_FLYWAY_BASELINE_ON_MIGRATE=true
+DB_URL=jdbc:postgresql://db:5432/baluarte
+DB_USERNAME=${POSTGRES_USER}
+DB_PASSWORD=${POSTGRES_PASSWORD}
+
+<span class="comment"># CORS — domínios que podem chamar a API</span>
+APP_CORS_ALLOWED_ORIGINS=https://seudominio.com.br,https://www.seudominio.com.br
+
+<span class="comment"># Clerk (auth)</span>
+APP_AUTH_CLERK_ISSUER=https://&lt;seu-clerk&gt;.clerk.accounts.dev
+APP_AUTH_CLERK_JWKS_URI=https://&lt;seu-clerk&gt;.clerk.accounts.dev/.well-known/jwks.json
+APP_AUTH_ADMIN_EMAILS=&lt;emails-admin&gt;
+APP_AUTH_CLERK_SECRET_KEY=sk_***
+APP_AUTH_CLERK_WEBHOOK_SECRET=whsec_***
+
+<span class="comment"># Mercado Pago</span>
+APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN=APP_USR-***
+APP_PAYMENT_MERCADOPAGO_PUBLIC_KEY=APP_USR-***
+APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET=***
+
+<span class="comment"># SuperFrete</span>
+APP_SHIPPING_PROVIDER=superfrete
+APP_SHIPPING_SUPERFRETE_BASE_URL=https://api.superfrete.com
+APP_SHIPPING_SUPERFRETE_TOKEN=***
+APP_SHIPPING_SUPERFRETE_SERVICES=1,2,17
+APP_SHIPPING_SUPERFRETE_USER_AGENT=Baluarte/1.0 (contato@seudominio.com)
+
+<span class="comment"># Uploads</span>
+APP_MEDIA_UPLOAD_DIR=/var/www/uploads
+
+<span class="comment"># Next.js</span>
+NODE_ENV=production
+PORT=3000
+NEXT_PUBLIC_API_BASE_URL=https://api.seudominio.com.br/api/v1
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_***
+CLERK_SECRET_KEY=sk_***
+NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=APP_USR-***</code></pre>
+
+<h3>4.4 Subir os serviços</h3>
+<pre><code><span class="cmd">cd /home/deploy/baluarte</span>
+<span class="cmd">docker compose pull</span>
+<span class="cmd">docker compose up -d</span>
+<span class="cmd">docker compose logs -f</span></code></pre>
+
+<!-- ============================================================ -->
+<h2>5. CI/CD com GitHub Actions</h2>
+
+<p>Dois workflows separados: um para o backend (Spring Boot native) e um para o frontend (Next.js).</p>
+
+<h3>5.1 Backend — Build + Deploy</h3>
+<p>Crie em <code>.github/workflows/backend-deploy.yml</code>:</p>
+<pre><code>name: Backend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Baluarte-core/**'
+      - '.github/workflows/backend-deploy.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/baluarte-core-native
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build native image
+        run: |
+          docker build \
+            -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            ./Baluarte-core
+
+      - name: Push image
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy na VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/deploy/baluarte
+            docker compose pull core
+            docker compose up -d --no-deps core
+            docker image prune -f</code></pre>
+
+<h3>5.2 Frontend — Build + Deploy</h3>
+<p>Crie em <code>.github/workflows/frontend-deploy.yml</code>:</p>
+<pre><code>name: Frontend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'next.config.*'
+      - '.github/workflows/frontend-deploy.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}/baluarte-next
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            -t ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ env.IMAGE_NAME }}:latest \
+            ./baluarte-next
+
+      - name: Push image
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy na VPS via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/deploy/baluarte
+            docker compose pull frontend
+            docker compose up -d --no-deps frontend
+            docker image prune -f</code></pre>
+
+<h3>5.3 Secrets do GitHub</h3>
+<p>Configure no repositório em <strong>Settings → Secrets and variables → Actions</strong>:</p>
+<table>
+  <tr><th>Secret</th><th>Valor</th></tr>
+  <tr><td><code>VPS_HOST</code></td><td>IP da VPS</td></tr>
+  <tr><td><code>VPS_USER</code></td><td><code>deploy</code></td></tr>
+  <tr><td><code>VPS_SSH_KEY</code></td><td>Chave privada SSH do usuário <code>deploy</code></td></tr>
+</table>
+
+<div class="info">
+  <strong>🚀 Fluxo:</strong> Push na <code>main</code> → GitHub Actions builda a imagem → envia para GHCR → faz SSH na VPS → dá pull da nova imagem → recria o container com <code>--no-deps</code> (sem parar banco). Zero downtime.
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Banco de Dados — Backup e Prevenção</h2>
+
+<h3>6.1 Backup automático diário</h3>
+<p>Crie o script <code>/home/deploy/baluarte/backup.sh</code>:</p>
+<pre><code><span class="cmd">nano /home/deploy/baluarte/backup.sh</span></code></pre>
+
+<pre><code>#!/bin/bash
+set -e
+
+BACKUP_DIR="/home/deploy/baluarte/backups"
+DB_NAME="baluarte"
+DB_USER="baluarte"
+DB_PASS="$(grep POSTGRES_PASSWORD /home/deploy/baluarte/.env | cut -d= -f2)"
+DATE="$(date +%Y-%m-%d_%H-%M)"
+RETENTION_DAYS=30
+RCLONE_REMOTE="cloudflare:baluarte-backups"
+
+mkdir -p "$BACKUP_DIR"
+
+# Dump via container (conexão interna, sem expor porta)
+docker exec baluarte-db pg_dump -U "$DB_USER" "$DB_NAME" \
+  --no-owner --no-privileges \
+  | gzip > "$BACKUP_DIR/baluarte_$DATE.sql.gz"
+
+# Remove backups antigos locais
+find "$BACKUP_DIR" -name "baluarte_*.sql.gz" -mtime +$RETENTION_DAYS -delete
+
+# Envia para Cloudflare R2 (ou S3 compatível)
+rclone copy "$BACKUP_DIR/baluarte_$DATE.sql.gz" "$RCLONE_REMOTE" --progress
+
+echo "Backup concluído: baluarte_$DATE.sql.gz"</code></pre>
+
+<pre><code><span class="cmd">chmod +x /home/deploy/baluarte/backup.sh</span></code></pre>
+
+<h3>6.2 Agendar no crontab</h3>
+<pre><code><span class="cmd">crontab -e</span></code></pre>
+
+<pre><code><span class="comment"># Backup do banco todos os dias às 03:00</span>
+0 3 * * * /home/deploy/baluarte/backup.sh >> /var/log/baluarte-backup.log 2>&1
+
+<span class="comment"># Backup semanal completo (segunda 04:00)</span>
+0 4 * * 1 /home/deploy/baluarte/backup.sh --full >> /var/log/baluarte-backup-full.log 2>&1</code></pre>
+
+<h3>6.3 Testar restore</h3>
+<pre><code><span class="comment"># Restaurar de um backup específico</span>
+<span class="cmd">gunzip -c backups/baluarte_2026-06-03_03-00.sql.gz | docker exec -i baluarte-db psql -U baluarte -d baluarte</span></code></pre>
+
+<div class="danger">
+  <strong>☢️ Teste o restore periodicamente!</strong> Um backup que não pode ser restaurado não é um backup. Faça um restore em banco de teste a cada 30 dias.
+</div>
+
+<h3>6.4 Cloudflare R2 (ou similar)</h3>
+<p>Armazenamento externo barato para backups:</p>
+<table>
+  <tr><th>Serviço</th><th>Custo</th><th>Limite grátis</th></tr>
+  <tr><td>Cloudflare R2</td><td>$0.015/GB/mês</td><td>10 GB armazenamento</td></tr>
+  <tr><td>Backblaze B2</td><td>$0.006/GB/mês</td><td>10 GB armazenamento</td></tr>
+  <tr><td>Hetzner Storage Box</td><td>~€3,90/mês</td><td>1 TB</td></tr>
+</table>
+
+<pre><code><span class="cmd">sudo apt install rclone</span>
+<span class="cmd">rclone config</span>
+<span class="comment"># Configure o remote (Cloudflare R2 / Backblaze / etc.)</span></code></pre>
+
+<div class="info">
+  <strong>Estratégia de backup:</strong> Diário (retém 30 dias) + semanal (retém 6 meses) + mensal (retém 1 ano). O script acima faz diário. Adapte para sua necessidade.
+</div>
+
+<h3>6.5 Prevenção de perda de dados</h3>
+<ul>
+  <li><strong>Snapshot da VPS:</strong> A Contabo oferece 1 snapshot incluso. Agende semanal via painel.</li>
+  <li><strong>RPO (Recovery Point Objective):</strong> Máximo 24 horas (backup diário).</li>
+  <li><strong>RTO (Recovery Time Objective):</strong> ~15 minutos (restore do último dump + docker compose up).</li>
+  <li><strong>Offsite:</strong> Backup no Cloudflare R2 (ou Backblaze) para proteger contra falha da VPS.</li>
+  <li><strong>Migração segura:</strong> Sempre faça dump do banco atual antes de aplicar migrations destrutivas.</li>
+</ul>
+
+<h3>6.6 Verificação de integridade</h3>
+<pre><code>$ docker exec -it baluarte-db psql -U baluarte -d baluarte -c "SELECT count(*) FROM admin_product;"
+  count
+--------
+    127
+
+$ ls -lh backups/
+-rw-r--r--  baluarte_2026-06-03_03-00.sql.gz   2.3M
+-rw-r--r--  baluarte_2026-06-04_03-00.sql.gz   2.3M</code></pre>
+
+<!-- ============================================================ -->
+<h2>7. Monitoramento e Health Check</h2>
+
+<h3>7.1 Validação de quedas</h3>
+<p>Opções para detectar se o site ficou fora do ar e ser notificado:</p>
+
+<table>
+  <tr><th>Ferramenta</th><th>Custo</th><th>Funcionalidade</th></tr>
+  <tr><td><strong>Uptime Kuma</strong> (auto-hospedado)</td><td>Grátis</td><td>Health check, alerta Telegram/Discord/Email, histórico</td></tr>
+  <tr><td><strong>Cronjob + curl</strong></td><td>Grátis</td><td>Script simples que verifica /actuator/health</td></tr>
+  <tr><td><strong>Better Uptime</strong></td><td>Grátis (10 monitores)</td><td>Monitoramento externo, página de status, SMS/Telegram</td></tr>
+  <tr><td><strong>Checkly</strong></td><td>Grátis (50 checks/mês)</td><td>Browser check + API check</td></tr>
+</table>
+
+<h3>7.2 Auto-hospedado com Uptime Kuma</h3>
+<pre><code><span class="comment"># No docker-compose.yml da VPS</span>
+  uptime:
+    image: louislam/uptime-kuma:latest
+    container_name: baluarte-uptime
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime_data:/app/data
+
+# Depois configure nginx para /status ou subdomínio status.seudominio.com.br</code></pre>
+
+<h3>7.3 Health check simples (cronjob)</h3>
+<pre><code><span class="cmd">nano /home/deploy/baluarte/healthcheck.sh</span></code></pre>
+
+<pre><code>#!/bin/bash
+WEBHOOK_TELEGRAM="https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage"
+CHAT_ID="$TELEGRAM_CHAT_ID"
+SERVICES=(
+  "https://seudominio.com.br"
+  "https://api.seudominio.com.br/actuator/health"
+)
+
+for URL in "${SERVICES[@]}"; do
+  STATUS=$(curl -o /dev/null -s -w "%{http_code}" "$URL")
+  if [ "$STATUS" != "200" ] && [ "$STATUS" != "302" ]; then
+    curl -s "$WEBHOOK_TELEGRAM" \
+      -d "chat_id=$CHAT_ID" \
+      -d "text=🔴 Baluarte OFFLINE: $URL retornou $STATUS"
+  fi
+done</code></pre>
+
+<pre><code><span class="comment"># No crontab, a cada 5 minutos</span>
+*/5 * * * * /home/deploy/baluarte/healthcheck.sh</code></pre>
+
+<h3>7.4 Logs e observabilidade</h3>
+<pre><code><span class="comment"># Ver logs em tempo real</span>
+<span class="cmd">docker compose logs -f --tail=100</span>
+
+<span class="comment"># Logs de um serviço específico</span>
+<span class="cmd">docker compose logs core --tail=50</span>
+
+<span class="comment"># Ver consumo de recursos</span>
+<span class="cmd">docker stats --no-stream</span></code></pre>
+
+<!-- ============================================================ -->
+<h2>8. Dockerfiles para Build Local</h2>
+
+<h3>8.1 Frontend Dockerfile</h3>
+<p>Crie <code>/home/deploy/baluarte/baluarte-next/Dockerfile</code> (no repositório):</p>
+<pre><code>FROM node:22-alpine AS base
+
+FROM base AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+FROM base AS builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+USER nextjs
+EXPOSE 3000
+CMD ["npm", "start"]</code></pre>
+
+<h3>8.2 Backend Dockerfile</h3>
+<p>Já existe em <code>Baluarte-core/Dockerfile</code> — build nativo multi-estágio. Se quiser versão JVM (mais rápida de build, mais RAM):</p>
+<pre><code>FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+COPY src ./src
+RUN mvn package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+RUN addgroup -S baluarte && adduser -S baluarte -G baluarte
+COPY --from=builder /app/target/*.jar app.jar
+USER baluarte
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
+
+<!-- ============================================================ -->
+<h2>9. Precificação — Mensalidade de Manutenção</h2>
+
+<p>Abaixo uma sugestão de valores para você cobrar de clientes pela hospedagem + manutenção. A conta considera que a VPS roda <strong>mais de um projeto</strong>:</p>
+
+<table>
+  <tr><th>Item</th><th>Custo mensal (estimado)</th></tr>
+  <tr><td>Contabo VPS S (rateado entre projetos)</td><td>€4,50 (~R$30) / N projetos</td></tr>
+  <tr><td>Domínio (.com.br)</td><td>~R$40/ano = R$3,30/mês</td></tr>
+  <tr><td>Cloudflare R2 (backups)</td><td>~$0,50/mês</td></tr>
+  <tr><td>Manutenção (monitoramento, updates, backups)</td><td>Seu tempo</td></tr>
+  <tr><td><strong>Total custo por projeto (estimado)</strong></td><td><strong>~R$15-25/mês</strong></td></tr>
+</table>
+
+<h3>Sugestão de tabela para cliente</h3>
+<table>
+  <tr><th>Plano</th><th>Inclui</th><th>Valor/mês</th></tr>
+  <tr>
+    <td><strong>Básico</strong></td>
+    <td>Hospedagem, SSL, backup diário, 1 deploy/mês</td>
+    <td><strong>R$ 49</strong></td>
+  </tr>
+  <tr>
+    <td><strong>Padrão</strong></td>
+    <td>Hospedagem, SSL, backup diário, deploys ilimitados, monitoramento, suporte em até 48h</td>
+    <td><strong>R$ 97</strong></td>
+  </tr>
+  <tr>
+    <td><strong>Premium</strong></td>
+    <td>Tudo do Padrão + suporte prioritário até 4h + relatório mensal + manutenção de conteúdo</td>
+    <td><strong>R$ 197</strong></td>
+  </tr>
+  <tr>
+    <td>Setup (taxa única)</td>
+    <td>Migração do Railway, configuração da VPS, domínio, SSL, CI/CD</td>
+    <td><strong>R$ 400-800</strong></td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>💡 Margem:</strong> Com uma VPS de €4,50 você pode hospedar 3-5 projetos pequenos. Cada cliente no plano Básico já cobre o custo total da VPS + domínio + sobra para seu trabalho.
+</div>
+
+<div class="warning">
+  <strong>📋 Lembre-se:</strong> Esses valores são sugestões. Ajuste conforme seu mercado, complexidade do projeto e seu tempo disponível para manutenção.
+</div>
+
+<!-- ============================================================ -->
+<h2>10. Checklist de Migração</h2>
+
+<ul>
+  <li><input type="checkbox"> Contratar Contabo VPS S</li>
+  <li><input type="checkbox"> Instalar Docker, nginx, certbot, ufw na VPS</li>
+  <li><input type="checkbox"> Configurar firewall (apenas 22, 80, 443)</li>
+  <li><input type="checkbox"> Criar usuário <code>deploy</code> e configurar SSH key</li>
+  <li><input type="checkbox"> Apontar domínio (A records) para o IP da VPS</li>
+  <li><input type="checkbox"> Configurar nginx + SSL (certbot)</li>
+  <li><input type="checkbox"> Exportar banco do Railway (pg_dump)</li>
+  <li><input type="checkbox"> Importar banco na VPS (psql)</li>
+  <li><input type="checkbox"> Subir docker compose com .env real</li>
+  <li><input type="checkbox"> Validar health check: <code>/actuator/health</code></li>
+  <li><input type="checkbox"> Validar frontend: carregar home, login, busca, produto</li>
+  <li><input type="checkbox"> Configurar webhooks Mercado Pago / SuperFrete para novo domínio</li>
+  <li><input type="checkbox"> Configurar GitHub Actions secrets (VPS_HOST, VPS_USER, VPS_SSH_KEY)</li>
+  <li><input type="checkbox"> Fazer push na main e validar CI/CD</li>
+  <li><input type="checkbox"> Agendar backup automático (crontab + rclone)</li>
+  <li><input type="checkbox"> Configurar monitoramento (Uptime Kuma ou cron + Telegram)</li>
+  <li><input type="checkbox"> Atualizar sitemap, OG metadata e robots.txt com domínio novo</li>
+  <li><input type="checkbox"> Desativar Railway (apenas depois de tudo validado)</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>11. Comparação de Custos</h2>
+
+<table>
+  <tr><th>Item</th><th>Railway + Vercel</th><th>VPS Contabo</th><th>Diferença</th></tr>
+  <tr><td>Frontend</td><td>Grátis (Vercel Hobby)</td><td>Incluso na VPS</td><td>~</td></tr>
+  <tr><td>Backend + Banco</td><td>$5 crédito (pode estourar)</td><td>Incluso na VPS</td><td>-</td></tr>
+  <tr><td>Projetos extras</td><td>+$5 cada</td><td>Grátis (mesma VPS)</td><td>💰</td></tr>
+  <tr><td>Manutenção</td><td>Zero</td><td>Você administra</td><td>⏱️</td></tr>
+  <tr><td>Custo fixo/mês</td><td>~$5-15 (variável)</td><td>€4,50 (~R$30)</td><td>💰💰</td></tr>
+  <tr><td>Escalabilidade</td><td>Automática</td><td>8GB fixo</td><td>-</td></tr>
+</table>
+
+<div class="info">
+  <strong>➡️ Conclusão:</strong> Para projetos pequenos-médios, a VPS sai muito mais barato e ainda sobra recurso para rodar outros projetos. A contrapartida é que você vira o administrador do servidor — mas com Docker + CI/CD bem configurado, o custo operacional é baixo.
+</div>
+
+<hr>
+
+<p style="text-align:center;color:var(--text-muted);font-size:0.85rem">
+  Documento gerado em junho de 2026 · Baluarte · <a href="https://github.com/JoaoPires3642/Baluarte" style="color:var(--accent)">github.com/JoaoPires3642/Baluarte</a>
+</p>
+
+</div>
+</body>
+</html>
