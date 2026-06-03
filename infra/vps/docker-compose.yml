@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: baluarte-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: baluarte
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d baluarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  core:
+    image: ghcr.io/joaopires3642/baluarte-core-native:latest
+    container_name: baluarte-core
+    restart: unless-stopped
+    pull_policy: always
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - uploads_data:/var/www/uploads
+
+volumes:
+  postgres_data:
+  uploads_data:
