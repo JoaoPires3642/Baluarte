@@ -1,10 +1,11 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
 BACKUP_DIR="/home/deploy/baluarte/backups"
 DB_NAME="baluarte"
 DB_USER="baluarte"
-DB_PASS="$(grep -oP '^POSTGRES_PASSWORD=\K.*' /home/deploy/baluarte/.env)"
+# -f2- captura senhas com "=" dentro (ex: base64)
+DB_PASS="$(grep ^POSTGRES_PASSWORD /home/deploy/baluarte/.env | cut -d= -f2-)"
 DATE="$(date +%Y-%m-%d_%H-%M)"
 RETENTION_DAYS=30
 RCLONE_REMOTE="cloudflare:baluarte-backups"
