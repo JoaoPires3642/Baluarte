@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { ClipboardList, ChevronRight } from "lucide-react"
+import { AlertTriangle, ClipboardList, ChevronRight } from "lucide-react"
 import { type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GeneratePendingShippingLabels } from "@/components/generate-pending-shipping-labels"
 import { auth, currentUser } from "@clerk/nextjs/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
@@ -67,23 +68,43 @@ function emptyOrdersPayload(page: number): OrdersPayload {
   return { data: [], meta: { page, size: 30, total: 0, totalPages: 0 } }
 }
 
+function isStaleProcessingOrder(order: Order) {
+  if (order.status !== "processing" || !order.shipping?.labelId) return false
+  const updatedAt = order.updatedAt || order.createdAt
+  const updatedTime = new Date(updatedAt).getTime()
+  if (Number.isNaN(updatedTime)) return false
+  return Date.now() - updatedTime > 24 * 60 * 60 * 1000
+}
+
 export default async function AdminOrdersPage({ searchParams }: Props) {
   const params = await searchParams
   const currentPage = Math.max(Number(params.page || "0") || 0, 0)
   const payload = await getOrders(currentPage)
   const orders = payload.data
   const meta = payload.meta
+  const staleProcessingOrders = orders.filter(isStaleProcessingOrder)
 
   return (
     <div className="space-y-6 py-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/admin" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">
             ← Voltar
           </Link>
           <h1 className="text-2xl font-bold">Pedidos</h1>
         </div>
+        <GeneratePendingShippingLabels />
       </div>
+
+      {staleProcessingOrders.length > 0 && (
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">{staleProcessingOrders.length} pedido(s) processando há mais de 1 dia.</p>
+            <p className="mt-1 text-amber-800">Eles ja tiveram etiqueta gerada, mas ainda nao foram marcados como enviados pela SuperFrete. Verifique se ficaram esquecidos.</p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -106,8 +127,9 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order: Order) => (
-                  <tr key={order.id} className="border-b">
+                {orders.map((order: Order) => {
+                  const stale = isStaleProcessingOrder(order)
+                  return <tr key={order.id} className={stale ? "border-b bg-amber-50/70" : "border-b"}>
                     <td className="py-3 font-medium">#{order.orderReference}</td>
                     <td className="py-3">{new Date(order.createdAt).toLocaleDateString("pt-BR")}</td>
                     <td className="py-3 text-slate-500">
@@ -115,9 +137,12 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                     </td>
                     <td className="py-3">R$ {order.total.toFixed(2).replace(".", ",")}</td>
                     <td className="py-3">
-                      <Badge className={statusColors[order.status] || "bg-gray-500"}>
-                        {statusLabels[order.status] || order.status}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge className={statusColors[order.status] || "bg-gray-500"}>
+                          {statusLabels[order.status] || order.status}
+                        </Badge>
+                        {stale && <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3 w-3" /> Verificar envio</span>}
+                      </div>
                     </td>
                     <td className="py-3 text-right">
                       <Button variant="ghost" size="sm" asChild>
@@ -125,7 +150,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                })}
               </tbody>
             </table>
           </div>}
@@ -137,9 +162,11 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
           )}
 
           <div className="space-y-3 sm:hidden">
-            {orders.map((order: Order) => (
+            {orders.map((order: Order) => {
+              const stale = isStaleProcessingOrder(order)
+              return (
               <Link key={order.id} href={`/admin/pedidos/${order.id}`} className="block">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50">
+                <div className={stale ? "rounded-xl border border-amber-200 bg-amber-50 p-4 transition-colors active:bg-amber-50" : "rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#0f274d]/30 active:bg-slate-50"}>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">#{order.orderReference}</span>
                     <Badge className={statusColors[order.status] || "bg-gray-500"}>
@@ -154,9 +181,11 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                     <span className="text-lg font-bold">R$ {order.total.toFixed(2).replace(".", ",")}</span>
                     <ChevronRight className="h-4 w-4 text-slate-300" />
                   </div>
+                  {stale && <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3 w-3" /> Verificar envio: processando há mais de 1 dia</p>}
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
 
           {meta.totalPages > 1 && (

@@ -67,6 +67,7 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
         if (settings.superfreteToken() == null || settings.superfreteToken().isBlank()) {
             throw new IllegalStateException("SuperFrete token not configured");
         }
+        AdminShippingPackageOption packageOption = settings.packageForQuantity(command.itemsCount());
 
         Map<String, Object> body = Map.of(
             "from", Map.of("postal_code", onlyDigits(settings.originCep())),
@@ -80,9 +81,9 @@ public class SuperFreteShippingQuoteStrategy implements ShippingQuoteStrategy {
             ),
             "products", List.of(Map.of(
                 "quantity", command.itemsCount(),
-                "height", settings.packageHeightCm(),
-                "length", settings.packageLengthCm(),
-                "width", settings.packageWidthCm(),
+                "height", packageOption.heightCm(),
+                "length", packageOption.lengthCm(),
+                "width", packageOption.widthCm(),
                 "weight", settings.packageWeightKg()
             ))
         );

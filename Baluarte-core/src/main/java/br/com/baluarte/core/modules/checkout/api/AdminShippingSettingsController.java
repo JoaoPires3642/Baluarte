@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.checkout.api;
 
 import br.com.baluarte.core.modules.checkout.infrastructure.AdminShippingSettingsService;
 import br.com.baluarte.core.modules.checkout.infrastructure.AdminShippingSettingsValues;
+import br.com.baluarte.core.modules.checkout.infrastructure.AdminShippingPackageOption;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,7 +46,8 @@ public class AdminShippingSettingsController {
             request.superfreteCartPath(), request.superfreteCheckoutPath(), request.superfreteLabelLinkPath(),
             request.senderName(), request.senderPhone(), request.senderEmail(), request.senderDocument(),
             request.senderStreet(), request.senderNumber(), request.senderComplement(), request.senderDistrict(),
-            request.senderCity(), request.senderState());
+            request.senderCity(), request.senderState(), request.packageOptions(), request.automaticLabelEnabled(),
+            request.automaticLabelRunTime(), request.automaticLabelCutoffTime());
     }
 
     private AdminShippingSettingsResponse toResponse(AdminShippingSettingsValues values) {
@@ -54,7 +57,8 @@ public class AdminShippingSettingsController {
             values.superfreteUserAgent(), values.superfreteCartPath(), values.superfreteCheckoutPath(),
             values.superfreteLabelLinkPath(), values.senderName(), values.senderPhone(), values.senderEmail(),
             values.senderDocument(), values.senderStreet(), values.senderNumber(), values.senderComplement(),
-            values.senderDistrict(), values.senderCity(), values.senderState());
+            values.senderDistrict(), values.senderCity(), values.senderState(), values.safePackageOptions(),
+            values.automaticLabelEnabled(), values.automaticLabelRunTime(), values.automaticLabelCutoffTime());
     }
 }
 
@@ -81,7 +85,11 @@ record AdminShippingSettingsRequest(
     String senderComplement,
     @NotBlank String senderDistrict,
     @NotBlank String senderCity,
-    @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$") String senderState
+    @NotBlank @Pattern(regexp = "^[A-Za-z]{2}$") String senderState,
+    List<@Valid AdminShippingPackageOption> packageOptions,
+    Boolean automaticLabelEnabled,
+    @Pattern(regexp = "^([01][0-9]|2[0-3]):[0-5][0-9]$") String automaticLabelRunTime,
+    @Pattern(regexp = "^([01][0-9]|2[0-3]):[0-5][0-9]$") String automaticLabelCutoffTime
 ) {}
 
 record AdminShippingSettingsResponse(
@@ -107,5 +115,9 @@ record AdminShippingSettingsResponse(
     String senderComplement,
     String senderDistrict,
     String senderCity,
-    String senderState
+    String senderState,
+    List<AdminShippingPackageOption> packageOptions,
+    Boolean automaticLabelEnabled,
+    String automaticLabelRunTime,
+    String automaticLabelCutoffTime
 ) {}

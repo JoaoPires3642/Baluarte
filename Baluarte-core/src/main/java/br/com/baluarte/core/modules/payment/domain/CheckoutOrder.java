@@ -31,6 +31,7 @@ public class CheckoutOrder {
     private String shippingLabelUrl;
     private String paymentReference;
     private String trackingCode;
+    private String trackingUrl;
     private Instant createdAt;
     private Instant updatedAt;
     private List<CheckoutOrderItem> items;
@@ -129,6 +130,8 @@ public class CheckoutOrder {
     public void setPaymentReference(String paymentReference) { this.paymentReference = paymentReference; }
     public String getTrackingCode() { return trackingCode; }
     public void setTrackingCode(String trackingCode) { this.trackingCode = trackingCode; }
+    public String getTrackingUrl() { return trackingUrl; }
+    public void setTrackingUrl(String trackingUrl) { this.trackingUrl = trackingUrl; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

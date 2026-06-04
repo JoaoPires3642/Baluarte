@@ -91,6 +91,9 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "tracking_code", length = 80)
     private String trackingCode;
 
+    @Column(name = "tracking_url", length = 500)
+    private String trackingUrl;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -134,6 +137,7 @@ public class CheckoutOrderJpaEntity {
         this.shippingLabelUrl = order.getShippingLabelUrl();
         this.paymentReference = order.getPaymentReference();
         this.trackingCode = order.getTrackingCode();
+        this.trackingUrl = order.getTrackingUrl();
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -144,6 +148,7 @@ public class CheckoutOrderJpaEntity {
                 shippingCity, shippingState);
         order.setPaymentReference(paymentReference);
         order.setTrackingCode(trackingCode);
+        order.setTrackingUrl(trackingUrl);
         order.setShippingServiceId(shippingServiceId);
         order.setShippingServiceName(shippingServiceName);
         order.setShippingProvider(shippingProvider);

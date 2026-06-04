@@ -1,11 +1,14 @@
 package br.com.baluarte.core.modules.checkout.infrastructure;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +17,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class AdminShippingSettingsJpaEntity {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<List<AdminShippingPackageOption>> PACKAGE_OPTIONS_TYPE = new TypeReference<>() {};
 
     public static final String SINGLETON_ID = "default";
 
@@ -38,6 +44,9 @@ public class AdminShippingSettingsJpaEntity {
 
     @Column(name = "package_length_cm", nullable = false)
     private Integer packageLengthCm;
+
+    @Column(name = "package_options_json", columnDefinition = "TEXT")
+    private String packageOptionsJson;
 
     @Column(name = "superfrete_base_url", nullable = false, length = 160)
     private String superfreteBaseUrl;
@@ -90,6 +99,15 @@ public class AdminShippingSettingsJpaEntity {
     @Column(name = "sender_state", nullable = false, length = 2)
     private String senderState;
 
+    @Column(name = "automatic_label_enabled", nullable = false)
+    private Boolean automaticLabelEnabled;
+
+    @Column(name = "automatic_label_run_time", nullable = false, length = 5)
+    private String automaticLabelRunTime;
+
+    @Column(name = "automatic_label_cutoff_time", nullable = false, length = 5)
+    private String automaticLabelCutoffTime;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -111,13 +129,14 @@ public class AdminShippingSettingsJpaEntity {
         this.packageHeightCm = values.packageHeightCm();
         this.packageWidthCm = values.packageWidthCm();
         this.packageLengthCm = values.packageLengthCm();
+        this.packageOptionsJson = toJson(values.safePackageOptions());
         this.superfreteBaseUrl = value(values.superfreteBaseUrl(), "https://sandbox.superfrete.com");
         this.superfreteToken = values.superfreteToken();
         this.superfreteServices = value(values.superfreteServices(), "1,2,17");
         this.superfreteUserAgent = value(values.superfreteUserAgent(), "Baluarte/1.0 (contato@baluarte.com)");
         this.superfreteCartPath = value(values.superfreteCartPath(), "/api/v0/cart");
         this.superfreteCheckoutPath = value(values.superfreteCheckoutPath(), "/api/v0/checkout");
-        this.superfreteLabelLinkPath = value(values.superfreteLabelLinkPath(), "/api/v0/orders/{id}/tag/link");
+        this.superfreteLabelLinkPath = value(values.superfreteLabelLinkPath(), "/api/v0/tag/print");
         this.senderName = value(values.senderName(), "");
         this.senderPhone = value(values.senderPhone(), "");
         this.senderEmail = value(values.senderEmail(), "");
@@ -128,6 +147,9 @@ public class AdminShippingSettingsJpaEntity {
         this.senderDistrict = value(values.senderDistrict(), "");
         this.senderCity = value(values.senderCity(), "");
         this.senderState = value(values.senderState(), "").toUpperCase();
+        this.automaticLabelEnabled = values.automaticLabelEnabled() != null && values.automaticLabelEnabled();
+        this.automaticLabelRunTime = value(values.automaticLabelRunTime(), "17:00");
+        this.automaticLabelCutoffTime = value(values.automaticLabelCutoffTime(), "15:00");
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -135,7 +157,27 @@ public class AdminShippingSettingsJpaEntity {
         return new AdminShippingSettingsValues(provider, originCep, packageWeightKg, packageHeightCm, packageWidthCm,
             packageLengthCm, superfreteBaseUrl, superfreteToken, superfreteServices, superfreteUserAgent,
             superfreteCartPath, superfreteCheckoutPath, superfreteLabelLinkPath, senderName, senderPhone, senderEmail,
-            senderDocument, senderStreet, senderNumber, senderComplement, senderDistrict, senderCity, senderState);
+            senderDocument, senderStreet, senderNumber, senderComplement, senderDistrict, senderCity, senderState,
+            packageOptions(), automaticLabelEnabled, automaticLabelRunTime, automaticLabelCutoffTime);
+    }
+
+    private List<AdminShippingPackageOption> packageOptions() {
+        if (packageOptionsJson == null || packageOptionsJson.isBlank()) {
+            return List.of(new AdminShippingPackageOption("Padrao", 999, packageHeightCm, packageWidthCm, packageLengthCm));
+        }
+        try {
+            return OBJECT_MAPPER.readValue(packageOptionsJson, PACKAGE_OPTIONS_TYPE);
+        } catch (Exception exception) {
+            return List.of(new AdminShippingPackageOption("Padrao", 999, packageHeightCm, packageWidthCm, packageLengthCm));
+        }
+    }
+
+    private String toJson(List<AdminShippingPackageOption> packageOptions) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(packageOptions);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Erro ao serializar pacotes de frete");
+        }
     }
 
     private String value(String value, String fallback) {

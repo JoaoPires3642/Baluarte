@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ChevronLeft, MapPin, PackageSearch, Truck, UserRound } from "lucide-react"
+import { AlertTriangle, ChevronLeft, MapPin, PackageSearch, Truck, UserRound } from "lucide-react"
 import { type Order } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -56,6 +56,14 @@ async function getOrder(id: string) {
   }
 }
 
+function isStaleProcessingOrder(order: Order) {
+  if (order.status !== "processing" || !order.shipping?.labelId) return false
+  const updatedAt = order.updatedAt || order.createdAt
+  const updatedTime = new Date(updatedAt).getTime()
+  if (Number.isNaN(updatedTime)) return false
+  return Date.now() - updatedTime > 24 * 60 * 60 * 1000
+}
+
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params
   const order = await getOrder(id)
@@ -63,6 +71,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   if (!order) {
     notFound()
   }
+
+  const staleProcessing = isStaleProcessingOrder(order)
 
   return (
     <div className="space-y-6 py-8">
@@ -83,6 +93,16 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           <UpdateOrderStatus orderId={order.id} currentStatus={order.status} />
         </div>
       </div>
+
+      {staleProcessing && (
+        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-semibold">Etiqueta gerada há mais de 1 dia e pedido ainda está em processamento.</p>
+            <p className="mt-1 text-amber-800">Verifique se a etiqueta foi impressa/postada ou se o pedido ficou esquecido.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

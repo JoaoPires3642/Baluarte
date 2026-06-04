@@ -23,5 +23,10 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
     @EntityGraph(attributePaths = "items")
     Optional<CheckoutOrderJpaEntity> findByOrderIdAndClerkUserId(String orderId, String clerkUserId);
 
+    Optional<CheckoutOrderJpaEntity> findByShippingLabelId(String shippingLabelId);
+
+    @EntityGraph(attributePaths = "items")
+    List<CheckoutOrderJpaEntity> findByStatusInOrderByCreatedAtAsc(List<String> statuses);
+
     List<CheckoutOrderJpaEntity> findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(String status, LocalDateTime createdAt, Pageable pageable);
 }

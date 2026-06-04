@@ -40,7 +40,9 @@ public class AdminShippingSettingsService {
             token, values.superfreteServices(), values.superfreteUserAgent(), values.superfreteCartPath(),
             values.superfreteCheckoutPath(), values.superfreteLabelLinkPath(), values.senderName(), values.senderPhone(),
             values.senderEmail(), values.senderDocument(), values.senderStreet(), values.senderNumber(),
-            values.senderComplement(), values.senderDistrict(), values.senderCity(), values.senderState()));
+            values.senderComplement(), values.senderDistrict(), values.senderCity(), values.senderState(),
+            values.safePackageOptions(), values.automaticLabelEnabled(), values.automaticLabelRunTime(),
+            values.automaticLabelCutoffTime()));
         return repository.save(entity).toValues();
     }
 }

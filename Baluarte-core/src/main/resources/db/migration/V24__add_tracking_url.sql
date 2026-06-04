@@ -1,0 +1,1 @@
+ALTER TABLE checkout_order ADD COLUMN IF NOT EXISTS tracking_url VARCHAR(500);

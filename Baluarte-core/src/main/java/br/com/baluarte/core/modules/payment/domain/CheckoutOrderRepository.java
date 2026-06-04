@@ -6,11 +6,13 @@ import java.util.Optional;
 public interface CheckoutOrderRepository {
     Optional<CheckoutOrder> findById(String orderId);
     Optional<CheckoutOrder> findByCheckoutSessionId(String checkoutSessionId);
+    Optional<CheckoutOrder> findByShippingLabelId(String shippingLabelId);
     List<CheckoutOrder> findByCustomerRef(String customerRef);
     List<CheckoutOrder> findByClerkUserId(String clerkUserId);
     Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId);
     List<CheckoutOrder> findAll();
     List<CheckoutOrder> findAll(int page, int size);
+    List<CheckoutOrder> findByStatusIn(List<String> statuses);
     long countAll();
     List<CheckoutOrder> findPendingPaymentCreatedBefore(java.time.Instant cutoff, int limit);
     CheckoutOrder save(CheckoutOrder order);

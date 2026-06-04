@@ -1,6 +1,7 @@
 package br.com.baluarte.core.modules.checkout.infrastructure;
 
 import java.math.BigDecimal;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +45,7 @@ public class AdminShippingSettingsProperties {
         @Value("${app.shipping.superfrete.user-agent:Baluarte/1.0 (contato@baluarte.com)}") String superfreteUserAgent,
         @Value("${app.shipping.superfrete.cart-path:/api/v0/cart}") String superfreteCartPath,
         @Value("${app.shipping.superfrete.checkout-path:/api/v0/checkout}") String superfreteCheckoutPath,
-        @Value("${app.shipping.superfrete.label-link-path:/api/v0/orders/{id}/tag/link}") String superfreteLabelLinkPath,
+        @Value("${app.shipping.superfrete.label-link-path:/api/v0/tag/print}") String superfreteLabelLinkPath,
         @Value("${app.shipping.sender.name:}") String senderName,
         @Value("${app.shipping.sender.phone:}") String senderPhone,
         @Value("${app.shipping.sender.email:}") String senderEmail,
@@ -85,6 +86,8 @@ public class AdminShippingSettingsProperties {
         return new AdminShippingSettingsValues(provider, originCep, packageWeightKg, packageHeightCm, packageWidthCm,
             packageLengthCm, superfreteBaseUrl, superfreteToken, superfreteServices, superfreteUserAgent,
             superfreteCartPath, superfreteCheckoutPath, superfreteLabelLinkPath, senderName, senderPhone, senderEmail,
-            senderDocument, senderStreet, senderNumber, senderComplement, senderDistrict, senderCity, senderState);
+            senderDocument, senderStreet, senderNumber, senderComplement, senderDistrict, senderCity, senderState,
+            List.of(new AdminShippingPackageOption("Padrao", 999, packageHeightCm, packageWidthCm, packageLengthCm)),
+            false, "17:00", "15:00");
     }
 }

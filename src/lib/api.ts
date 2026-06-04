@@ -448,6 +448,7 @@ export interface Order {
   orderReference: string
   status: "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "pending_payment"
   createdAt: string
+  updatedAt?: string
   total: number
   items: Array<{
     productId: string
@@ -505,6 +506,18 @@ export interface AdminShippingSettings {
   senderDistrict: string
   senderCity: string
   senderState: string
+  packageOptions: AdminShippingPackageOption[]
+  automaticLabelEnabled?: boolean
+  automaticLabelRunTime?: string
+  automaticLabelCutoffTime?: string
+}
+
+export interface AdminShippingPackageOption {
+  name: string
+  maxQuantity: number
+  heightCm: number
+  widthCm: number
+  lengthCm: number
 }
 
 export type AdminShippingSettingsUpdate = AdminShippingSettings & {

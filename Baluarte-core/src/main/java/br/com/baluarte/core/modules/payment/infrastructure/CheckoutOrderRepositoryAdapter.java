@@ -41,6 +41,12 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<CheckoutOrder> findByShippingLabelId(String shippingLabelId) {
+        return jpaRepository.findByShippingLabelId(shippingLabelId).map(CheckoutOrderJpaEntity::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CheckoutOrder> findAll() {
         return jpaRepository.findAll().stream()
             .map(CheckoutOrderJpaEntity::toDomain)
@@ -53,6 +59,14 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
         List<CheckoutOrderJpaEntity> orders = jpaRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)).getContent();
         loadItems(orders);
         return orders.stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CheckoutOrder> findByStatusIn(List<String> statuses) {
+        return jpaRepository.findByStatusInOrderByCreatedAtAsc(statuses).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }

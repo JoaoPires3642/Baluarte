@@ -2,8 +2,10 @@ package br.com.baluarte.core.modules.order.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
-import br.com.baluarte.core.modules.checkout.infrastructure.SuperFreteShippingLabelService;
+import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationFailure;
+import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationResult;
 import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
+import br.com.baluarte.core.modules.order.application.ShippingLabelGenerationService;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
@@ -44,7 +46,7 @@ public class OrderController {
     private final ClerkJwtVerifier clerkJwtVerifier;
     private final InternalRoleResolver internalRoleResolver;
     private final PixOrderExpirationService pixOrderExpirationService;
-    private final SuperFreteShippingLabelService shippingLabelService;
+    private final ShippingLabelGenerationService shippingLabelGenerationService;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders(
@@ -151,30 +153,24 @@ public class OrderController {
         }
 
         try {
-            if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
-                var cartLabel = shippingLabelService.createCartLabel(order);
-                order.setShippingProvider("superfrete");
-                order.setShippingLabelId(cartLabel.labelId());
-                order.setUpdatedAt(Instant.now());
-                orderRepository.save(order);
-            }
-
-            if (order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank()) {
-                var label = shippingLabelService.emitLabel(order.getShippingLabelId());
-                order.setShippingLabelId(label.labelId());
-                order.setShippingLabelUrl(label.labelUrl());
-                if (label.trackingCode() != null && !label.trackingCode().isBlank()) {
-                    order.setTrackingCode(label.trackingCode());
-                }
-            }
+            order = shippingLabelGenerationService.generateForOrder(order);
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
         }
 
-        order.setStatus("processing");
-        order.setUpdatedAt(Instant.now());
-        orderRepository.save(order);
-        return ApiSuccessResponse.of(toResponse(orderRepository.save(order)));
+        return ApiSuccessResponse.of(toResponse(order));
+    }
+
+    @PostMapping("/shipping-labels/generate-pending")
+    @Transactional
+    public ApiSuccessResponse<BulkShippingLabelResponse> generatePendingShippingLabels(
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        BulkShippingLabelGenerationResult result = shippingLabelGenerationService.generatePending(null);
+        return ApiSuccessResponse.of(new BulkShippingLabelResponse(result.candidates(), result.generated(), result.failures()));
     }
 
     private void releaseOrderStock(CheckoutOrder order) {
@@ -260,6 +256,7 @@ public class OrderController {
             order.getOrderId(),
             order.getStatus(),
             order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
+            order.getUpdatedAt() != null ? order.getUpdatedAt().toString() : "",
             order.getTotalAmount().doubleValue(),
             items,
             new ShippingResponse(
@@ -282,10 +279,17 @@ record OrderResponse(
     String orderReference,
     String status,
     String createdAt,
+    String updatedAt,
     Double total,
     List<OrderItemResponse> items,
     ShippingResponse shipping,
     PaymentResponse payment
+) {}
+
+record BulkShippingLabelResponse(
+    int candidates,
+    int generated,
+    List<BulkShippingLabelGenerationFailure> failures
 ) {}
 
 record OrderItemResponse(

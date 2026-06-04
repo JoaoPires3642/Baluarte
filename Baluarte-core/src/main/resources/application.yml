@@ -84,7 +84,8 @@ app:
       user-agent: ${APP_SHIPPING_SUPERFRETE_USER_AGENT:Baluarte/1.0 (contato@baluarte.com)}
       cart-path: ${APP_SHIPPING_SUPERFRETE_CART_PATH:/api/v0/cart}
       checkout-path: ${APP_SHIPPING_SUPERFRETE_CHECKOUT_PATH:/api/v0/checkout}
-      label-link-path: ${APP_SHIPPING_SUPERFRETE_LABEL_LINK_PATH:/api/v0/orders/{id}/tag/link}
+      label-link-path: ${APP_SHIPPING_SUPERFRETE_LABEL_LINK_PATH:/api/v0/tag/print}
+      webhook-secret: ${APP_SHIPPING_SUPERFRETE_WEBHOOK_SECRET:}
   payment:
     active-provider: ${APP_PAYMENT_PROVIDER:mock}
     mercadopago:

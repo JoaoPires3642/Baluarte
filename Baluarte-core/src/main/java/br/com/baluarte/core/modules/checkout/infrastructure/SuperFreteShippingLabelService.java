@@ -1,6 +1,8 @@
 package br.com.baluarte.core.modules.checkout.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -15,7 +17,11 @@ import org.springframework.web.client.RestClient;
 @Service
 public class SuperFreteShippingLabelService {
 
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+    private static final TypeReference<List<Object>> LIST_TYPE = new TypeReference<>() {};
+
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
     private final String token;
     private final String originCep;
     private final String userAgent;
@@ -60,8 +66,10 @@ public class SuperFreteShippingLabelService {
         @Value("${app.shipping.package.product-height-cm:4}") int productHeightCm,
         @Value("${app.shipping.package.product-width-cm:25}") int productWidthCm,
         @Value("${app.shipping.package.product-length-cm:35}") int productLengthCm,
+        ObjectMapper objectMapper,
         AdminShippingSettingsService settingsService
     ) {
+        this.objectMapper = objectMapper;
         this.token = token;
         this.originCep = originCep;
         this.userAgent = userAgent;
@@ -121,7 +129,7 @@ public class SuperFreteShippingLabelService {
 
         String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
         if (labelUrl == null || labelUrl.isBlank()) {
-            Map<String, Object> linkResponse = get(settings.superfreteLabelLinkPath().replace("{id}", labelId), settings);
+            Map<String, Object> linkResponse = printLabel(labelId, settings);
             labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
         }
 
@@ -132,7 +140,9 @@ public class SuperFreteShippingLabelService {
     private Map<String, Object> cartBody(CheckoutOrder order, String serviceId, AdminShippingSettingsValues settings) {
         int quantity = order.getItems() == null ? 1 : order.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
         BigDecimal insuranceValue = order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount();
-        double weightKg = settings.packageWeightKg().doubleValue();
+        AdminShippingPackageOption packageOption = settings.packageForQuantity(quantity);
+        double productWeightKg = settings.packageWeightKg().doubleValue();
+        double totalWeightKg = settings.totalWeightKg(quantity).doubleValue();
         return Map.of(
             "service", Integer.parseInt(serviceId),
             "from", address(settings.senderName(), settings.senderPhone(), settings.senderEmail(), settings.senderDocument(),
@@ -145,16 +155,16 @@ public class SuperFreteShippingLabelService {
                 "name", productDescription(order),
                 "quantity", Math.max(quantity, 1),
                 "unitary_value", insuranceValue,
-                "weight", weightKg,
-                "height", settings.packageHeightCm(),
-                "width", settings.packageWidthCm(),
-                "length", settings.packageLengthCm()
+                "weight", productWeightKg,
+                "height", packageOption.heightCm(),
+                "width", packageOption.widthCm(),
+                "length", packageOption.lengthCm()
             )),
             "volumes", List.of(Map.of(
-                "weight", weightKg * Math.max(quantity, 1),
-                "height", settings.packageHeightCm(),
-                "width", settings.packageWidthCm(),
-                "length", settings.packageLengthCm()
+                "weight", totalWeightKg,
+                "height", packageOption.heightCm(),
+                "width", packageOption.widthCm(),
+                "length", packageOption.lengthCm()
             )),
             "options", Map.of(
                 "own_hand", false,
@@ -211,7 +221,7 @@ public class SuperFreteShippingLabelService {
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
                 throw new IllegalStateException("SuperFrete label request failed: " + resp.getStatusCode() + " - " + responseBody(resp));
             })
-            .body(Object.class));
+            .body(String.class));
     }
 
     private Map<String, Object> get(String path, AdminShippingSettingsValues settings) {
@@ -224,7 +234,15 @@ public class SuperFreteShippingLabelService {
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
                 throw new IllegalStateException("SuperFrete label link failed: " + resp.getStatusCode() + " - " + responseBody(resp));
             })
-            .body(Object.class));
+            .body(String.class));
+    }
+
+    private Map<String, Object> printLabel(String labelId, AdminShippingSettingsValues settings) {
+        String path = settings.superfreteLabelLinkPath();
+        if (path == null || path.isBlank() || path.contains("{id}")) {
+            path = "/api/v0/tag/print";
+        }
+        return post(path, Map.of("orders", List.of(labelId)), settings);
     }
 
     private String responseBody(org.springframework.http.client.ClientHttpResponse response) {
@@ -258,7 +276,37 @@ public class SuperFreteShippingLabelService {
         if (response instanceof List<?> list && !list.isEmpty() && list.getFirst() instanceof Map<?, ?> map) {
             return (Map<String, Object>) map;
         }
+        if (response instanceof String text) {
+            return normalizeTextResponse(text);
+        }
         return Map.of();
+    }
+
+    private Map<String, Object> normalizeTextResponse(String response) {
+        String text = response == null ? "" : response.trim();
+        if (text.isBlank()) {
+            return Map.of();
+        }
+        if (text.startsWith("http://") || text.startsWith("https://")) {
+            return Map.of("url", text);
+        }
+        try {
+            if (text.startsWith("[")) {
+                List<Object> list = objectMapper.readValue(text, LIST_TYPE);
+                return normalizeResponse(list);
+            }
+            if (text.startsWith("{")) {
+                return objectMapper.readValue(text, MAP_TYPE);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("SuperFrete response is not valid JSON: " + responseSnippet(text));
+        }
+        throw new IllegalStateException("SuperFrete returned a non-JSON response: " + responseSnippet(text));
+    }
+
+    private String responseSnippet(String response) {
+        String normalized = response.replaceAll("\\s+", " ").trim();
+        return normalized.length() > 180 ? normalized.substring(0, 180) + "..." : normalized;
     }
 
     private RestClient restClient(AdminShippingSettingsValues settings) {
