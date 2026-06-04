@@ -26,6 +26,9 @@ public class PaymentTransactionJpaEntity {
     @Column(name = "provider_payment_id", length = 80)
     private String providerPaymentId;
 
+    @Column(name = "provider_order_id", length = 80)
+    private String providerOrderId;
+
     @Column(name = "method", nullable = false, length = 20)
     private String method;
 
@@ -74,6 +77,7 @@ public class PaymentTransactionJpaEntity {
     public PaymentTransaction toDomain() {
         PaymentTransaction tx = new PaymentTransaction(paymentId, orderId, provider, method, amount, status, idempotencyKey);
         tx.setProviderPaymentId(providerPaymentId);
+        tx.setProviderOrderId(providerOrderId);
         tx.setInstallments(installments);
         tx.setStatusDetail(statusDetail);
         tx.setPixQrCode(pixQrCode);
@@ -97,6 +101,11 @@ public class PaymentTransactionJpaEntity {
 
     public void setProviderPaymentId(String providerPaymentId) {
         this.providerPaymentId = providerPaymentId;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setProviderOrderId(String providerOrderId) {
+        this.providerOrderId = providerOrderId;
         this.updatedAt = LocalDateTime.now();
     }
 

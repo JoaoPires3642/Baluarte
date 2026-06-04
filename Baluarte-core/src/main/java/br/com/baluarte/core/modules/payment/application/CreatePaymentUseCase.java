@@ -138,6 +138,7 @@ public class CreatePaymentUseCase {
             request.idempotencyKey()
         );
         transaction.setProviderPaymentId(result.providerPaymentId());
+        transaction.setProviderOrderId(result.providerOrderId());
         transaction.setStatusDetail(result.statusDetail());
         transaction.setInstallments(result.installments());
         if (result.pixQrCode() != null) {

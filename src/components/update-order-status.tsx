@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useAdminApi } from "@/lib/use-admin-api"
 
 const STATUS_ORDER = ["pending", "paid", "processing", "shipped", "delivered"]
+const CANCELLABLE_STATUSES = ["pending_payment", "pending", "paid", "processing"]
 
 export function UpdateOrderStatus({ orderId, currentStatus }: { orderId: string; currentStatus: string }) {
   const router = useRouter()
@@ -15,6 +16,7 @@ export function UpdateOrderStatus({ orderId, currentStatus }: { orderId: string;
 
   const currentIdx = STATUS_ORDER.indexOf(currentStatus)
   const nextStatus = currentIdx >= 0 && currentIdx < STATUS_ORDER.length - 1 ? STATUS_ORDER[currentIdx + 1] : null
+  const canCancel = CANCELLABLE_STATUSES.includes(currentStatus)
 
   const handleAdvance = async (status: string) => {
     setLoading(true)
@@ -39,7 +41,7 @@ export function UpdateOrderStatus({ orderId, currentStatus }: { orderId: string;
           Avançar para {STATUS_ORDER.indexOf(nextStatus) >= 3 ? "Enviado" : nextStatus === "paid" ? "Pago" : nextStatus === "processing" ? "Processando" : nextStatus}
         </Button>
       )}
-      {currentStatus !== "cancelled" && (
+      {canCancel && (
         <Button size="sm" variant="outline" className="text-red-500" onClick={() => handleAdvance("cancelled")} disabled={loading}>
           Cancelar
         </Button>

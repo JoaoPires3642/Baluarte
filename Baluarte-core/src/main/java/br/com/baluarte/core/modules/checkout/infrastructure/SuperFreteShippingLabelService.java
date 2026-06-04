@@ -128,13 +128,51 @@ public class SuperFreteShippingLabelService {
         }
 
         String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
-        if (labelUrl == null || labelUrl.isBlank()) {
+        String trackingCode = firstValue(checkoutResponse, "tracking_code", "tracking", "code", "authorization_code",
+            "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+        if (labelUrl == null || labelUrl.isBlank() || trackingCode == null || trackingCode.isBlank()) {
             Map<String, Object> linkResponse = printLabel(labelId, settings);
-            labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
+            if (labelUrl == null || labelUrl.isBlank()) {
+                labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
+            }
+            if (trackingCode == null || trackingCode.isBlank()) {
+                trackingCode = firstValue(linkResponse, "tracking_code", "tracking", "code", "authorization_code",
+                    "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+            }
+        }
+        if (trackingCode == null || trackingCode.isBlank()) {
+            Map<String, Object> orderInfoResponse = orderInfo(labelId, settings);
+            trackingCode = firstValue(orderInfoResponse, "tracking_code", "tracking", "code", "authorization_code",
+                "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
         }
 
-        String trackingCode = firstValue(checkoutResponse, "tracking_code", "tracking", "code", "authorization_code");
         return new ShippingLabelResult(labelId, labelUrl, trackingCode);
+    }
+
+    public ShippingLabelResult getLabelInfo(String labelId) {
+        AdminShippingSettingsValues settings = settingsService.get();
+        ensureConfigured(settings);
+        if (labelId == null || labelId.isBlank()) {
+            throw new IllegalStateException("SuperFrete label id missing");
+        }
+        Map<String, Object> orderInfoResponse = orderInfo(labelId, settings);
+        String trackingCode = firstValue(orderInfoResponse, "tracking_code", "tracking", "code", "authorization_code",
+            "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+        return new ShippingLabelResult(labelId, null, trackingCode);
+    }
+
+    public void cancelLabel(String labelId, String description) {
+        AdminShippingSettingsValues settings = settingsService.get();
+        ensureConfigured(settings);
+        if (labelId == null || labelId.isBlank()) {
+            throw new IllegalStateException("SuperFrete label id missing");
+        }
+        post("/api/v0/order/cancel", Map.of(
+            "order", Map.of(
+                "id", labelId,
+                "description", value(description).isBlank() ? "Pedido cancelado" : description
+            )
+        ), settings);
     }
 
     private Map<String, Object> cartBody(CheckoutOrder order, String serviceId, AdminShippingSettingsValues settings) {
@@ -245,6 +283,10 @@ public class SuperFreteShippingLabelService {
         return post(path, Map.of("orders", List.of(labelId)), settings);
     }
 
+    private Map<String, Object> orderInfo(String labelId, AdminShippingSettingsValues settings) {
+        return get("/api/v0/order/info/" + labelId, settings);
+    }
+
     private String responseBody(org.springframework.http.client.ClientHttpResponse response) {
         try {
             return new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
@@ -257,14 +299,34 @@ public class SuperFreteShippingLabelService {
         if (source == null) return null;
         for (String key : keys) {
             Object value = source.get(key);
-            if (value != null) return String.valueOf(value);
+            String text = stringFromCandidate(value, keys);
+            if (text != null) return text;
         }
-        Object data = source.get("data");
-        if (data instanceof Map<?, ?> map) {
+        for (String containerKey : List.of("data", "orders", "order")) {
+            String text = stringFromCandidate(source.get(containerKey), keys);
+            if (text != null) return text;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String stringFromCandidate(Object value, String... keys) {
+        if (value == null) return null;
+        if (value instanceof CharSequence text) {
+            String normalized = text.toString().trim();
+            return normalized.isBlank() ? null : normalized;
+        }
+        if (value instanceof Number || value instanceof Boolean) {
+            return String.valueOf(value);
+        }
+        if (value instanceof Map<?, ?> map) {
             return firstValue((Map<String, Object>) map, keys);
         }
-        if (data instanceof List<?> list && !list.isEmpty() && list.getFirst() instanceof Map<?, ?> map) {
-            return firstValue((Map<String, Object>) map, keys);
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                String text = stringFromCandidate(item, keys);
+                if (text != null) return text;
+            }
         }
         return null;
     }

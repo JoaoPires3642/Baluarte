@@ -41,6 +41,7 @@ public class PaymentTransactionRepositoryAdapter implements PaymentTransactionRe
                 transaction.getIdempotencyKey()
         );
         entity.setProviderPaymentId(transaction.getProviderPaymentId());
+        entity.setProviderOrderId(transaction.getProviderOrderId());
         entity.setStatusDetail(transaction.getStatusDetail());
         entity.setInstallments(transaction.getInstallments());
         if (transaction.getPixQrCode() != null) {

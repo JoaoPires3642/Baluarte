@@ -1,12 +1,16 @@
 package br.com.baluarte.core.modules.payment.api;
 
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
+import br.com.baluarte.core.modules.payment.application.PaymentGateway;
+import br.com.baluarte.core.modules.payment.application.PaymentRefundResult;
+import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
@@ -35,6 +39,7 @@ public class MercadoPagoWebhookController {
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository transactionRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
+    private final PaymentGateway paymentGateway;
     private final RestClient mercadoPagoRestClient;
 
     @Value("${app.payment.mercadopago.access-token:}")
@@ -43,18 +48,17 @@ public class MercadoPagoWebhookController {
     @Value("${app.payment.mercadopago.webhook-secret:}")
     private String webhookSecret;
 
-    @Value("${app.payment.active-provider:mock}")
-    private String activePaymentProvider;
-
     public MercadoPagoWebhookController(
         CheckoutOrderRepository orderRepository,
         PaymentTransactionRepository transactionRepository,
         SpringDataAdminProductVariantJpaRepository variantRepository,
+        PaymentGateway paymentGateway,
         @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl
     ) {
         this.orderRepository = orderRepository;
         this.transactionRepository = transactionRepository;
         this.variantRepository = variantRepository;
+        this.paymentGateway = paymentGateway;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(30000);
@@ -97,7 +101,11 @@ public class MercadoPagoWebhookController {
 
         String previousStatus = order.getStatus();
         if ("cancelled".equals(previousStatus) && "paid".equals(nextStatus)) {
-            updatePaymentTransaction(order.getOrderId(), payment, "payment_received_after_cancellation", paymentStatusDetail);
+            try {
+                refundPaymentReceivedAfterCancellation(order, mercadoPagoOrderId, payment, paymentStatusDetail);
+            } catch (PaymentValidationException exception) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
+            }
             return ApiSuccessResponse.of(Map.of("status", "ok", "orderStatus", previousStatus));
         }
 
@@ -107,7 +115,7 @@ public class MercadoPagoWebhookController {
             orderRepository.save(order);
         }
 
-        updatePaymentTransaction(order.getOrderId(), payment, nextStatus, paymentStatusDetail);
+        updatePaymentTransaction(order.getOrderId(), mercadoPagoOrderId, payment, nextStatus, paymentStatusDetail);
 
         if ("cancelled".equals(nextStatus) && "pending_payment".equals(previousStatus)) {
             releaseOrderStock(order);
@@ -137,16 +145,48 @@ public class MercadoPagoWebhookController {
         }
     }
 
-    private void updatePaymentTransaction(String orderId, Map<String, Object> payment, String nextStatus, String statusDetail) {
-        transactionRepository.findByOrderId(orderId).ifPresent(tx -> {
-            tx.setStatus("paid".equals(nextStatus) ? "approved" : nextStatus);
+    private void updatePaymentTransaction(String localOrderId, String providerOrderId, Map<String, Object> payment, String nextStatus, String statusDetail) {
+        transactionRepository.findByOrderId(localOrderId).ifPresent(tx -> {
+            String newStatus = "paid".equals(nextStatus) ? "approved" : nextStatus;
+            if (newStatus.equals(tx.getStatus()) && statusDetail == null ? tx.getStatusDetail() == null : statusDetail.equals(tx.getStatusDetail())) {
+                return;
+            }
+            tx.setStatus(newStatus);
             tx.setStatusDetail(statusDetail);
             if (payment != null) {
                 String providerPaymentId = stringValue(payment, "id");
                 if (providerPaymentId != null) tx.setProviderPaymentId(providerPaymentId);
             }
+            tx.setProviderOrderId(providerOrderId);
             transactionRepository.save(tx);
         });
+    }
+
+    private void refundPaymentReceivedAfterCancellation(CheckoutOrder order, String providerOrderId, Map<String, Object> payment, String statusDetail) {
+        String providerPaymentId = payment != null ? stringValue(payment, "id") : null;
+        if (providerPaymentId == null || providerPaymentId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Mercado Pago payment id missing");
+        }
+
+        PaymentTransaction transaction = transactionRepository.findByOrderId(order.getOrderId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Transacao local nao encontrada"));
+
+        PaymentRefundResult refund = paymentGateway.refund(
+            transaction.getProvider(),
+            providerPaymentId,
+            providerOrderId,
+            "late-refund-" + order.getOrderId()
+        );
+        transaction.setProviderPaymentId(providerPaymentId);
+        transaction.setProviderOrderId(providerOrderId);
+        transaction.setStatus(refund.status() != null && !refund.status().isBlank() ? refund.status() : "refunded");
+        transaction.setStatusDetail(refund.statusDetail() != null && !refund.statusDetail().isBlank()
+            ? refund.statusDetail()
+            : "payment_received_after_cancellation_refunded");
+        if ("refunded".equals(transaction.getStatus()) && statusDetail != null && !statusDetail.isBlank()) {
+            transaction.setStatusDetail(transaction.getStatusDetail() + "; original_status_detail=" + statusDetail);
+        }
+        transactionRepository.save(transaction);
     }
 
     private String resolveLocalOrderStatus(String orderStatus, String paymentStatus) {
@@ -174,10 +214,7 @@ public class MercadoPagoWebhookController {
 
     private void validateSignatureIfConfigured(String dataId, String requestId, String signature) {
         if (webhookSecret == null || webhookSecret.isBlank()) {
-            if ("mercadopago".equalsIgnoreCase(activePaymentProvider)) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mercado Pago webhook secret not configured");
-            }
-            return;
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mercado Pago webhook secret not configured");
         }
         if (requestId == null || requestId.isBlank() || signature == null || signature.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Mercado Pago webhook signature");
@@ -198,7 +235,7 @@ public class MercadoPagoWebhookController {
 
         String manifest = "id:" + dataId + ";request-id:" + requestId + ";ts:" + ts + ";";
         String expectedHash = hmacSha256(manifest, webhookSecret);
-        if (!expectedHash.equals(receivedHash)) {
+        if (!MessageDigest.isEqual(expectedHash.getBytes(StandardCharsets.UTF_8), receivedHash.getBytes(StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Mercado Pago webhook signature");
         }
     }

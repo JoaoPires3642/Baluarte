@@ -3,7 +3,10 @@ package br.com.baluarte.core.modules.payment.infrastructure;
 import br.com.baluarte.core.modules.payment.application.CreatePaymentCommand;
 import br.com.baluarte.core.modules.payment.application.PaymentGatewayResult;
 import br.com.baluarte.core.modules.payment.application.PaymentGatewayStrategy;
+import br.com.baluarte.core.modules.payment.application.PaymentRefundResult;
 import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +22,10 @@ import org.springframework.web.client.RestClient;
 @Component
 public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy {
 
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
     private final String baseUrl;
     private final String accessToken;
     private final String payerEmail;
@@ -29,8 +35,10 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
         @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
         @Value("${app.payment.mercadopago.access-token:}") String accessToken,
         @Value("${app.payment.mercadopago.payer-email:}") String payerEmail,
-        @Value("${app.payment.mercadopago.payer-first-name:APRO}") String payerFirstName
+        @Value("${app.payment.mercadopago.payer-first-name:APRO}") String payerFirstName,
+        ObjectMapper objectMapper
     ) {
+        this.objectMapper = objectMapper;
         this.baseUrl = baseUrl;
         this.accessToken = accessToken;
         this.payerEmail = payerEmail;
@@ -66,19 +74,75 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
                 .body(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
-                    throw new PaymentValidationException("Mercado Pago order request failed: " + resp.getStatusCode() + " - " + responseBody(resp));
+                    throw new MercadoPagoApiException(resp.getStatusCode(), responseBody(resp));
                 })
                 .onStatus(HttpStatusCode::is5xxServerError, (req, resp) -> {
-                    throw new PaymentValidationException("Mercado Pago server error: " + resp.getStatusCode() + " - " + responseBody(resp));
+                    throw new MercadoPagoApiException(resp.getStatusCode(), responseBody(resp));
                 })
                 .body(Map.class);
 
             return mapOrderToResult(response, command.method(), command.installments());
+        } catch (MercadoPagoApiException e) {
+            Map<String, Object> failedOrder = orderDataFromErrorBody(e.body());
+            if (failedOrder != null) {
+                return mapOrderToResult(failedOrder, command.method(), command.installments());
+            }
+            throw new PaymentValidationException("Mercado Pago order request failed");
         } catch (PaymentValidationException e) {
             throw e;
         } catch (Exception e) {
             throw new PaymentValidationException("Failed to create Mercado Pago order: " + e.getMessage());
         }
+    }
+
+    @Override
+    public PaymentRefundResult refund(String providerPaymentId, String providerOrderId, String idempotencyKey) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new PaymentValidationException("Mercado Pago access token not configured");
+        }
+        if ((providerOrderId == null || providerOrderId.isBlank()) && (providerPaymentId == null || providerPaymentId.isBlank())) {
+            throw new PaymentValidationException("Mercado Pago payment reference missing");
+        }
+
+        try {
+            Map<String, Object> response = providerOrderId != null && !providerOrderId.isBlank()
+                ? refundOrder(providerOrderId, idempotencyKey)
+                : refundPayment(providerPaymentId, idempotencyKey);
+
+            String status = valueAsString(response != null ? response.get("status") : null);
+            String statusDetail = valueAsString(response != null ? response.get("status_detail") : null);
+            return new PaymentRefundResult(
+                status != null ? status : "refunded",
+                statusDetail != null ? statusDetail : "refunded"
+            );
+        } catch (PaymentValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PaymentValidationException("Failed to refund Mercado Pago payment: " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> refundOrder(String providerOrderId, String idempotencyKey) {
+        return postRefund("/v1/orders/{orderId}/refund", providerOrderId, idempotencyKey);
+    }
+
+    private Map<String, Object> refundPayment(String providerPaymentId, String idempotencyKey) {
+        return postRefund("/v1/payments/{paymentId}/refunds", providerPaymentId, idempotencyKey);
+    }
+
+    private Map<String, Object> postRefund(String path, String id, String idempotencyKey) {
+        return restClient.post()
+            .uri(path, id)
+            .header("Authorization", "Bearer " + accessToken)
+            .header("X-Idempotency-Key", idempotencyKey)
+            .retrieve()
+            .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
+                throw new PaymentValidationException("Mercado Pago refund request failed");
+            })
+            .onStatus(HttpStatusCode::is5xxServerError, (req, resp) -> {
+                throw new PaymentValidationException("Mercado Pago refund server error");
+            })
+            .body(Map.class);
     }
 
     private Map<String, Object> buildOrderRequest(CreatePaymentCommand command) {
@@ -127,6 +191,20 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> orderDataFromErrorBody(String body) {
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(body, MAP_TYPE);
+            Object data = parsed.get("data");
+            if (data instanceof Map<?, ?> map) {
+                return (Map<String, Object>) map;
+            }
+            return null;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
     private String formatAmount(BigDecimal amount) {
         return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
@@ -144,6 +222,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
         if (isApproved(orderStatus, paymentStatus)) {
             return PaymentGatewayResult.approvedCard(
                 providerPaymentId,
+                orderId,
                 "approved",
                 paymentStatusDetail != null ? paymentStatusDetail : "accredited",
                 installments
@@ -156,6 +235,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
             String qrCodeBase64 = paymentMethod != null ? valueAsString(paymentMethod.get("qr_code_base64")) : null;
             return PaymentGatewayResult.pendingPix(
                 providerPaymentId,
+                orderId,
                 "pending",
                 paymentStatusDetail != null ? paymentStatusDetail : "waiting_transfer",
                 qrCode,
@@ -167,6 +247,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
         if (isPending(orderStatus, paymentStatus)) {
             return PaymentGatewayResult.pendingPix(
                 providerPaymentId,
+                orderId,
                 "pending",
                 paymentStatusDetail != null ? paymentStatusDetail : "pending",
                 null,
@@ -177,7 +258,8 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
 
         return PaymentGatewayResult.rejectedCard(
             providerPaymentId,
-            paymentStatus != null ? paymentStatus : orderStatus,
+            orderId,
+            "rejected",
             paymentStatusDetail != null ? paymentStatusDetail : "rejected",
             installments
         );
@@ -205,5 +287,23 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
 
     private String valueAsString(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    private static class MercadoPagoApiException extends RuntimeException {
+        private final HttpStatusCode statusCode;
+        private final String body;
+
+        private MercadoPagoApiException(HttpStatusCode statusCode, String body) {
+            this.statusCode = statusCode;
+            this.body = body;
+        }
+
+        private HttpStatusCode statusCode() {
+            return statusCode;
+        }
+
+        private String body() {
+            return body;
+        }
     }
 }

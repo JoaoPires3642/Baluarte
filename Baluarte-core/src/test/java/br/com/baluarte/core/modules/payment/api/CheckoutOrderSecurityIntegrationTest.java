@@ -122,6 +122,35 @@ class CheckoutOrderSecurityIntegrationTest {
         assertThat(orderRepository.count()).isZero();
     }
 
+    @Test
+    void shouldAllowOwnerToCancelPendingPaymentOrderAndReleaseStock() throws Exception {
+        String productId = createProductAndExtractId("Camisa Teste Cancelamento", 2);
+
+        MvcResult payment = mockMvc.perform(post("/api/v1/payment/requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer token_client")
+                .header("X-Clerk-User-Id", "user_1")
+                .content(paymentPayload("session-cancel-1", "key-cancel-1", productId, 1)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String orderId = com.jayway.jsonpath.JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        assertThat(variantRepository.findAll().getFirst().getStockQuantity()).isEqualTo(1);
+
+        mockMvc.perform(post("/api/v1/orders/my/{orderId}/cancel", orderId)
+                .header("Authorization", "Bearer token_other")
+                .header("X-Clerk-User-Id", "user_2"))
+            .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/v1/orders/my/{orderId}/cancel", orderId)
+                .header("Authorization", "Bearer token_client")
+                .header("X-Clerk-User-Id", "user_1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("cancelled"));
+
+        assertThat(variantRepository.findAll().getFirst().getStockQuantity()).isEqualTo(2);
+    }
+
     private String createProductAndExtractId(String modelName, int stockQuantity) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/admin/products")
                 .contentType(MediaType.APPLICATION_JSON)

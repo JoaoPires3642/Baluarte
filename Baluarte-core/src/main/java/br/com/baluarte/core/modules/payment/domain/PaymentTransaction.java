@@ -9,6 +9,7 @@ public class PaymentTransaction {
     private String orderId;
     private String provider;
     private String providerPaymentId;
+    private String providerOrderId;
     private String method;
     private BigDecimal amount;
     private Integer installments;
@@ -50,6 +51,8 @@ public class PaymentTransaction {
     public void setProvider(String provider) { this.provider = provider; }
     public String getProviderPaymentId() { return providerPaymentId; }
     public void setProviderPaymentId(String providerPaymentId) { this.providerPaymentId = providerPaymentId; }
+    public String getProviderOrderId() { return providerOrderId; }
+    public void setProviderOrderId(String providerOrderId) { this.providerOrderId = providerOrderId; }
     public String getMethod() { return method; }
     public void setMethod(String method) { this.method = method; }
     public BigDecimal getAmount() { return amount; }

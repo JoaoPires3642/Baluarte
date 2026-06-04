@@ -9,9 +9,12 @@ import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/shipping/webhooks/superfrete")
 public class SuperFreteWebhookController {
 
+    private static final Logger log = LoggerFactory.getLogger(SuperFreteWebhookController.class);
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
     private final CheckoutOrderRepository orderRepository;
@@ -58,7 +62,7 @@ public class SuperFreteWebhookController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "data missing");
         }
 
-        String shippingLabelId = stringValue(data, "id");
+        String shippingLabelId = firstValue(data, "id", "order_id", "protocol", "uuid");
         if (shippingLabelId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "data.id missing");
         }
@@ -70,14 +74,18 @@ public class SuperFreteWebhookController {
         String previousStatus = order.getStatus();
 
         switch (event) {
+            case "order.created", "order.released", "order.generated" -> {
+                updateTracking(order, data);
+                if ("paid".equals(order.getStatus())) {
+                    order.setStatus("processing");
+                }
+            }
             case "order.posted" -> {
-                String trackingCode = stringValue(data, "tracking");
-                String trackingUrl = stringValue(data, "tracking_url");
+                updateTracking(order, data);
                 order.setStatus("shipped");
-                if (trackingCode != null) order.setTrackingCode(trackingCode);
-                if (trackingUrl != null) order.setTrackingUrl(trackingUrl);
             }
             case "order.delivered" -> {
+                updateTracking(order, data);
                 order.setStatus("delivered");
             }
             case "order.cancelled" -> {
@@ -98,8 +106,17 @@ public class SuperFreteWebhookController {
         ));
     }
 
+    private void updateTracking(CheckoutOrder order, Map<String, Object> data) {
+        String trackingCode = firstValue(data, "tracking_code", "tracking", "code", "authorization_code",
+            "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+        String trackingUrl = firstValue(data, "tracking_url", "trackingUrl", "url_rastreio");
+        if (trackingCode != null) order.setTrackingCode(trackingCode);
+        if (trackingUrl != null) order.setTrackingUrl(trackingUrl);
+    }
+
     private void validateSignatureIfConfigured(String rawBody, String signature) {
         if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.warn("Webhook signature disabled: app.shipping.superfrete.webhook-secret not configured");
             return;
         }
         if (signature == null || signature.isBlank()) {
@@ -147,5 +164,40 @@ public class SuperFreteWebhookController {
         if (body == null) return null;
         Object value = body.get(key);
         return value == null ? null : String.valueOf(value);
+    }
+
+    private String firstValue(Map<String, Object> source, String... keys) {
+        if (source == null) return null;
+        for (String key : keys) {
+            String text = stringFromCandidate(source.get(key), keys);
+            if (text != null) return text;
+        }
+        for (String containerKey : List.of("data", "orders", "order")) {
+            String text = stringFromCandidate(source.get(containerKey), keys);
+            if (text != null) return text;
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String stringFromCandidate(Object value, String... keys) {
+        if (value == null) return null;
+        if (value instanceof CharSequence text) {
+            String normalized = text.toString().trim();
+            return normalized.isBlank() ? null : normalized;
+        }
+        if (value instanceof Number || value instanceof Boolean) {
+            return String.valueOf(value);
+        }
+        if (value instanceof Map<?, ?> map) {
+            return firstValue((Map<String, Object>) map, keys);
+        }
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                String text = stringFromCandidate(item, keys);
+                if (text != null) return text;
+            }
+        }
+        return null;
     }
 }

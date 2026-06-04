@@ -44,4 +44,9 @@ public class MockPaymentGatewayStrategy implements PaymentGatewayStrategy {
             command.installments()
         );
     }
+
+    @Override
+    public PaymentRefundResult refund(String providerPaymentId, String providerOrderId, String idempotencyKey) {
+        return new PaymentRefundResult("refunded", "mock_refunded");
+    }
 }

@@ -27,11 +27,22 @@ public class PaymentGateway {
     }
 
     public PaymentGatewayResult create(CreatePaymentCommand command) {
-        PaymentGatewayStrategy strategy = strategyByProvider.get(activeProvider);
-        if (strategy == null) {
-            throw new IllegalStateException("No payment strategy configured for provider: " + activeProvider);
-        }
+        PaymentGatewayStrategy strategy = strategy(activeProvider);
         return strategy.create(command);
+    }
+
+    public PaymentRefundResult refund(String provider, String providerPaymentId, String providerOrderId, String idempotencyKey) {
+        PaymentGatewayStrategy strategy = strategy(provider);
+        return strategy.refund(providerPaymentId, providerOrderId, idempotencyKey);
+    }
+
+    private PaymentGatewayStrategy strategy(String provider) {
+        String normalizedProvider = normalize(provider);
+        PaymentGatewayStrategy strategy = strategyByProvider.get(normalizedProvider);
+        if (strategy == null) {
+            throw new IllegalStateException("No payment strategy configured for provider: " + normalizedProvider);
+        }
+        return strategy;
     }
 
     private String normalize(String value) {

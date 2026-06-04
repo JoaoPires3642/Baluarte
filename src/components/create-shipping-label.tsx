@@ -11,11 +11,13 @@ export function CreateShippingLabel({
   status,
   labelId,
   labelUrl,
+  trackingCode,
 }: {
   orderId: string
   status: string
   labelId?: string
   labelUrl?: string
+  trackingCode?: string
 }) {
   const router = useRouter()
   const { authedFetch } = useAdminApi()
@@ -52,6 +54,11 @@ export function CreateShippingLabel({
         ) : (
           <Button size="sm" onClick={handleCreate} disabled={!canCreate || loading}>
             <PackagePlus className="mr-2 h-4 w-4" /> {loading ? "Gerando..." : "Gerar etiqueta"}
+          </Button>
+        )}
+        {labelUrl && !trackingCode && (
+          <Button size="sm" variant="outline" onClick={handleCreate} disabled={!canCreate || loading}>
+            <PackagePlus className="mr-2 h-4 w-4" /> {loading ? "Atualizando..." : "Atualizar rastreio"}
           </Button>
         )}
       </div>

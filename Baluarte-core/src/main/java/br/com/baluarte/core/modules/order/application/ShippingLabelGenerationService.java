@@ -40,6 +40,12 @@ public class ShippingLabelGenerationService {
             if (label.trackingCode() != null && !label.trackingCode().isBlank()) {
                 order.setTrackingCode(label.trackingCode());
             }
+        } else if ((order.getTrackingCode() == null || order.getTrackingCode().isBlank())
+            && order.getShippingLabelId() != null && !order.getShippingLabelId().isBlank()) {
+            var label = shippingLabelService.getLabelInfo(order.getShippingLabelId());
+            if (label.trackingCode() != null && !label.trackingCode().isBlank()) {
+                order.setTrackingCode(label.trackingCode());
+            }
         }
 
         order.setStatus("processing");

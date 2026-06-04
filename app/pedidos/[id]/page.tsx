@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { PixOrderBanner } from "@/components/pix-order-banner"
+import { CancelOrderButton } from "@/components/cancel-order-button"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -28,6 +29,8 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-red-500",
   pending_payment: "bg-yellow-500",
 }
+
+const customerCancellableStatuses = ["pending_payment", "paid"]
 
 type Order = {
   id: string
@@ -88,9 +91,12 @@ export default async function OrderDetailPage({ params }: Props) {
             })}
           </p>
         </div>
-        <Badge className={statusColors[order.status] || "bg-gray-500"}>
-          {statusLabels[order.status] || order.status}
-        </Badge>
+        <div className="flex flex-col items-end gap-3">
+          <Badge className={statusColors[order.status] || "bg-gray-500"}>
+            {statusLabels[order.status] || order.status}
+          </Badge>
+          {customerCancellableStatuses.includes(order.status) && <CancelOrderButton orderId={order.id} />}
+        </div>
       </div>
 
       {order.status === "pending_payment" && order.payment?.method === "pix" && order.payment.pixQrCodeBase64 && (

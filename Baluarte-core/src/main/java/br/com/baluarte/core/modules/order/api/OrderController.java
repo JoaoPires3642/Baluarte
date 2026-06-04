@@ -1,11 +1,12 @@
 package br.com.baluarte.core.modules.order.api;
 
 import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
-import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationFailure;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationResult;
+import br.com.baluarte.core.modules.order.application.OrderCancellationService;
 import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
 import br.com.baluarte.core.modules.order.application.ShippingLabelGenerationService;
+import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
@@ -19,7 +20,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -42,11 +42,11 @@ public class OrderController {
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
-    private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final ClerkJwtVerifier clerkJwtVerifier;
     private final InternalRoleResolver internalRoleResolver;
     private final PixOrderExpirationService pixOrderExpirationService;
     private final ShippingLabelGenerationService shippingLabelGenerationService;
+    private final OrderCancellationService orderCancellationService;
 
     @GetMapping
     public ApiSuccessResponse<List<OrderResponse>> listOrders(
@@ -125,16 +125,39 @@ public class OrderController {
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
-        String previousStatus = order.getStatus();
+        if (!List.of("pending_payment", "pending", "paid", "processing", "shipped", "delivered", "cancelled").contains(request.status())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status invalido");
+        }
+
+        if ("cancelled".equals(request.status())) {
+            return ApiSuccessResponse.of(toResponse(cancelByAdmin(order)));
+        }
+
         order.setStatus(request.status());
         order.setUpdatedAt(Instant.now());
         orderRepository.save(order);
 
-        if ("cancelled".equals(request.status()) && !"cancelled".equals(previousStatus)) {
-            releaseOrderStock(order);
-        }
-
         return ApiSuccessResponse.of(toResponse(orderRepository.findById(orderId).orElse(order)));
+    }
+
+    @PostMapping("/my/{orderId}/cancel")
+    @Transactional
+    public ApiSuccessResponse<OrderResponse> cancelMyOrder(
+        @PathVariable String orderId,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+    ) {
+        String userId = resolveUserId(authorizationHeader, clerkUserId);
+        CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+
+        try {
+            return ApiSuccessResponse.of(toResponse(orderCancellationService.cancelByCustomer(order)));
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
+        } catch (IllegalStateException | PaymentValidationException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Erro ao cancelar pedido");
+        }
     }
 
     @PostMapping("/{orderId}/shipping-label")
@@ -173,15 +196,13 @@ public class OrderController {
         return ApiSuccessResponse.of(new BulkShippingLabelResponse(result.candidates(), result.generated(), result.failures()));
     }
 
-    private void releaseOrderStock(CheckoutOrder order) {
-        if (order.getItems() == null) return;
-        for (var item : order.getItems()) {
-            try {
-                UUID productId = UUID.fromString(item.getProductId());
-                variantRepository.releaseStock(productId, item.getSize(), item.getQuantity());
-            } catch (IllegalArgumentException e) {
-                // ignore invalid product IDs
-            }
+    private CheckoutOrder cancelByAdmin(CheckoutOrder order) {
+        try {
+            return orderCancellationService.cancelByAdmin(order);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
+        } catch (IllegalStateException | PaymentValidationException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
         }
     }
 
