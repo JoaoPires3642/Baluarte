@@ -27,6 +27,7 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     type: "website",
   },
+  icons: [{ rel: "icon", url: "/logoN.png" }],
   robots: {
     index: true,
     follow: true,
