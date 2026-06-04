@@ -430,6 +430,7 @@ export interface PaymentRequest {
 
 export interface PaymentResponse {
   paymentId: string
+  orderId: string
   orderReference: string
   provider: string
   method: "pix" | "card"

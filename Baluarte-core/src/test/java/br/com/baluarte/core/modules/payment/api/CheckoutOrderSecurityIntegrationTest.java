@@ -85,7 +85,7 @@ class CheckoutOrderSecurityIntegrationTest {
             .andExpect(jsonPath("$.data.status").value("pending"))
             .andReturn();
 
-        String orderId = com.jayway.jsonpath.JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderId = com.jayway.jsonpath.JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderId");
 
         AdminProductVariantJpaEntity variant = variantRepository.findAll().getFirst();
         assertThat(variant.getStockQuantity()).isEqualTo(1);
@@ -134,7 +134,7 @@ class CheckoutOrderSecurityIntegrationTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        String orderId = com.jayway.jsonpath.JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderId = com.jayway.jsonpath.JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderId");
         assertThat(variantRepository.findAll().getFirst().getStockQuantity()).isEqualTo(1);
 
         mockMvc.perform(post("/api/v1/orders/my/{orderId}/cancel", orderId)

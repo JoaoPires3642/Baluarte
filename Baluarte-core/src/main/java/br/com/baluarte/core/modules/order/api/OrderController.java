@@ -272,9 +272,10 @@ public class OrderController {
             }
         }
 
+        String orderReference = order.getOrderNumber() != null ? "BAL" + order.getOrderNumber() : order.getOrderId();
         return new OrderResponse(
             order.getOrderId(),
-            order.getOrderId(),
+            orderReference,
             order.getStatus(),
             order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
             order.getUpdatedAt() != null ? order.getUpdatedAt().toString() : "",

@@ -50,7 +50,10 @@ public class CreatePaymentUseCase {
         
         if (existingTx.isPresent()) {
             PaymentTransaction tx = existingTx.get();
-            return mapToResponse(tx, provider, request.method());
+            Long existingOrderNumber = orderRepository.findById(tx.getOrderId())
+                .map(CheckoutOrder::getOrderNumber)
+                .orElse(null);
+            return mapToResponse(tx, provider, request.method(), existingOrderNumber);
         }
 
         List<ResolvedItem> resolvedItems = request.items().stream()
@@ -97,7 +100,7 @@ public class CreatePaymentUseCase {
             .toList());
         order.setShippingServiceId(request.shipping().optionId());
         order.setShippingServiceName(request.shipping().label());
-        orderRepository.save(order);
+        order = orderRepository.save(order);
 
         CreatePaymentCommand command = new CreatePaymentCommand(
             request.checkoutSessionId(),
@@ -149,9 +152,9 @@ public class CreatePaymentUseCase {
 
         order.setPaymentReference(paymentId);
         order.setStatus(resolveOrderStatus(result.status()));
-        orderRepository.save(order);
+        order = orderRepository.save(order);
 
-        return mapToResponse(transaction, provider, request.method());
+        return mapToResponse(transaction, provider, request.method(), order.getOrderNumber());
     }
 
     private String resolveOrderStatus(String paymentStatus) {
@@ -211,7 +214,7 @@ public class CreatePaymentUseCase {
 
     private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice) {}
 
-    private CreatePaymentResponse mapToResponse(PaymentTransaction tx, String provider, String method) {
+    private CreatePaymentResponse mapToResponse(PaymentTransaction tx, String provider, String method, Long orderNumber) {
         PixPayload pix = null;
         if (tx.getPixQrCode() != null) {
             pix = new PixPayload(tx.getPixQrCode(), tx.getPixQrCodeBase64(), tx.getPixQrCode());
@@ -219,6 +222,7 @@ public class CreatePaymentUseCase {
         return new CreatePaymentResponse(
             tx.getPaymentId(),
             tx.getOrderId(),
+            orderNumber != null ? "BAL" + orderNumber : tx.getOrderId(),
             provider,
             method,
             tx.getStatus(),

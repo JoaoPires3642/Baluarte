@@ -214,8 +214,10 @@ public class SuperFreteShippingLabelService {
     }
 
     private String productDescription(CheckoutOrder order) {
+        String prefix = order.getOrderNumber() != null ? "#BAL" + order.getOrderNumber() + " - " : "";
+
         if (order.getItems() == null || order.getItems().isEmpty()) {
-            return "Pedido Baluarte";
+            return prefix + "Pedido Baluarte";
         }
 
         String description = order.getItems().stream()
@@ -227,7 +229,10 @@ public class SuperFreteShippingLabelService {
             .reduce((left, right) -> left + "; " + right)
             .orElse("Pedido Baluarte");
 
-        return description.length() > 120 ? description.substring(0, 117) + "..." : description;
+        if (prefix.length() + description.length() > 120) {
+            description = description.substring(0, 117 - prefix.length()) + "...";
+        }
+        return prefix + description;
     }
 
     private Map<String, Object> address(String name, String phone, String email, String document, String street,

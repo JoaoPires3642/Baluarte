@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 @Entity
 @Table(name = "checkout_order")
@@ -18,6 +20,9 @@ public class CheckoutOrderJpaEntity {
     @Id
     @Column(name = "order_id", nullable = false, length = 36)
     private String orderId;
+
+    @Column(name = "order_number", nullable = false, unique = true)
+    private Long orderNumber;
 
     @Column(name = "checkout_session_id", nullable = false, length = 64)
     private String checkoutSessionId;
@@ -113,6 +118,9 @@ public class CheckoutOrderJpaEntity {
 
     public void apply(CheckoutOrder order) {
         this.orderId = order.getOrderId();
+        if (order.getOrderNumber() != null) {
+            this.orderNumber = order.getOrderNumber();
+        }
         this.checkoutSessionId = order.getCheckoutSessionId();
         this.customerRef = order.getCustomerRef();
         this.clerkUserId = order.getClerkUserId();
@@ -146,6 +154,7 @@ public class CheckoutOrderJpaEntity {
                 payerEmail, payerDocumentType, payerDocumentNumber, recipientName, status, totalAmount,
                 shippingPrice, shippingCep, shippingStreet, shippingNumber, shippingComplement, shippingNeighborhood,
                 shippingCity, shippingState);
+        order.setOrderNumber(orderNumber);
         order.setPaymentReference(paymentReference);
         order.setTrackingCode(trackingCode);
         order.setTrackingUrl(trackingUrl);
@@ -158,6 +167,10 @@ public class CheckoutOrderJpaEntity {
         order.setCreatedAt(createdAt.toInstant(java.time.ZoneOffset.UTC));
         order.setUpdatedAt(updatedAt.toInstant(java.time.ZoneOffset.UTC));
         return order;
+    }
+
+    public void setOrderNumber(Long orderNumber) {
+        this.orderNumber = orderNumber;
     }
 
     public void setPaymentReference(String paymentReference) {

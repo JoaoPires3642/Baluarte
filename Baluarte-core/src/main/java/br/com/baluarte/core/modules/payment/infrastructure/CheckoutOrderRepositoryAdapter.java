@@ -116,7 +116,11 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     public CheckoutOrder save(CheckoutOrder order) {
         boolean exists = jpaRepository.existsById(order.getOrderId());
         CheckoutOrderJpaEntity entity = jpaRepository.findById(order.getOrderId())
-            .orElseGet(() -> CheckoutOrderJpaEntity.create(order));
+            .orElseGet(() -> {
+                CheckoutOrderJpaEntity created = CheckoutOrderJpaEntity.create(order);
+                created.setOrderNumber(jpaRepository.nextOrderNumber());
+                return created;
+            });
         entity.apply(order);
         CheckoutOrder saved = jpaRepository.save(entity).toDomain();
 

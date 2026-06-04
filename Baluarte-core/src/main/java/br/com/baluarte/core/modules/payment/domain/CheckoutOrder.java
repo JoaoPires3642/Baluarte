@@ -7,6 +7,7 @@ import java.util.List;
 public class CheckoutOrder {
 
     private String orderId;
+    private Long orderNumber;
     private String checkoutSessionId;
     private String customerRef;
     private String clerkUserId;
@@ -82,6 +83,8 @@ public class CheckoutOrder {
 
     public String getOrderId() { return orderId; }
     public void setOrderId(String orderId) { this.orderId = orderId; }
+    public Long getOrderNumber() { return orderNumber; }
+    public void setOrderNumber(Long orderNumber) { this.orderNumber = orderNumber; }
     public String getCheckoutSessionId() { return checkoutSessionId; }
     public void setCheckoutSessionId(String checkoutSessionId) { this.checkoutSessionId = checkoutSessionId; }
     public String getCustomerRef() { return customerRef; }
