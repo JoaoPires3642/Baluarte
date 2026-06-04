@@ -53,7 +53,7 @@ export function Header() {
         <div className="mb-3 flex items-center gap-1 sm:hidden">
           <Link href="/" className="flex shrink-0 items-center">
             <div className={`relative shrink-0 overflow-hidden transition-all duration-300 ${compactMobileHeader ? "h-8 w-20" : "h-9 w-22"}`}>
-              <Image src="/logo.png" alt="Baluarte" fill priority sizes="88px" className="object-contain object-left" />
+              <Image src="/logoN.png" alt="Baluarte" fill priority sizes="88px" className="object-contain object-left" />
             </div>
           </Link>
           <div className="min-w-0 flex-1">
@@ -68,7 +68,7 @@ export function Header() {
           <div className="hidden min-w-0 items-center justify-between gap-3 sm:flex lg:justify-start">
             <Link href="/" className="flex min-w-0 items-center gap-3">
               <div className={`relative shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-900/10 transition-all duration-200 ${compactMobileHeader ? "h-9 w-9" : compactTabletHeader ? "h-10 w-10" : "h-11 w-11"} md:h-12 md:w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12`}>
-                <Image src="/logo.png" alt="Baluarte" fill priority sizes="48px" className="object-contain p-1" />
+                <Image src="/logoN.png" alt="Baluarte" fill priority sizes="48px" className="object-contain p-1" />
               </div>
               <div className={`min-w-0 leading-none transition-all duration-200 ${compactMobileHeader ? "hidden" : "block"}`}>
                 <div className="flex items-start gap-1">
@@ -152,7 +152,7 @@ export function Header() {
             <div className="flex items-center justify-between border-b border-[#d9e2ef] px-4 py-4">
               <div className="flex items-center gap-3">
                 <div className="relative h-9 w-24 overflow-hidden">
-                  <Image src="/logo.png" alt="Baluarte" fill priority sizes="96px" className="object-contain object-left" />
+                  <Image src="/logoN.png" alt="Baluarte" fill priority sizes="96px" className="object-contain object-left" />
                 </div>
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">artigos esportivos</p>
