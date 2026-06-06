@@ -63,7 +63,7 @@ export function ProductFilters(props: ProductFiltersProps) {
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Filtre por categoria ou time. Use Estoque para conferir quantidades e Em falta para ver produtos abaixo de {LOW_STOCK_THRESHOLD} unidades por tamanho.
+          Estoque mostra todos os tamanhos. Em falta mostra apenas itens abaixo de {LOW_STOCK_THRESHOLD} unidades e abre reposição direto no estoque.
         </p>
       </CardContent>
     </Card>
@@ -75,17 +75,26 @@ export function ProductListSection({ products, onEdit, onToggleActive, onDeleteR
     <Card>
       <CardHeader><CardTitle>{products.length} produto(s)</CardTitle></CardHeader>
       <CardContent>
-        <div className="hidden sm:block">
-          <table className="w-full">
+        <div className="hidden overflow-x-auto sm:block">
+          <table className="w-full min-w-[1080px] table-fixed">
+            <colgroup>
+              <col className="w-[48%]" />
+              <col className="w-[11%]" />
+              <col className="w-[10%]" />
+              <col className="w-[8%]" />
+              <col className="w-[9%]" />
+              <col className="w-[7%]" />
+              <col className="w-[7%]" />
+            </colgroup>
             <thead>
               <tr className="border-b">
-                <th className="pb-3 text-left text-sm font-medium">Produto</th>
-                <th className="pb-3 text-left text-sm font-medium">Time</th>
-                <th className="pb-3 text-left text-sm font-medium">Preço</th>
-                <th className="pb-3 text-left text-sm font-medium">Estoque</th>
-                <th className="pb-3 text-left text-sm font-medium">Destaque</th>
-                <th className="pb-3 text-left text-sm font-medium">Status</th>
-                <th className="pb-3 text-right text-sm font-medium">Ações</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Produto</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Time</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Preço</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Estoque</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Destaque</th>
+                <th className="px-3 pb-3 text-left text-sm font-medium">Status</th>
+                <th className="px-3 pb-3 text-right text-sm font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -105,14 +114,16 @@ export function ProductListSection({ products, onEdit, onToggleActive, onDeleteR
 
 function ProductTableRow({ product, onEdit, onToggleActive, onDeleteRequest }: ProductActionProps) {
   return (
-    <tr className="border-b">
-      <td className="py-3">{product.modelName}</td>
-      <td className="py-3">{product.teamSlug}</td>
-      <td className="py-3">R$ {product.price.toFixed(2).replace(".", ",")}</td>
-      <td className="py-3"><span className={product.stockQuantity < 10 ? "text-red-500 font-medium" : ""}>{product.stockQuantity}</span></td>
-      <td className="py-3">{product.featured ? <Badge variant="secondary">Destaque</Badge> : <span className="text-sm text-slate-400">-</span>}</td>
-      <td className="py-3"><Badge variant={product.active ? "success" : "secondary"}>{product.active ? "Ativo" : "Inativo"}</Badge></td>
-      <td className="py-3 text-right"><ProductActions product={product} onEdit={onEdit} onToggleActive={onToggleActive} onDeleteRequest={onDeleteRequest} /></td>
+    <tr className="border-b align-middle">
+      <td className="px-3 py-4 text-sm leading-6 text-slate-900">{product.modelName}</td>
+      <td className="px-3 py-4 text-sm text-slate-600">{product.teamSlug}</td>
+      <td className="whitespace-nowrap px-3 py-4 text-sm">R$ {product.price.toFixed(2).replace(".", ",")}</td>
+      <td className="whitespace-nowrap px-3 py-4 text-sm">
+        <span className={product.stockQuantity < 10 ? "font-semibold text-red-500" : "font-medium text-slate-900"}>{product.stockQuantity}</span>
+      </td>
+      <td className="whitespace-nowrap px-3 py-4">{product.featured ? <Badge variant="secondary">Destaque</Badge> : <span className="text-sm text-slate-400">-</span>}</td>
+      <td className="whitespace-nowrap px-3 py-4"><Badge variant={product.active ? "success" : "secondary"}>{product.active ? "Ativo" : "Inativo"}</Badge></td>
+      <td className="whitespace-nowrap px-3 py-4 text-right"><ProductActions product={product} onEdit={onEdit} onToggleActive={onToggleActive} onDeleteRequest={onDeleteRequest} /></td>
     </tr>
   )
 }

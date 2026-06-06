@@ -113,7 +113,7 @@ export default function AdminProductsPage() {
     setDialogOpen(true)
   }
 
-  const openEdit = (product: AdminProduct) => {
+  const openEdit = (product: AdminProduct, initialStep = 0) => {
     const imageUrls = normalizeImageUrls([...(product.images || []), product.imageUrl])
     setEditingId(product.id)
     setForm({
@@ -128,7 +128,7 @@ export default function AdminProductsPage() {
       featured: Boolean(product.featured),
       variants: Object.fromEntries(SIZES.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])),
     })
-    setStep(0)
+    setStep(initialStep)
     setError("")
     setDialogOpen(true)
   }
@@ -231,8 +231,8 @@ export default function AdminProductsPage() {
         <Button className="inline-flex items-center gap-2" onClick={openCreate}><PackagePlus className="h-4 w-4" />Novo Produto</Button>
       </div>
 
-      <ProductFilters search={search} categoryFilter={categoryFilter} teamFilter={teamFilter} stockOnly={stockOnly} lowStockOnly={lowStockOnly} categories={categories} teams={teams} lowStockCount={lowStockVariants.length} onSearchChange={setSearch} onCategoryFilterChange={value => { setCategoryFilter(value); setTeamFilter("") }} onTeamFilterChange={setTeamFilter} onStockOnlyChange={() => setStockOnly(value => !value)} onLowStockOnlyChange={() => { setLowStockOnly(value => !value); setStockOnly(true) }} onDownloadReport={downloadLowStockReport} onClearFilters={() => { setSearch(""); setCategoryFilter(""); setTeamFilter(""); setLowStockOnly(false) }} />
-      {stockOnly && <ProductStockSection products={filtered} lowStockVariants={filteredLowStockVariants} onEdit={openEdit} />}
+      <ProductFilters search={search} categoryFilter={categoryFilter} teamFilter={teamFilter} stockOnly={stockOnly} lowStockOnly={lowStockOnly} categories={categories} teams={teams} lowStockCount={lowStockVariants.length} onSearchChange={setSearch} onCategoryFilterChange={value => { setCategoryFilter(value); setTeamFilter("") }} onTeamFilterChange={setTeamFilter} onStockOnlyChange={() => { setStockOnly(value => lowStockOnly ? true : !value); setLowStockOnly(false) }} onLowStockOnlyChange={() => { setStockOnly(true); setLowStockOnly(true) }} onDownloadReport={downloadLowStockReport} onClearFilters={() => { setSearch(""); setCategoryFilter(""); setTeamFilter(""); setStockOnly(false); setLowStockOnly(false) }} />
+      {stockOnly && <ProductStockSection products={filtered} lowStockVariants={filteredLowStockVariants} lowStockOnly={lowStockOnly} onEditStock={product => openEdit(product, 1)} />}
       <ProductListSection products={filtered} onEdit={openEdit} onToggleActive={async product => { try { await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" }); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao alterar status do produto") } }} onDeleteRequest={setDeleteConfirm} />
 
       <ProductFormDialog open={dialogOpen} editingId={editingId} form={form} step={step} saving={saving} uploadingImage={uploadingImage} error={error} categories={categories} teams={teams} featuredCount={featuredCount} onClose={() => setDialogOpen(false)} onBack={() => setStep(value => Math.max(value - 1, 0))} onNext={() => { if (validateStep(step)) setStep(value => Math.min(value + 1, 2)) }} onSave={handleSave} onFormChange={setForm} onImageUrlTextChange={value => setForm(current => ({ ...current, imageUrl: value, imageUrls: normalizeImageUrls(value.split(/\r?\n/)) }))} onImageFiles={handleImageFiles} onRemoveImage={imageUrl => setForm(current => { const imageUrls = current.imageUrls.filter(value => value !== imageUrl); return { ...current, imageUrl: imageUrls.join("\n"), imageUrls } })} />
