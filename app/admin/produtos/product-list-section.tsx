@@ -76,15 +76,15 @@ export function ProductListSection({ products, onEdit, onToggleActive, onDeleteR
       <CardHeader><CardTitle>{products.length} produto(s)</CardTitle></CardHeader>
       <CardContent>
         <div className="hidden overflow-x-auto sm:block">
-          <table className="w-full min-w-[1080px] table-fixed">
+          <table className="w-full min-w-[1220px] table-fixed">
             <colgroup>
-              <col className="w-[48%]" />
-              <col className="w-[11%]" />
+              <col className="w-[36%]" />
+              <col className="w-[10%]" />
               <col className="w-[10%]" />
               <col className="w-[8%]" />
-              <col className="w-[9%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[16%]" />
             </colgroup>
             <thead>
               <tr className="border-b">
@@ -93,7 +93,7 @@ export function ProductListSection({ products, onEdit, onToggleActive, onDeleteR
                 <th className="px-3 pb-3 text-left text-sm font-medium">Preço</th>
                 <th className="px-3 pb-3 text-left text-sm font-medium">Estoque</th>
                 <th className="px-3 pb-3 text-left text-sm font-medium">Destaque</th>
-                <th className="px-3 pb-3 text-left text-sm font-medium">Status</th>
+                <th className="px-3 pb-3 text-center text-sm font-medium">Status</th>
                 <th className="px-3 pb-3 text-right text-sm font-medium">Ações</th>
               </tr>
             </thead>
@@ -122,7 +122,7 @@ function ProductTableRow({ product, onEdit, onToggleActive, onDeleteRequest }: P
         <span className={product.stockQuantity < 10 ? "font-semibold text-red-500" : "font-medium text-slate-900"}>{product.stockQuantity}</span>
       </td>
       <td className="whitespace-nowrap px-3 py-4">{product.featured ? <Badge variant="secondary">Destaque</Badge> : <span className="text-sm text-slate-400">-</span>}</td>
-      <td className="whitespace-nowrap px-3 py-4"><Badge variant={product.active ? "success" : "secondary"}>{product.active ? "Ativo" : "Inativo"}</Badge></td>
+      <td className="whitespace-nowrap px-3 py-4 text-center"><Badge variant={product.active ? "success" : "secondary"}>{product.active ? "Ativo" : "Inativo"}</Badge></td>
       <td className="whitespace-nowrap px-3 py-4 text-right"><ProductActions product={product} onEdit={onEdit} onToggleActive={onToggleActive} onDeleteRequest={onDeleteRequest} /></td>
     </tr>
   )
@@ -148,10 +148,10 @@ function ProductMobileCard({ product, onEdit, onToggleActive, onDeleteRequest }:
 
 function ProductActions({ product, onEdit, onToggleActive, onDeleteRequest, iconClassName = "h-4 w-4" }: ProductActionProps & { iconClassName?: string }) {
   return (
-    <div className="flex justify-end gap-1">
-      <Button variant="ghost" size="sm" onClick={() => onEdit(product)}><Pencil className={iconClassName} /></Button>
-      <Button variant="ghost" size="sm" onClick={() => onToggleActive(product)}>{product.active ? <EyeOff className={`${iconClassName} text-slate-400`} /> : <Eye className={`${iconClassName} text-green-500`} />}</Button>
-      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => onDeleteRequest(product.id)}><Trash2 className={iconClassName} /></Button>
+    <div className="ml-auto inline-flex items-center justify-end gap-2 rounded-full bg-slate-50 px-2 py-1">
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit(product)}><Pencil className={iconClassName} /></Button>
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onToggleActive(product)}>{product.active ? <EyeOff className={`${iconClassName} text-slate-400`} /> : <Eye className={`${iconClassName} text-green-500`} />}</Button>
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-700" onClick={() => onDeleteRequest(product.id)}><Trash2 className={iconClassName} /></Button>
     </div>
   )
 }
