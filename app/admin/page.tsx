@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { AlertTriangle, ChevronRight } from "lucide-react"
-import { type AdminProductDashboardSummary, type Order } from "@/lib/api"
+import { type AdminProduct, type AdminProductDashboardSummary, type Order } from "@/lib/api"
+import { getAdminLowStockVariants, toAdminLowStockReportItems } from "@/lib/admin-low-stock"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -71,6 +72,17 @@ async function getProductSummary(headers: Record<string, string>): Promise<Admin
   }
 }
 
+async function getAdminProducts(headers: Record<string, string>): Promise<AdminProduct[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/products`, { headers, cache: "no-store" })
+    if (!res.ok) return []
+    const payload = await res.json() as { data: AdminProduct[] }
+    return payload.data
+  } catch {
+    return []
+  }
+}
+
 function isToday(date: string) {
   const value = new Date(date)
   const today = new Date()
@@ -79,12 +91,12 @@ function isToday(date: string) {
 
 export default async function AdminDashboard() {
   const headers = await getAdminHeaders()
-  const [orders, productSummary] = headers
-    ? await Promise.all([getOrders(headers), getProductSummary(headers)])
-    : [[], { totalActiveProducts: 0, lowStockVariants: [] }]
+  const [orders, productSummary, adminProducts] = headers
+    ? await Promise.all([getOrders(headers), getProductSummary(headers), getAdminProducts(headers)])
+    : [[], { totalActiveProducts: 0, lowStockVariants: [] }, []]
   const paidOrders = orders.filter(order => isToday(order.createdAt) && order.status !== "cancelled" && order.status !== "pending_payment")
 
-  const lowStockVariants = productSummary.lowStockVariants
+  const lowStockVariants = toAdminLowStockReportItems(getAdminLowStockVariants(adminProducts, LOW_STOCK_THRESHOLD))
 
   const stats = {
     totalProducts: productSummary.totalActiveProducts,

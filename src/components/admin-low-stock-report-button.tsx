@@ -1,20 +1,14 @@
 "use client"
 
 import { Download } from "lucide-react"
+import type { AdminLowStockReportItem } from "@/lib/admin-low-stock"
 import { Button } from "@/components/ui/button"
-
-type LowStockVariant = {
-  productId: string
-  productName: string
-  size: string
-  stockQuantity: number
-}
 
 function escapeHtml(value: string | number) {
   return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] || char)
 }
 
-export function AdminLowStockReportButton({ items, threshold }: { items: LowStockVariant[]; threshold: number }) {
+export function AdminLowStockReportButton({ items, threshold }: { items: AdminLowStockReportItem[]; threshold: number }) {
   const openReport = () => {
     if (items.length === 0) return
     const reportWindow = window.open("", "_blank")
@@ -43,8 +37,8 @@ export function AdminLowStockReportButton({ items, threshold }: { items: LowStoc
           <h1>Relatório de estoque baixo</h1>
           <p>Gerado em ${escapeHtml(generatedAt)}. Itens abaixo de ${threshold} unidades.</p>
           <table>
-            <thead><tr><th>Produto</th><th class="center">Tamanho</th><th class="center">Estoque</th></tr></thead>
-            <tbody>${items.map(item => `<tr><td>${escapeHtml(item.productName)}</td><td class="center">${escapeHtml(item.size)}</td><td class="stock">${escapeHtml(item.stockQuantity)} un.</td></tr>`).join("")}</tbody>
+            <thead><tr><th>Produto</th><th>Time</th><th class="center">Tamanho</th><th class="center">Estoque</th></tr></thead>
+            <tbody>${items.map(item => `<tr><td>${escapeHtml(item.productName)}</td><td>${escapeHtml(item.teamSlug)}</td><td class="center">${escapeHtml(item.size)}</td><td class="stock">${escapeHtml(item.stockQuantity)} un.</td></tr>`).join("")}</tbody>
           </table>
           <script>window.onload = () => window.print()</script>
         </body>

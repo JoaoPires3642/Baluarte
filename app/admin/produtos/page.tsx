@@ -7,11 +7,12 @@ import { useAuth, useUser } from "@clerk/nextjs"
 import { PackagePlus } from "lucide-react"
 import { fetchCategories, fetchPublicTeams, uploadImage, type AdminProduct, type Category, type Team } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
+import { getAdminLowStockVariants } from "@/lib/admin-low-stock"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog, ProductFormDialog } from "./product-form-dialog"
 import { ProductFilters, ProductListSection } from "./product-list-section"
 import { ProductStockSection } from "./product-stock-section"
-import { emptyForm, LOW_STOCK_THRESHOLD, SIZES, type LowStockVariant, type ProductFormData } from "./admin-products-types"
+import { emptyForm, LOW_STOCK_THRESHOLD, SIZES, type ProductFormData } from "./admin-products-types"
 
 function normalizeImageUrls(values: Array<string | undefined>) {
   return Array.from(new Set(values.map(value => value?.trim()).filter(Boolean) as string[]))
@@ -23,14 +24,6 @@ function parseMoney(value: string) {
 
 function getCsvValue(value: string | number) {
   return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] || char)
-}
-
-function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
-  return products.flatMap(product =>
-    SIZES.map(size => product.variants.find(variant => variant.size === size) || { size, stockQuantity: 0, available: false })
-      .filter(variant => variant.stockQuantity < LOW_STOCK_THRESHOLD)
-      .map(variant => ({ product, variant }))
-  )
 }
 
 export default function AdminProductsPage() {
@@ -102,8 +95,8 @@ export default function AdminProductsPage() {
     const matchesLowStock = !lowStockOnly || product.stockQuantity <= 0 || product.variants.some(variant => variant.stockQuantity < LOW_STOCK_THRESHOLD)
     return matchesSearch && matchesCategory && matchesTeam && matchesLowStock
   })
-  const lowStockVariants = getLowStockVariants(products)
-  const filteredLowStockVariants = getLowStockVariants(filtered)
+  const lowStockVariants = getAdminLowStockVariants(products, LOW_STOCK_THRESHOLD)
+  const filteredLowStockVariants = getAdminLowStockVariants(filtered, LOW_STOCK_THRESHOLD)
 
   const openCreate = () => {
     setEditingId(null)

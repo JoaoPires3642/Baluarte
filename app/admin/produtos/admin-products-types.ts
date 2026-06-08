@@ -1,6 +1,7 @@
-import type { AdminProduct } from "@/lib/api"
+import { ADMIN_STOCK_SIZES } from "@/lib/admin-low-stock"
+import type { AdminLowStockVariant } from "@/lib/admin-low-stock"
 
-export const SIZES = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]
+export const SIZES = ADMIN_STOCK_SIZES
 export const STEPS = ["Informações", "Preço & Estoque", "Imagem"]
 export const LOW_STOCK_THRESHOLD = 5
 
@@ -30,7 +31,4 @@ export const emptyForm: ProductFormData = {
   variants: Object.fromEntries(SIZES.map(size => [size, "0"])),
 }
 
-export type LowStockVariant = {
-  product: AdminProduct
-  variant: AdminProduct["variants"][number]
-}
+export type LowStockVariant = AdminLowStockVariant
