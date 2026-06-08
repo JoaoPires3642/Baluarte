@@ -5,6 +5,7 @@ import { type AdminProductDashboardSummary, type Order } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AdminLowStockReportButton } from "@/components/admin-low-stock-report-button"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -157,14 +158,17 @@ export default async function AdminDashboard() {
 
       {lowStockVariants.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            <div>
-              <CardTitle className="text-base sm:text-lg">Variantes com Estoque Baixo</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Produtos com variações abaixo de {LOW_STOCK_THRESHOLD} unidades
-              </CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <div>
+                <CardTitle className="text-base sm:text-lg">Variantes com Estoque Baixo</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Produtos com variações abaixo de {LOW_STOCK_THRESHOLD} unidades
+                </CardDescription>
+              </div>
             </div>
+            <AdminLowStockReportButton items={lowStockVariants} threshold={LOW_STOCK_THRESHOLD} />
           </CardHeader>
           <CardContent>
             <div className="max-h-72 overflow-y-auto">
