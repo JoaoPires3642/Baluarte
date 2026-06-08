@@ -27,14 +27,9 @@ function getCsvValue(value: string | number) {
 
 function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
   return products.flatMap(product =>
-    {
-      const lowStockVariants = product.variants
+    SIZES.map(size => product.variants.find(variant => variant.size === size) || { size, stockQuantity: 0, available: false })
       .filter(variant => variant.stockQuantity < LOW_STOCK_THRESHOLD)
       .map(variant => ({ product, variant }))
-      if (lowStockVariants.length > 0) return lowStockVariants
-      if (product.stockQuantity <= 0) return [{ product, variant: { size: "Todos", stockQuantity: 0, available: false } }]
-      return []
-    }
   )
 }
 
