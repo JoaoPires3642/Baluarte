@@ -58,7 +58,7 @@ export function ProductFilters(props: ProductFiltersProps) {
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant={stockOnly ? "default" : "outline"} size="sm" onClick={onStockOnlyChange}>Estoque</Button>
             <Button type="button" variant={lowStockOnly ? "destructive" : "outline"} size="sm" onClick={onLowStockOnlyChange}>Em falta</Button>
-            <Button type="button" variant="outline" size="sm" onClick={onDownloadReport} disabled={lowStockCount === 0}><Download className="h-3.5 w-3.5" />Relatório</Button>
+            <Button type="button" variant="outline" size="sm" onClick={onDownloadReport} disabled={lowStockCount === 0}><Download className="h-3.5 w-3.5" />PDF</Button>
             <Button type="button" variant="ghost" size="sm" onClick={onClearFilters}>Limpar</Button>
           </div>
         </div>

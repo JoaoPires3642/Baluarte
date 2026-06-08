@@ -22,7 +22,7 @@ function parseMoney(value: string) {
 }
 
 function getCsvValue(value: string | number) {
-  return `"${String(value).replace(/"/g, '""')}"`
+  return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] || char)
 }
 
 function getLowStockVariants(products: AdminProduct[]): LowStockVariant[] {
@@ -104,7 +104,7 @@ export default function AdminProductsPage() {
     const matchesSearch = !searchValue || product.modelName.toLowerCase().includes(searchValue) || product.teamSlug.toLowerCase().includes(searchValue)
     const matchesCategory = !categoryFilter || product.categorySlug === categoryFilter
     const matchesTeam = !teamFilter || product.teamSlug === teamFilter
-    const matchesLowStock = !lowStockOnly || product.variants.some(variant => variant.stockQuantity < LOW_STOCK_THRESHOLD)
+    const matchesLowStock = !lowStockOnly || product.stockQuantity <= 0 || product.variants.some(variant => variant.stockQuantity < LOW_STOCK_THRESHOLD)
     return matchesSearch && matchesCategory && matchesTeam && matchesLowStock
   })
   const lowStockVariants = getLowStockVariants(products)
@@ -208,16 +208,41 @@ export default function AdminProductsPage() {
     }
   }
 
-  const downloadLowStockReport = () => {
+  const openLowStockReport = () => {
     const rows = filteredLowStockVariants.length > 0 ? filteredLowStockVariants : lowStockVariants
     if (rows.length === 0) return
-    const csv = [["Produto", "Categoria", "Time", "Tamanho", "Estoque"].map(getCsvValue).join(","), ...rows.map(({ product, variant }) => [product.modelName, product.categorySlug, product.teamSlug, variant.size, variant.stockQuantity].map(getCsvValue).join(","))].join("\n")
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }))
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "relatorio-estoque-baixo.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    const generatedAt = new Date().toLocaleString("pt-BR")
+    const reportWindow = window.open("", "_blank")
+    if (!reportWindow) return
+    reportWindow.document.write(`<!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>Relatório de estoque baixo</title>
+          <style>
+            body { color: #10233f; font-family: Arial, sans-serif; margin: 32px; }
+            h1 { font-size: 22px; margin: 0 0 6px; }
+            p { color: #64748b; font-size: 12px; margin: 0 0 18px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border-bottom: 1px solid #d9e2ef; font-size: 12px; padding: 10px 8px; text-align: left; }
+            th { background: #f4f7fb; color: #0f274d; font-size: 11px; text-transform: uppercase; }
+            .stock { color: #c3222a; font-weight: 700; text-align: center; }
+            .center { text-align: center; }
+            @media print { body { margin: 18mm; } button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()" style="float:right;padding:10px 16px;border-radius:999px;border:1px solid #d9e2ef;background:white;font-weight:700;cursor:pointer">Imprimir / Salvar PDF</button>
+          <h1>Relatório de estoque baixo</h1>
+          <p>Gerado em ${getCsvValue(generatedAt)}. Itens abaixo de ${LOW_STOCK_THRESHOLD} unidades ou com estoque zerado.</p>
+          <table>
+            <thead><tr><th>Produto</th><th>Categoria</th><th>Time</th><th class="center">Tamanho</th><th class="center">Estoque</th></tr></thead>
+            <tbody>${rows.map(({ product, variant }) => `<tr><td>${getCsvValue(product.modelName)}</td><td>${getCsvValue(product.categorySlug)}</td><td>${getCsvValue(product.teamSlug)}</td><td class="center">${getCsvValue(variant.size)}</td><td class="stock">${getCsvValue(variant.stockQuantity)} un.</td></tr>`).join("")}</tbody>
+          </table>
+          <script>window.onload = () => window.print()</script>
+        </body>
+      </html>`)
+    reportWindow.document.close()
   }
 
   if (loading) return <div className="space-y-6 py-8"><p>Carregando...</p></div>
@@ -236,7 +261,7 @@ export default function AdminProductsPage() {
         <Button className="inline-flex items-center gap-2" onClick={openCreate}><PackagePlus className="h-4 w-4" />Novo Produto</Button>
       </div>
 
-      <ProductFilters search={search} categoryFilter={categoryFilter} teamFilter={teamFilter} stockOnly={stockOnly} lowStockOnly={lowStockOnly} categories={categories} teams={teams} lowStockCount={lowStockVariants.length} onSearchChange={setSearch} onCategoryFilterChange={value => { setCategoryFilter(value); setTeamFilter("") }} onTeamFilterChange={setTeamFilter} onStockOnlyChange={() => { setStockOnly(value => lowStockOnly ? true : !value); setLowStockOnly(false) }} onLowStockOnlyChange={() => { setStockOnly(true); setLowStockOnly(true) }} onDownloadReport={downloadLowStockReport} onClearFilters={() => { setSearch(""); setCategoryFilter(""); setTeamFilter(""); setStockOnly(false); setLowStockOnly(false) }} />
+      <ProductFilters search={search} categoryFilter={categoryFilter} teamFilter={teamFilter} stockOnly={stockOnly} lowStockOnly={lowStockOnly} categories={categories} teams={teams} lowStockCount={lowStockVariants.length} onSearchChange={setSearch} onCategoryFilterChange={value => { setCategoryFilter(value); setTeamFilter("") }} onTeamFilterChange={setTeamFilter} onStockOnlyChange={() => { setStockOnly(value => lowStockOnly ? true : !value); setLowStockOnly(false) }} onLowStockOnlyChange={() => { setStockOnly(true); setLowStockOnly(true) }} onDownloadReport={openLowStockReport} onClearFilters={() => { setSearch(""); setCategoryFilter(""); setTeamFilter(""); setStockOnly(false); setLowStockOnly(false) }} />
       {stockOnly && <ProductStockSection products={filtered} lowStockVariants={filteredLowStockVariants} lowStockOnly={lowStockOnly} onEditStock={product => openEdit(product, 1)} />}
       <ProductListSection products={filtered} onEdit={openEdit} onToggleActive={async product => { try { await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" }); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao alterar status do produto") } }} onDeleteRequest={setDeleteConfirm} />
 
