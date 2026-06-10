@@ -55,6 +55,20 @@ function formatDateBr(dateIso: string) {
 
 const CUTOFF_HOUR = 18
 
+function generateTimeSlots(ranges: string[]) {
+  const slots: string[] = []
+  for (const range of ranges) {
+    const [start, end] = range.split("-")
+    const [startH] = start.split(":").map(Number)
+    const [endH] = end.split(":").map(Number)
+    for (let h = startH; h < endH; h++) {
+      slots.push(`${String(h).padStart(2, "0")}:00`)
+      slots.push(`${String(h).padStart(2, "0")}:30`)
+    }
+  }
+  return slots
+}
+
 function nextAvailableDateForDay(dayKey: string) {
   const targetDay = deliveryDayIndexes[dayKey]
   if (targetDay === undefined) return ""
@@ -737,7 +751,7 @@ export default function CheckoutPage() {
                             onChange={e => setSelectedTimeSlot(e.target.value)}
                             className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           >
-                            {stationDelivery.timeSlots?.map(slot => (
+                            {generateTimeSlots(stationDelivery.timeSlots || []).map(slot => (
                               <option key={slot} value={slot}>{slot}</option>
                             ))}
                           </select>
