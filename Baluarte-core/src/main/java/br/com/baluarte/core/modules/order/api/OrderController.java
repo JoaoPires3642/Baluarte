@@ -289,7 +289,11 @@ public class OrderController {
                 order.getShippingServiceId(),
                 order.getShippingServiceName(),
                 order.getShippingLabelId(),
-                order.getShippingLabelUrl()
+                order.getShippingLabelUrl(),
+                order.getShippingType(),
+                order.getDeliveryStation(),
+                order.getDeliveryDay(),
+                order.getDeliveryTimeSlot()
             ),
             payment
         );
@@ -330,7 +334,11 @@ record ShippingResponse(
     String serviceId,
     String serviceName,
     String labelId,
-    String labelUrl
+    String labelUrl,
+    String shippingType,
+    String deliveryStation,
+    String deliveryDay,
+    String deliveryTimeSlot
 ) {}
 
 record PaymentResponse(

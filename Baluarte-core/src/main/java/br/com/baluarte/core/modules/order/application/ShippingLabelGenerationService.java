@@ -25,6 +25,12 @@ public class ShippingLabelGenerationService {
 
     @Transactional
     public CheckoutOrder generateForOrder(CheckoutOrder order) {
+        if ("station".equals(order.getShippingType())) {
+            order.setStatus("processing");
+            order.setUpdatedAt(Instant.now());
+            return orderRepository.save(order);
+        }
+
         if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
             var cartLabel = shippingLabelService.createCartLabel(order);
             order.setShippingProvider("superfrete");
@@ -56,6 +62,7 @@ public class ShippingLabelGenerationService {
     @Transactional
     public BulkShippingLabelGenerationResult generatePending(Instant createdBefore) {
         List<CheckoutOrder> candidates = orderRepository.findByStatusIn(List.of("paid", "processing")).stream()
+            .filter(order -> !"station".equals(order.getShippingType()))
             .filter(order -> order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank())
             .filter(order -> createdBefore == null || order.getCreatedAt() == null || order.getCreatedAt().isBefore(createdBefore))
             .toList();

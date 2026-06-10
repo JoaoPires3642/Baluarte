@@ -117,7 +117,49 @@ export async function fetchMyOrder(orderId: string) {
   return response.json() as Promise<{ data: Order }>
 }
 
+export async function fetchSiteContactSettings() {
+  return fetchApi<{ data: SiteContactSettings }>("/site/contact-settings", { cache: "no-store" })
+}
+
+export interface SiteContactSettings {
+  footerMessage?: string | null
+  email?: string | null
+  phone?: string | null
+  whatsapp?: string | null
+  businessHours?: string | null
+  instagramUrl?: string | null
+  facebookUrl?: string | null
+  youtubeUrl?: string | null
+}
+
 // Shipping Quotes - POST /checkout/shipping/quotes
+// Station Delivery - GET /checkout/shipping/station-settings
+export async function fetchStationDeliverySettings() {
+  const response = await fetch("/api/checkout/shipping/station-settings", {
+    cache: "no-store",
+  })
+  if (!response.ok) return null
+  const json = await response.json()
+  return json.data as StationDeliverySettings
+}
+
+export interface StationDeliverySettings {
+  enabled: boolean
+  price: number | null
+  stations: Record<string, string[]> | null
+  timeSlots: string[] | null
+}
+
+const DAYS_OF_WEEK: Record<string, string> = {
+  monday: "Segunda-feira",
+  tuesday: "Terça-feira",
+  wednesday: "Quarta-feira",
+  thursday: "Quinta-feira",
+  friday: "Sexta-feira",
+}
+
+export { DAYS_OF_WEEK as deliveryDayLabels }
+
 export async function fetchShippingQuotes(destination: {
   cep: string; street: string; number: string; neighborhood: string; city: string; state: string
 }, itemsCount: number) {
@@ -414,6 +456,10 @@ export interface PaymentRequest {
     label: string
     price: number
   }
+  shippingType?: string
+  deliveryStation?: string
+  deliveryDay?: string
+  deliveryTimeSlot?: string
   items: Array<{
     productId: string
     size: string
@@ -467,6 +513,10 @@ export interface Order {
     serviceName?: string
     labelId?: string
     labelUrl?: string
+    shippingType?: string
+    deliveryStation?: string
+    deliveryDay?: string
+    deliveryTimeSlot?: string
   }
   payment?: {
     method: string

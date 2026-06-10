@@ -99,6 +99,18 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "tracking_url", length = 500)
     private String trackingUrl;
 
+    @Column(name = "shipping_type", nullable = false, length = 20)
+    private String shippingType;
+
+    @Column(name = "delivery_station", length = 120)
+    private String deliveryStation;
+
+    @Column(name = "delivery_day", length = 20)
+    private String deliveryDay;
+
+    @Column(name = "delivery_time_slot", length = 20)
+    private String deliveryTimeSlot;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -146,6 +158,10 @@ public class CheckoutOrderJpaEntity {
         this.paymentReference = order.getPaymentReference();
         this.trackingCode = order.getTrackingCode();
         this.trackingUrl = order.getTrackingUrl();
+        this.shippingType = order.getShippingType() != null ? order.getShippingType() : "delivery";
+        this.deliveryStation = order.getDeliveryStation();
+        this.deliveryDay = order.getDeliveryDay();
+        this.deliveryTimeSlot = order.getDeliveryTimeSlot();
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -163,6 +179,10 @@ public class CheckoutOrderJpaEntity {
         order.setShippingProvider(shippingProvider);
         order.setShippingLabelId(shippingLabelId);
         order.setShippingLabelUrl(shippingLabelUrl);
+        order.setShippingType(shippingType);
+        order.setDeliveryStation(deliveryStation);
+        order.setDeliveryDay(deliveryDay);
+        order.setDeliveryTimeSlot(deliveryTimeSlot);
         order.setItems(items.stream().map(CheckoutOrderItemJpaEntity::toDomain).toList());
         order.setCreatedAt(createdAt.toInstant(java.time.ZoneOffset.UTC));
         order.setUpdatedAt(updatedAt.toInstant(java.time.ZoneOffset.UTC));

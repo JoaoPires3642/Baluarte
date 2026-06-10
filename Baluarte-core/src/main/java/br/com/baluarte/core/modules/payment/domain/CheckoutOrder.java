@@ -33,6 +33,10 @@ public class CheckoutOrder {
     private String paymentReference;
     private String trackingCode;
     private String trackingUrl;
+    private String shippingType;
+    private String deliveryStation;
+    private String deliveryDay;
+    private String deliveryTimeSlot;
     private Instant createdAt;
     private Instant updatedAt;
     private List<CheckoutOrderItem> items;
@@ -135,6 +139,14 @@ public class CheckoutOrder {
     public void setTrackingCode(String trackingCode) { this.trackingCode = trackingCode; }
     public String getTrackingUrl() { return trackingUrl; }
     public void setTrackingUrl(String trackingUrl) { this.trackingUrl = trackingUrl; }
+    public String getShippingType() { return shippingType; }
+    public void setShippingType(String shippingType) { this.shippingType = shippingType; }
+    public String getDeliveryStation() { return deliveryStation; }
+    public void setDeliveryStation(String deliveryStation) { this.deliveryStation = deliveryStation; }
+    public String getDeliveryDay() { return deliveryDay; }
+    public void setDeliveryDay(String deliveryDay) { this.deliveryDay = deliveryDay; }
+    public String getDeliveryTimeSlot() { return deliveryTimeSlot; }
+    public void setDeliveryTimeSlot(String deliveryTimeSlot) { this.deliveryTimeSlot = deliveryTimeSlot; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

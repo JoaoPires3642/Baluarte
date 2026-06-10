@@ -1,8 +1,25 @@
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { Camera, MessageCircle, PlayCircle, ShieldCheck } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { fetchSiteContactSettings, type SiteContactSettings } from "@/lib/api"
 
-export function Footer() {
+const fallbackSettings: SiteContactSettings = {
+  footerMessage: "Loja com curadoria premium, atendimento consultivo e coleções esportivas para quem veste o time com identidade.",
+  email: "contato@baluarte.com.br",
+  phone: "(11) 99999-9999",
+  whatsapp: "(11) 99999-9999",
+  businessHours: "Seg a Sex, 9h às 18h",
+  instagramUrl: "https://instagram.com",
+  youtubeUrl: "https://youtube.com",
+}
+
+export async function Footer() {
+  const settings = await loadContactSettings()
+  const whatsappHref = buildWhatsappHref(settings.whatsapp)
+  const hasSocialLinks = !!(settings.instagramUrl || whatsappHref || settings.youtubeUrl)
+  const hasContactInfo = !!(settings.email || settings.phone || settings.whatsapp || settings.businessHours)
+
   return (
     <footer className="mt-16 border-t border-[#d9e2ef] bg-[#0f274d] text-white">
       <div className="container mx-auto px-4 py-10 sm:py-12">
@@ -12,20 +29,14 @@ export function Footer() {
               <p className="text-3xl font-extrabold uppercase tracking-[-0.05em]">Baluarte</p>
               <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.24em] text-red-200">Artigos esportivos</p>
             </div>
-            <p className="max-w-xs text-sm text-slate-300">
-              Loja com curadoria premium, atendimento consultivo e coleções esportivas para quem veste o time com identidade.
-            </p>
-            <div className="flex items-center gap-3">
-              <Link href="https://instagram.com" target="_blank" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
-                <Camera className="h-4 w-4" />
-              </Link>
-              <Link href="https://facebook.com" target="_blank" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
-                <MessageCircle className="h-4 w-4" />
-              </Link>
-              <Link href="https://youtube.com" target="_blank" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white">
-                <PlayCircle className="h-4 w-4" />
-              </Link>
-            </div>
+            {settings.footerMessage && <p className="max-w-xs text-sm text-slate-300">{settings.footerMessage}</p>}
+            {hasSocialLinks && (
+              <div className="flex items-center gap-3">
+                {settings.instagramUrl && <SocialLink href={settings.instagramUrl} label="Instagram" icon={<Camera className="h-4 w-4" />} />}
+                {whatsappHref && <SocialLink href={whatsappHref} label="WhatsApp" icon={<MessageCircle className="h-4 w-4" />} />}
+                {settings.youtubeUrl && <SocialLink href={settings.youtubeUrl} label="YouTube" icon={<PlayCircle className="h-4 w-4" />} />}
+              </div>
+            )}
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-200">
               <ShieldCheck className="h-4 w-4 text-red-200" /> entrega em todo o Brasil
             </div>
@@ -51,14 +62,17 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="text-sm font-extrabold uppercase tracking-[0.18em] text-red-300">Contato</h4>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>contato@baluarte.com.br</li>
-              <li>(11) 99999-9999</li>
-              <li>Seg a Sex, 9h às 18h</li>
-            </ul>
-          </div>
+          {hasContactInfo && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-extrabold uppercase tracking-[0.18em] text-red-300">Contato</h4>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {settings.email && <li>{settings.email}</li>}
+                {settings.phone && <li>{settings.phone}</li>}
+                {settings.whatsapp && <li>WhatsApp: {settings.whatsapp}</li>}
+                {settings.businessHours && <li>{settings.businessHours}</li>}
+              </ul>
+            </div>
+          )}
         </div>
 
         <Separator className="my-8 bg-white/10" />
@@ -73,4 +87,34 @@ export function Footer() {
       </div>
     </footer>
   )
+}
+
+async function loadContactSettings() {
+  try {
+    const response = await fetchSiteContactSettings()
+    return response.data
+  } catch {
+    return fallbackSettings
+  }
+}
+
+function SocialLink({ href, label, icon }: { href: string; label: string; icon: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 hover:text-white"
+    >
+      {icon}
+    </Link>
+  )
+}
+
+function buildWhatsappHref(value?: string | null) {
+  if (!value) return null
+  if (value.startsWith("http://") || value.startsWith("https://")) return value
+  const digits = value.replace(/\D/g, "")
+  if (!digits) return null
+  return `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
 }

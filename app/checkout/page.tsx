@@ -6,7 +6,7 @@ import { CreditCard, Loader2, MapPin, MapPinned, Plus, Truck } from "lucide-reac
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { useUser } from "@clerk/nextjs"
-import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, type Address, type PaymentResponse, type ShippingQuote } from "@/lib/api"
+import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, fetchStationDeliverySettings, deliveryDayLabels, type Address, type PaymentResponse, type ShippingQuote, type StationDeliverySettings } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -72,6 +72,13 @@ export default function CheckoutPage() {
     email: "",
     cpf: "",
   })
+
+  const [stationDelivery, setStationDelivery] = useState<StationDeliverySettings | null>(null)
+  const [stationDeliveryLoading, setStationDeliveryLoading] = useState(false)
+  const [useStationDelivery, setUseStationDelivery] = useState(false)
+  const [selectedDeliveryDay, setSelectedDeliveryDay] = useState("")
+  const [selectedStation, setSelectedStation] = useState("")
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
 
   const [cepLoading, setCepLoading] = useState(false)
   const [shippingLoading, setShippingLoading] = useState(false)
@@ -189,6 +196,16 @@ export default function CheckoutPage() {
     }
   }, [cep, address.street, address.state, triggerShippingQuote])
 
+  useEffect(() => {
+    setStationDeliveryLoading(true)
+    fetchStationDeliverySettings().then(data => {
+      setStationDelivery(data)
+      if (data?.enabled && data.timeSlots?.length) {
+        setSelectedTimeSlot(data.timeSlots[0])
+      }
+    }).catch(() => {}).finally(() => setStationDeliveryLoading(false))
+  }, [])
+
   const resetNewAddress = () => {
     setNewAddr({ label: "", recipientName: "", cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "", isDefault: false })
     setShowNewAddress(false)
@@ -301,9 +318,17 @@ export default function CheckoutPage() {
     }
 
     const addr = showNewAddress && newAddr.street ? newAddr : address
-    if (!addr.recipientName || !addr.street || !addr.neighborhood || !addr.city) {
-      showToast("Preencha o endereço completo", "error")
-      return
+
+    if (useStationDelivery) {
+      if (!selectedDeliveryDay || !selectedStation || !selectedTimeSlot) {
+        showToast("Selecione o dia, estação e horário da entrega", "error")
+        return
+      }
+    } else {
+      if (!addr.recipientName || !addr.street || !addr.neighborhood || !addr.city) {
+        showToast("Preencha o endereço completo", "error")
+        return
+      }
     }
 
     const shipping = shippingOptions.find((s) => s.id === selectedShipping)
@@ -320,7 +345,7 @@ export default function CheckoutPage() {
     setPaymentError("")
     try {
       // Save new address to profile if user is signed in and it's a new one
-      if (isSignedIn && !selectedAddressId && cep && addr.street) {
+      if (!useStationDelivery && isSignedIn && !selectedAddressId && cep && addr.street) {
         try {
           const existing = addresses.map(a => ({
             addressId: a.addressId,
@@ -365,20 +390,24 @@ export default function CheckoutPage() {
           identification: { type: "CPF" as const, number: payer.cpf },
         },
         shippingAddress: {
-          recipientName: addr.recipientName,
-          cep: cep.replace(/\D/g, ""),
-          street: addr.street,
-          number: addr.number,
-          complement: addr.complement || undefined,
-          neighborhood: addr.neighborhood,
-          city: addr.city,
-          state: addr.state,
+          recipientName: useStationDelivery ? "Retirar na Estação" : addr.recipientName,
+          cep: useStationDelivery ? "00000000" : cep.replace(/\D/g, ""),
+          street: useStationDelivery ? `Estação ${selectedStation}` : addr.street,
+          number: useStationDelivery ? "s/n" : addr.number,
+          complement: useStationDelivery ? selectedTimeSlot : (addr.complement || undefined),
+          neighborhood: useStationDelivery ? selectedDeliveryDay : addr.neighborhood,
+          city: useStationDelivery ? "São Paulo" : addr.city,
+          state: useStationDelivery ? "SP" : addr.state,
         },
         shipping: {
           optionId: shipping.id,
           label: shipping.label,
           price: shipping.price,
         },
+        shippingType: useStationDelivery ? "station" : "delivery",
+        deliveryStation: useStationDelivery ? selectedStation : undefined,
+        deliveryDay: useStationDelivery ? selectedDeliveryDay : undefined,
+        deliveryTimeSlot: useStationDelivery ? selectedTimeSlot : undefined,
         card: paymentMethod === "card" && cardData ? {
           token: cardData.token,
           paymentMethodId: cardData.paymentMethodId,
@@ -417,7 +446,9 @@ export default function CheckoutPage() {
     setLoading(false)
   }
 
-  const shippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
+  const regularShippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
+  const stationShippingCost = stationDelivery?.price || 10
+  const shippingCost = useStationDelivery ? stationShippingCost : regularShippingCost
 
   if (items.length === 0) {
     return (
@@ -576,13 +607,92 @@ export default function CheckoutPage() {
                         <input
                           type="radio"
                           name="shipping"
-                          checked={selectedShipping === option.id}
-                          onChange={() => setSelectedShipping(option.id)}
+                          checked={selectedShipping === option.id && !useStationDelivery}
+                          onChange={() => { setSelectedShipping(option.id); setUseStationDelivery(false) }}
                           className="mt-1 sm:mt-0"
                         />
                         <span className="leading-5">{option.label} - R$ {option.price.toFixed(2).replace(".", ",")} ({option.estimatedDays})</span>
                       </label>
                     ))}
+                  </div>
+                )}
+
+                {!showNewAddress && stationDelivery?.enabled && !stationDeliveryLoading && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-3 rounded-2xl border p-3 text-sm cursor-pointer transition-colors"
+                        style={{
+                          borderColor: useStationDelivery ? "#0f274d" : "rgb(226 232 240)",
+                          backgroundColor: useStationDelivery ? "#f4f7fb" : undefined,
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="shipping"
+                          checked={useStationDelivery}
+                          onChange={() => {
+                            setUseStationDelivery(true)
+                            setSelectedShipping("station")
+                            if (stationDelivery.timeSlots?.length) {
+                              setSelectedTimeSlot(stationDelivery.timeSlots[0])
+                            }
+                          }}
+                          className="mt-1"
+                        />
+                        <span className="leading-5">
+                          <strong>Entrega em Estação</strong> - R$ {stationDelivery.price?.toFixed(2).replace(".", ",") ?? "10,00"}
+                        </span>
+                      </label>
+                    </div>
+
+                    {useStationDelivery && (
+                      <div className="ml-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <Label>Dia da semana</Label>
+                          <select
+                            value={selectedDeliveryDay}
+                            onChange={e => { setSelectedDeliveryDay(e.target.value); setSelectedStation("") }}
+                            className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          >
+                            <option value="">Selecione um dia</option>
+                            {stationDelivery.stations && Object.entries(stationDelivery.stations).map(([dayKey]) => (
+                              <option key={dayKey} value={dayKey}>
+                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedDeliveryDay && stationDelivery.stations?.[selectedDeliveryDay] && (
+                          <div>
+                            <Label>Estação</Label>
+                            <select
+                              value={selectedStation}
+                              onChange={e => setSelectedStation(e.target.value)}
+                              className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="">Selecione a estação</option>
+                              {stationDelivery.stations[selectedDeliveryDay].map(station => (
+                                <option key={station} value={station}>{station}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <Label>Horário</Label>
+                          <select
+                            value={selectedTimeSlot}
+                            onChange={e => setSelectedTimeSlot(e.target.value)}
+                            className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          >
+                            {stationDelivery.timeSlots?.map(slot => (
+                              <option key={slot} value={slot}>{slot}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -594,7 +704,7 @@ export default function CheckoutPage() {
               </CardContent>
               {!showNewAddress && (
                 <CardFooter className="justify-end">
-                  <Button variant="outline" onClick={() => setStep(2)} disabled={!selectedShipping} className="w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => setStep(2)} disabled={!selectedShipping || (useStationDelivery && (!selectedDeliveryDay || !selectedStation || !selectedTimeSlot))} className="w-full sm:w-auto">
                     Revisar pedido
                   </Button>
                 </CardFooter>
@@ -616,7 +726,14 @@ export default function CheckoutPage() {
                   </div>
                 ))}
                 <Separator />
-                {(() => {
+                {useStationDelivery ? (
+                  <div className="text-sm text-slate-600">
+                    <p className="font-semibold">Entrega em Estação</p>
+                    <p>{deliveryDayLabels[selectedDeliveryDay as keyof typeof deliveryDayLabels] || selectedDeliveryDay}</p>
+                    <p>Estação {selectedStation}</p>
+                    <p>Horário: {selectedTimeSlot}</p>
+                  </div>
+                ) : (() => {
                   const a = showNewAddress && newAddr.street ? newAddr : address
                   return (
                     <div className="text-sm text-slate-600">
@@ -717,7 +834,7 @@ export default function CheckoutPage() {
                 </div>
               ))}
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Frete</span>
+                <span className="text-muted-foreground">{useStationDelivery ? "Entrega em Estação" : "Frete"}</span>
                 <span>R$ {shippingCost.toFixed(2).replace(".", ",")}</span>
               </div>
               <Separator />

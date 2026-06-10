@@ -100,6 +100,10 @@ public class CreatePaymentUseCase {
             .toList());
         order.setShippingServiceId(request.shipping().optionId());
         order.setShippingServiceName(request.shipping().label());
+        order.setShippingType(request.shippingType() != null ? request.shippingType() : "delivery");
+        order.setDeliveryStation(request.deliveryStation());
+        order.setDeliveryDay(request.deliveryDay());
+        order.setDeliveryTimeSlot(request.deliveryTimeSlot());
         order = orderRepository.save(order);
 
         CreatePaymentCommand command = new CreatePaymentCommand(

@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
-import { MapPin, PackageSearch } from "lucide-react"
+import { MapPin, PackageSearch, Train } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -32,6 +32,14 @@ const statusColors: Record<string, string> = {
 
 const customerCancellableStatuses = ["pending_payment", "paid"]
 
+const deliveryDayLabels: Record<string, string> = {
+  monday: "Segunda-feira",
+  tuesday: "Terca-feira",
+  wednesday: "Quarta-feira",
+  thursday: "Quinta-feira",
+  friday: "Sexta-feira",
+}
+
 type Order = {
   id: string
   orderReference: string
@@ -39,7 +47,7 @@ type Order = {
   createdAt: string
   total: number
   items: Array<{ productId: string; name: string; size: string; quantity: number; unitPrice: number }>
-  shipping?: { recipientName?: string; address: string; trackingCode?: string }
+  shipping?: { recipientName?: string; address: string; trackingCode?: string; shippingType?: string; deliveryStation?: string; deliveryDay?: string; deliveryTimeSlot?: string }
   payment?: { method: string; pixQrCode?: string; pixQrCodeBase64?: string; pixCopyPasteCode?: string }
 }
 
@@ -141,13 +149,19 @@ export default async function OrderDetailPage({ params }: Props) {
             <CardTitle>Entrega</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {order.shipping?.address && (
+            {order.shipping?.shippingType === "station" ? (
+              <div>
+                <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Train className="h-4 w-4 text-[#c3222a]" />Entrega em Estação</p>
+                <p className="font-medium">Estação {order.shipping.deliveryStation}</p>
+                <p className="text-sm text-muted-foreground">{deliveryDayLabels[order.shipping.deliveryDay || ""] || order.shipping.deliveryDay} - {order.shipping.deliveryTimeSlot}</p>
+              </div>
+            ) : order.shipping?.address ? (
               <div>
                 <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4 text-[#c3222a]" />Endereço</p>
                 <p className="font-medium">{order.shipping.address}</p>
               </div>
-            )}
-            {order.shipping?.trackingCode && (
+            ) : null}
+            {order.shipping?.trackingCode && order.shipping?.shippingType !== "station" && (
               <div>
                 <p className="text-sm text-muted-foreground">Código de Rastreamento</p>
                 <p className="font-medium">{order.shipping.trackingCode}</p>

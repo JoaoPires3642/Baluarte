@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { AlertTriangle, ChevronLeft, MapPin, PackageSearch, Truck, UserRound } from "lucide-react"
+import { AlertTriangle, ChevronLeft, MapPin, PackageSearch, Train, Truck, UserRound } from "lucide-react"
 import { type Order } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -57,6 +57,7 @@ async function getOrder(id: string) {
 }
 
 function isStaleProcessingOrder(order: Order) {
+  if (order.shipping?.shippingType === "station") return false
   if (order.status !== "processing" || !order.shipping?.labelId) return false
   const updatedAt = order.updatedAt || order.createdAt
   const updatedTime = new Date(updatedAt).getTime()
@@ -136,13 +137,22 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             <CardTitle className="inline-flex items-center gap-2"><UserRound className="h-5 w-5 shrink-0 text-[#0f274d]" />Informações do Cliente</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {order.shipping?.address && (
+            {order.shipping?.shippingType === "station" ? (
+              <div>
+                <p className="inline-flex items-center gap-2 text-sm text-slate-500"><Train className="h-4 w-4 shrink-0 text-[#c3222a]" />Entrega em Estação</p>
+                <p className="font-medium">Estação {order.shipping.deliveryStation}</p>
+                <p className="text-sm text-slate-500">
+                  {order.shipping.deliveryDay ? (
+                    { monday: "Segunda", tuesday: "Terca", wednesday: "Quarta", thursday: "Quinta", friday: "Sexta" }[order.shipping.deliveryDay] || order.shipping.deliveryDay
+                  ) : ""} - {order.shipping.deliveryTimeSlot || ""}
+                </p>
+              </div>
+            ) : order.shipping?.address ? (
               <div>
                 <p className="inline-flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4 shrink-0 text-[#c3222a]" />Endereço de Entrega</p>
                 <p className="font-medium">{order.shipping.address}</p>
               </div>
-            )}
-            {!order.shipping?.address && (
+            ) : (
               <p className="text-sm text-slate-500">Nenhuma informação de entrega disponível para este pedido.</p>
             )}
           </CardContent>
@@ -153,18 +163,28 @@ export default async function AdminOrderDetailPage({ params }: Props) {
             <CardTitle className="inline-flex items-center gap-2"><Truck className="h-5 w-5 shrink-0 text-[#0f274d]" />Frete e Etiqueta</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="space-y-1 text-sm">
-              <p><span className="text-slate-500">Serviço:</span> {order.shipping?.serviceName || order.shipping?.serviceId || "Nao informado"}</p>
-              <p><span className="text-slate-500">Etiqueta:</span> {order.shipping?.labelId || "Nao gerada"}</p>
-              <p><span className="text-slate-500">Rastreio:</span> {order.shipping?.trackingCode || "Nao disponivel"}</p>
-            </div>
-            <CreateShippingLabel
-              orderId={order.id}
-              status={order.status}
-              labelId={order.shipping?.labelId}
-              labelUrl={order.shipping?.labelUrl}
-              trackingCode={order.shipping?.trackingCode}
-            />
+            {order.shipping?.shippingType === "station" ? (
+              <div className="space-y-1 text-sm">
+                <p><span className="text-slate-500">Tipo:</span> Entrega em Estação</p>
+                <p><span className="text-slate-500">Estação:</span> {order.shipping.deliveryStation}</p>
+                <p><span className="text-slate-500">Horário:</span> {order.shipping.deliveryTimeSlot}</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-slate-500">Serviço:</span> {order.shipping?.serviceName || order.shipping?.serviceId || "Nao informado"}</p>
+                  <p><span className="text-slate-500">Etiqueta:</span> {order.shipping?.labelId || "Nao gerada"}</p>
+                  <p><span className="text-slate-500">Rastreio:</span> {order.shipping?.trackingCode || "Nao disponivel"}</p>
+                </div>
+                <CreateShippingLabel
+                  orderId={order.id}
+                  status={order.status}
+                  labelId={order.shipping?.labelId}
+                  labelUrl={order.shipping?.labelUrl}
+                  trackingCode={order.shipping?.trackingCode}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

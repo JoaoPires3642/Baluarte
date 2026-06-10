@@ -13,7 +13,11 @@ public record CreatePaymentRequest(
     @NotNull @Valid ShippingAddress shippingAddress,
     @NotNull @Valid ShippingSelection shipping,
     @NotNull @Size(min = 1) List<@Valid Item> items,
-    @Valid Card card
+    @Valid Card card,
+    String shippingType,
+    String deliveryStation,
+    String deliveryDay,
+    String deliveryTimeSlot
 ) {
     public record Payer(
         @Email @NotBlank String email,
