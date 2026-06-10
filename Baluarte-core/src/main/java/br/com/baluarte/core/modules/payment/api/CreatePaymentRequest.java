@@ -17,6 +17,7 @@ public record CreatePaymentRequest(
     String shippingType,
     String deliveryStation,
     String deliveryDay,
+    String deliveryDate,
     String deliveryTimeSlot
 ) {
     public record Payer(

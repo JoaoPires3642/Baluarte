@@ -36,6 +36,7 @@ public class CheckoutOrder {
     private String shippingType;
     private String deliveryStation;
     private String deliveryDay;
+    private String deliveryDate;
     private String deliveryTimeSlot;
     private Instant createdAt;
     private Instant updatedAt;
@@ -145,6 +146,8 @@ public class CheckoutOrder {
     public void setDeliveryStation(String deliveryStation) { this.deliveryStation = deliveryStation; }
     public String getDeliveryDay() { return deliveryDay; }
     public void setDeliveryDay(String deliveryDay) { this.deliveryDay = deliveryDay; }
+    public String getDeliveryDate() { return deliveryDate; }
+    public void setDeliveryDate(String deliveryDate) { this.deliveryDate = deliveryDate; }
     public String getDeliveryTimeSlot() { return deliveryTimeSlot; }
     public void setDeliveryTimeSlot(String deliveryTimeSlot) { this.deliveryTimeSlot = deliveryTimeSlot; }
     public Instant getCreatedAt() { return createdAt; }

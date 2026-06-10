@@ -99,6 +99,19 @@ public class OrderController {
         return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
     }
 
+    @GetMapping("/station-deliveries")
+    public ApiSuccessResponse<List<OrderResponse>> listStationDeliveries(
+        @RequestParam("date") String date,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        return ApiSuccessResponse.of(orderRepository.findStationDeliveriesByDate(date).stream()
+            .map(this::toResponse)
+            .toList());
+    }
+
     @GetMapping("/my/{orderId}")
     public ApiSuccessResponse<OrderResponse> getMyOrder(
         @PathVariable String orderId,
@@ -293,6 +306,7 @@ public class OrderController {
                 order.getShippingType(),
                 order.getDeliveryStation(),
                 order.getDeliveryDay(),
+                order.getDeliveryDate(),
                 order.getDeliveryTimeSlot()
             ),
             payment
@@ -338,6 +352,7 @@ record ShippingResponse(
     String shippingType,
     String deliveryStation,
     String deliveryDay,
+    String deliveryDate,
     String deliveryTimeSlot
 ) {}
 

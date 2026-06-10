@@ -108,6 +108,9 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "delivery_day", length = 20)
     private String deliveryDay;
 
+    @Column(name = "delivery_date", length = 10)
+    private String deliveryDate;
+
     @Column(name = "delivery_time_slot", length = 20)
     private String deliveryTimeSlot;
 
@@ -161,6 +164,7 @@ public class CheckoutOrderJpaEntity {
         this.shippingType = order.getShippingType() != null ? order.getShippingType() : "delivery";
         this.deliveryStation = order.getDeliveryStation();
         this.deliveryDay = order.getDeliveryDay();
+        this.deliveryDate = order.getDeliveryDate();
         this.deliveryTimeSlot = order.getDeliveryTimeSlot();
         this.updatedAt = LocalDateTime.now();
     }
@@ -182,6 +186,7 @@ public class CheckoutOrderJpaEntity {
         order.setShippingType(shippingType);
         order.setDeliveryStation(deliveryStation);
         order.setDeliveryDay(deliveryDay);
+        order.setDeliveryDate(deliveryDate);
         order.setDeliveryTimeSlot(deliveryTimeSlot);
         order.setItems(items.stream().map(CheckoutOrderItemJpaEntity::toDomain).toList());
         order.setCreatedAt(createdAt.toInstant(java.time.ZoneOffset.UTC));

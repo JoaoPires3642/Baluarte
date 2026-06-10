@@ -103,6 +103,7 @@ public class CreatePaymentUseCase {
         order.setShippingType(request.shippingType() != null ? request.shippingType() : "delivery");
         order.setDeliveryStation(request.deliveryStation());
         order.setDeliveryDay(request.deliveryDay());
+        order.setDeliveryDate(request.deliveryDate());
         order.setDeliveryTimeSlot(request.deliveryTimeSlot());
         order = orderRepository.save(order);
 

@@ -47,12 +47,18 @@ type Order = {
   createdAt: string
   total: number
   items: Array<{ productId: string; name: string; size: string; quantity: number; unitPrice: number }>
-  shipping?: { recipientName?: string; address: string; trackingCode?: string; shippingType?: string; deliveryStation?: string; deliveryDay?: string; deliveryTimeSlot?: string }
+  shipping?: { recipientName?: string; address: string; trackingCode?: string; shippingType?: string; deliveryStation?: string; deliveryDay?: string; deliveryDate?: string; deliveryTimeSlot?: string }
   payment?: { method: string; pixQrCode?: string; pixQrCodeBase64?: string; pixCopyPasteCode?: string }
 }
 
 type Props = {
   params: Promise<{ id: string }>
+}
+
+function formatDateBr(dateIso?: string) {
+  if (!dateIso) return ""
+  const [year, month, day] = dateIso.split("-")
+  return `${day}/${month}/${year}`
 }
 
 async function getOrder(id: string): Promise<Order | null> {
@@ -153,7 +159,9 @@ export default async function OrderDetailPage({ params }: Props) {
               <div>
                 <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Train className="h-4 w-4 text-[#c3222a]" />Entrega em Estação</p>
                 <p className="font-medium">Estação {order.shipping.deliveryStation}</p>
-                <p className="text-sm text-muted-foreground">{deliveryDayLabels[order.shipping.deliveryDay || ""] || order.shipping.deliveryDay} - {order.shipping.deliveryTimeSlot}</p>
+                <p className="text-sm text-muted-foreground">
+                  {deliveryDayLabels[order.shipping.deliveryDay || ""] || order.shipping.deliveryDay} {formatDateBr(order.shipping.deliveryDate)} - {order.shipping.deliveryTimeSlot}
+                </p>
               </div>
             ) : order.shipping?.address ? (
               <div>

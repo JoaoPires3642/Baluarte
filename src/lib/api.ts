@@ -459,6 +459,7 @@ export interface PaymentRequest {
   shippingType?: string
   deliveryStation?: string
   deliveryDay?: string
+  deliveryDate?: string
   deliveryTimeSlot?: string
   items: Array<{
     productId: string
@@ -516,6 +517,7 @@ export interface Order {
     shippingType?: string
     deliveryStation?: string
     deliveryDay?: string
+    deliveryDate?: string
     deliveryTimeSlot?: string
   }
   payment?: {

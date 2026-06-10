@@ -73,6 +73,15 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CheckoutOrder> findStationDeliveriesByDate(String deliveryDate) {
+        return jpaRepository.findByShippingTypeAndDeliveryDateOrderByDeliveryStationAscDeliveryTimeSlotAsc("station", deliveryDate)
+            .stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countAll() {
         return jpaRepository.count();
     }

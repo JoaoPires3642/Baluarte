@@ -20,6 +20,16 @@ type PaymentMethod = "pix" | "card"
 type CheckoutStep = 1 | 2 | 3
 type CardTokenResult = { token: string; paymentMethodId: string; issuerId: string | null; installments: number }
 
+const deliveryDayIndexes: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+}
+
 function createAddressId() {
   return crypto.randomUUID()
 }
@@ -36,6 +46,27 @@ function formatCpf(value: string) {
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+}
+
+function formatDateBr(dateIso: string) {
+  const [year, month, day] = dateIso.split("-")
+  return `${day}/${month}/${year}`
+}
+
+function nextAvailableDateForDay(dayKey: string) {
+  const targetDay = deliveryDayIndexes[dayKey]
+  if (targetDay === undefined) return ""
+
+  const today = new Date()
+  const targetDate = new Date(today)
+  let daysToAdd = (targetDay - today.getDay() + 7) % 7
+  if (daysToAdd === 0) daysToAdd = 7
+  targetDate.setDate(today.getDate() + daysToAdd)
+
+  const year = targetDate.getFullYear()
+  const month = String(targetDate.getMonth() + 1).padStart(2, "0")
+  const day = String(targetDate.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }
 
 export default function CheckoutPage() {
@@ -77,7 +108,9 @@ export default function CheckoutPage() {
   const [stationDeliveryLoading, setStationDeliveryLoading] = useState(false)
   const [useStationDelivery, setUseStationDelivery] = useState(false)
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState("")
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState("")
   const [selectedStation, setSelectedStation] = useState("")
+  const [stationRecipientName, setStationRecipientName] = useState("")
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
 
   const [cepLoading, setCepLoading] = useState(false)
@@ -320,8 +353,8 @@ export default function CheckoutPage() {
     const addr = showNewAddress && newAddr.street ? newAddr : address
 
     if (useStationDelivery) {
-      if (!selectedDeliveryDay || !selectedStation || !selectedTimeSlot) {
-        showToast("Selecione o dia, estação e horário da entrega", "error")
+      if (!stationRecipientName || !selectedDeliveryDay || !selectedDeliveryDate || !selectedStation || !selectedTimeSlot) {
+        showToast("Preencha nome, dia, estação e horário da entrega", "error")
         return
       }
     } else {
@@ -390,7 +423,7 @@ export default function CheckoutPage() {
           identification: { type: "CPF" as const, number: payer.cpf },
         },
         shippingAddress: {
-          recipientName: useStationDelivery ? "Retirar na Estação" : addr.recipientName,
+          recipientName: useStationDelivery ? stationRecipientName : addr.recipientName,
           cep: useStationDelivery ? "00000000" : cep.replace(/\D/g, ""),
           street: useStationDelivery ? `Estação ${selectedStation}` : addr.street,
           number: useStationDelivery ? "s/n" : addr.number,
@@ -407,6 +440,7 @@ export default function CheckoutPage() {
         shippingType: useStationDelivery ? "station" : "delivery",
         deliveryStation: useStationDelivery ? selectedStation : undefined,
         deliveryDay: useStationDelivery ? selectedDeliveryDay : undefined,
+        deliveryDate: useStationDelivery ? selectedDeliveryDate : undefined,
         deliveryTimeSlot: useStationDelivery ? selectedTimeSlot : undefined,
         card: paymentMethod === "card" && cardData ? {
           token: cardData.token,
@@ -648,19 +682,33 @@ export default function CheckoutPage() {
                     {useStationDelivery && (
                       <div className="ml-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div>
+                          <Label>Nome de quem vai receber</Label>
+                          <Input
+                            value={stationRecipientName}
+                            onChange={e => setStationRecipientName(e.target.value)}
+                            placeholder="Nome completo"
+                            className="mt-1 bg-white"
+                          />
+                        </div>
+                        <div>
                           <Label>Dia da semana</Label>
                           <select
                             value={selectedDeliveryDay}
-                            onChange={e => { setSelectedDeliveryDay(e.target.value); setSelectedStation("") }}
+                            onChange={e => {
+                              setSelectedDeliveryDay(e.target.value)
+                              setSelectedDeliveryDate(nextAvailableDateForDay(e.target.value))
+                              setSelectedStation("")
+                            }}
                             className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           >
-                            <option value="">Selecione um dia</option>
+                            <option value="">Selecione o próximo dia disponível</option>
                             {stationDelivery.stations && Object.entries(stationDelivery.stations).map(([dayKey]) => (
                               <option key={dayKey} value={dayKey}>
-                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey}
+                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey} ({formatDateBr(nextAvailableDateForDay(dayKey))})
                               </option>
                             ))}
                           </select>
+                          <p className="mt-1 text-xs text-slate-500">Entrega no mesmo dia nao fica disponivel. Se for o dia da estacao hoje, aparece a data da semana seguinte.</p>
                         </div>
 
                         {selectedDeliveryDay && stationDelivery.stations?.[selectedDeliveryDay] && (
@@ -704,7 +752,7 @@ export default function CheckoutPage() {
               </CardContent>
               {!showNewAddress && (
                 <CardFooter className="justify-end">
-                  <Button variant="outline" onClick={() => setStep(2)} disabled={!selectedShipping || (useStationDelivery && (!selectedDeliveryDay || !selectedStation || !selectedTimeSlot))} className="w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => setStep(2)} disabled={!selectedShipping || (useStationDelivery && (!stationRecipientName || !selectedDeliveryDay || !selectedDeliveryDate || !selectedStation || !selectedTimeSlot))} className="w-full sm:w-auto">
                     Revisar pedido
                   </Button>
                 </CardFooter>
@@ -729,7 +777,8 @@ export default function CheckoutPage() {
                 {useStationDelivery ? (
                   <div className="text-sm text-slate-600">
                     <p className="font-semibold">Entrega em Estação</p>
-                    <p>{deliveryDayLabels[selectedDeliveryDay as keyof typeof deliveryDayLabels] || selectedDeliveryDay}</p>
+                    <p>{stationRecipientName}</p>
+                    <p>{deliveryDayLabels[selectedDeliveryDay as keyof typeof deliveryDayLabels] || selectedDeliveryDay} - {formatDateBr(selectedDeliveryDate)}</p>
                     <p>Estação {selectedStation}</p>
                     <p>Horário: {selectedTimeSlot}</p>
                   </div>

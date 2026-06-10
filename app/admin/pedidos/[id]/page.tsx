@@ -31,6 +31,12 @@ const statusColors: Record<string, string> = {
   pending_payment: "bg-yellow-500",
 }
 
+function formatDateBr(dateIso?: string) {
+  if (!dateIso) return ""
+  const [year, month, day] = dateIso.split("-")
+  return `${day}/${month}/${year}`
+}
+
 type Props = {
   params: Promise<{ id: string }>
 }
@@ -144,7 +150,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 <p className="text-sm text-slate-500">
                   {order.shipping.deliveryDay ? (
                     { monday: "Segunda", tuesday: "Terca", wednesday: "Quarta", thursday: "Quinta", friday: "Sexta" }[order.shipping.deliveryDay] || order.shipping.deliveryDay
-                  ) : ""} - {order.shipping.deliveryTimeSlot || ""}
+                  ) : ""} {formatDateBr(order.shipping.deliveryDate)} - {order.shipping.deliveryTimeSlot || ""}
                 </p>
               </div>
             ) : order.shipping?.address ? (
@@ -167,6 +173,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <div className="space-y-1 text-sm">
                 <p><span className="text-slate-500">Tipo:</span> Entrega em Estação</p>
                 <p><span className="text-slate-500">Estação:</span> {order.shipping.deliveryStation}</p>
+                <p><span className="text-slate-500">Data:</span> {formatDateBr(order.shipping.deliveryDate)}</p>
                 <p><span className="text-slate-500">Horário:</span> {order.shipping.deliveryTimeSlot}</p>
               </div>
             ) : (
