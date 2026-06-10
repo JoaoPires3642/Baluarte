@@ -3,6 +3,7 @@ package br.com.baluarte.core.modules.payment.infrastructure;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -75,6 +76,21 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     @Transactional(readOnly = true)
     public List<CheckoutOrder> findStationDeliveriesByDate(String deliveryDate) {
         return jpaRepository.findByShippingTypeAndDeliveryDateOrderByDeliveryStationAscDeliveryTimeSlotAsc("station", deliveryDate)
+            .stream()
+            .map(CheckoutOrderJpaEntity::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CheckoutOrder> findSeparationReportByCreatedDate(LocalDate date) {
+        LocalDateTime createdFrom = date.atStartOfDay();
+        LocalDateTime createdTo = date.plusDays(1).atStartOfDay();
+        return jpaRepository.findByStatusInAndCreatedAtBetweenOrderByShippingTypeAscShippingServiceNameAscCreatedAtAsc(
+                List.of("paid", "processing"),
+                createdFrom,
+                createdTo
+            )
             .stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();

@@ -42,5 +42,12 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
         String deliveryDate
     );
 
+    @EntityGraph(attributePaths = "items")
+    List<CheckoutOrderJpaEntity> findByStatusInAndCreatedAtBetweenOrderByShippingTypeAscShippingServiceNameAscCreatedAtAsc(
+        List<String> statuses,
+        LocalDateTime createdFrom,
+        LocalDateTime createdTo
+    );
+
     List<CheckoutOrderJpaEntity> findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(String status, LocalDateTime createdAt, Pageable pageable);
 }

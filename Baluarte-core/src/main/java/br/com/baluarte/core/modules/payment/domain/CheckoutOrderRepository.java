@@ -14,6 +14,7 @@ public interface CheckoutOrderRepository {
     List<CheckoutOrder> findAll(int page, int size);
     List<CheckoutOrder> findByStatusIn(List<String> statuses);
     List<CheckoutOrder> findStationDeliveriesByDate(String deliveryDate);
+    List<CheckoutOrder> findSeparationReportByCreatedDate(java.time.LocalDate date);
     long countAll();
     List<CheckoutOrder> findPendingPaymentCreatedBefore(java.time.Instant cutoff, int limit);
     CheckoutOrder save(CheckoutOrder order);

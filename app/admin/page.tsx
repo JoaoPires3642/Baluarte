@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AdminLowStockReportButton } from "@/components/admin-low-stock-report-button"
+import { AdminSeparationReportButton } from "@/components/admin-separation-report-button"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -167,6 +168,8 @@ export default async function AdminDashboard() {
           </Card>
         </Link>
       </div>
+
+      <AdminSeparationReportButton />
 
       {lowStockVariants.length > 0 && (
         <Card>

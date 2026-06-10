@@ -17,6 +17,7 @@ import br.com.baluarte.core.shared.auth.InternalRole;
 import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,6 +109,19 @@ public class OrderController {
     ) {
         resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
         return ApiSuccessResponse.of(orderRepository.findStationDeliveriesByDate(date).stream()
+            .map(this::toResponse)
+            .toList());
+    }
+
+    @GetMapping("/separation-report")
+    public ApiSuccessResponse<List<OrderResponse>> listSeparationReport(
+        @RequestParam("date") String date,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
+        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+    ) {
+        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        return ApiSuccessResponse.of(orderRepository.findSeparationReportByCreatedDate(LocalDate.parse(date)).stream()
             .map(this::toResponse)
             .toList());
     }
