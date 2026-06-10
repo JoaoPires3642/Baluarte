@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<CheckoutOrderJpaEntity, String> {
 
@@ -42,11 +43,18 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
         String deliveryDate
     );
 
-    @EntityGraph(attributePaths = "items")
-    List<CheckoutOrderJpaEntity> findByStatusInAndCreatedAtBetweenOrderByShippingTypeAscShippingServiceNameAscCreatedAtAsc(
-        List<String> statuses,
-        LocalDateTime createdFrom,
-        LocalDateTime createdTo
+    @Query("""
+        select o from CheckoutOrderJpaEntity o left join fetch o.items
+        where o.status in :statuses
+          and o.createdAt >= :createdFrom
+          and o.createdAt < :createdTo
+          and (o.shippingType is null or o.shippingType <> 'station')
+        order by o.shippingServiceName asc, o.createdAt asc
+        """)
+    List<CheckoutOrderJpaEntity> findNonStationSeparationOrders(
+        @Param("statuses") List<String> statuses,
+        @Param("createdFrom") LocalDateTime createdFrom,
+        @Param("createdTo") LocalDateTime createdTo
     );
 
     List<CheckoutOrderJpaEntity> findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(String status, LocalDateTime createdAt, Pageable pageable);

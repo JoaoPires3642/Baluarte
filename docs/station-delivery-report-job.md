@@ -18,9 +18,15 @@ Mesmo com a job automatica de estacoes, existe um botao manual em `Admin > Dashb
 Ele permite:
 
 - escolher uma data;
-- abrir uma pagina imprimivel com todos os pedidos pagos/em processamento criados naquela data;
+- abrir uma pagina imprimivel com pedidos pagos/em processamento daquela data de separacao;
 - separar visualmente por tipo de entrega, como Estacao, SEDEX, PAC ou outro servico;
 - usar o navegador para `Imprimir / Salvar PDF`.
+
+Regra do botao manual:
+
+- pedidos de frete comum entram pela data de criacao do pedido;
+- pedidos de estacao entram pela data de entrega do dia seguinte;
+- exemplo: se o pedido de estacao foi feito no sabado, mas a entrega e na terca, ele aparece no PDF de separacao de segunda.
 
 Esse botao nao dispara WhatsApp e nao gera etiqueta. Ele serve apenas para separacao manual antes de gerar as etiquetas.
 
@@ -293,4 +299,4 @@ APP_STATION_DELIVERY_REPORT_WEBHOOK_SECRET=uma-chave-secreta
 - Hoje o envio real depende do webhook. Isso evita acoplar o sistema a um provedor especifico.
 - O PDF so inclui pedidos com `delivery_date` igual ao dia seguinte.
 - Pedidos feitos depois das 18h para o dia seguinte podem nao entrar se a job ja tiver rodado.
-- O botao manual do Dashboard e diferente da job: ele lista todos os pedidos pagos/em processamento pela data de criacao do pedido, separados por tipo de entrega.
+- O botao manual do Dashboard e diferente da job: frete comum usa data de criacao do pedido; estacao usa a entrega do dia seguinte da data escolhida.

@@ -86,7 +86,7 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     public List<CheckoutOrder> findSeparationReportByCreatedDate(LocalDate date) {
         LocalDateTime createdFrom = date.atStartOfDay();
         LocalDateTime createdTo = date.plusDays(1).atStartOfDay();
-        return jpaRepository.findByStatusInAndCreatedAtBetweenOrderByShippingTypeAscShippingServiceNameAscCreatedAtAsc(
+        List<CheckoutOrder> regularOrders = jpaRepository.findNonStationSeparationOrders(
                 List.of("paid", "processing"),
                 createdFrom,
                 createdTo
@@ -94,6 +94,10 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
             .stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
+        List<CheckoutOrder> stationOrders = findStationDeliveriesByDate(date.plusDays(1).toString()).stream()
+            .filter(order -> List.of("paid", "processing").contains(order.getStatus()))
+            .toList();
+        return java.util.stream.Stream.concat(regularOrders.stream(), stationOrders.stream()).toList();
     }
 
     @Override

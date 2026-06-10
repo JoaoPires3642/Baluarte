@@ -29,7 +29,7 @@ export function AdminSeparationReportButton() {
     <div className="flex flex-col gap-3 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h2 className="text-lg font-bold">PDF de separacao</h2>
-        <p className="mt-1 text-sm text-slate-500">Lista geral de pedidos para separar antes de gerar etiquetas.</p>
+        <p className="mt-1 text-sm text-slate-500">Fretes comuns pela data do pedido; estacoes pela entrega do dia seguinte.</p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input type="date" value={date} onChange={event => setDate(event.target.value)} className="w-full sm:w-44" />
@@ -105,7 +105,7 @@ function buildReportHtml(orders: Order[], date: string) {
       <body>
         <button onclick="window.print()">Imprimir / Salvar PDF</button>
         <h1>Separacao de pedidos</h1>
-        <p>Pedidos criados em ${formatDateBr(date)} - ${orders.length} pedido(s)</p>
+        <p>Data de separacao: ${formatDateBr(date)} - ${orders.length} pedido(s)</p>
         ${sections || `<section><p>Nenhum pedido pago ou em processamento para esta data.</p></section>`}
       </body>
     </html>`
