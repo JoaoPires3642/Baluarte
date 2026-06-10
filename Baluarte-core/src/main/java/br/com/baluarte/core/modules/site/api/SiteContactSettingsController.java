@@ -44,7 +44,8 @@ public class SiteContactSettingsController {
             request.businessHours(),
             request.instagramUrl(),
             request.facebookUrl(),
-            request.youtubeUrl()
+            request.youtubeUrl(),
+            request.whatsappMessage()
         );
     }
 
@@ -57,7 +58,8 @@ public class SiteContactSettingsController {
             values.businessHours(),
             values.instagramUrl(),
             values.facebookUrl(),
-            values.youtubeUrl()
+            values.youtubeUrl(),
+            values.whatsappMessage()
         );
     }
 }
@@ -70,7 +72,8 @@ record SiteContactSettingsRequest(
     @Size(max = 120) String businessHours,
     @Size(max = 300) String instagramUrl,
     @Size(max = 300) String facebookUrl,
-    @Size(max = 300) String youtubeUrl
+    @Size(max = 300) String youtubeUrl,
+    @Size(max = 600) String whatsappMessage
 ) {
 }
 
@@ -82,6 +85,7 @@ record SiteContactSettingsResponse(
     String businessHours,
     String instagramUrl,
     String facebookUrl,
-    String youtubeUrl
+    String youtubeUrl,
+    String whatsappMessage
 ) {
 }

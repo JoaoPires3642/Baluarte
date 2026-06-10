@@ -13,6 +13,7 @@ const fallbackSettings: SiteContactSettings = {
   instagramUrl: "https://instagram.com",
   facebookUrl: "https://facebook.com",
   youtubeUrl: "https://youtube.com",
+  whatsappMessage: "Ola! Gostaria de mais informacoes sobre os produtos da Baluarte.",
 }
 
 export default async function AdminContactSettingsPage() {

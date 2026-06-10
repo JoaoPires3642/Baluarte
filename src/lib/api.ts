@@ -130,6 +130,7 @@ export interface SiteContactSettings {
   instagramUrl?: string | null
   facebookUrl?: string | null
   youtubeUrl?: string | null
+  whatsappMessage?: string | null
 }
 
 // Shipping Quotes - POST /checkout/shipping/quotes

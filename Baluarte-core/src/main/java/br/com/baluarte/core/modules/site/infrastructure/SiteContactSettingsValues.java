@@ -8,6 +8,7 @@ public record SiteContactSettingsValues(
     String businessHours,
     String instagramUrl,
     String facebookUrl,
-    String youtubeUrl
+    String youtubeUrl,
+    String whatsappMessage
 ) {
 }

@@ -71,6 +71,22 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
 
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <div className="sm:col-span-2">
+          <h2 className="text-lg font-bold">Mensagem padrao do WhatsApp</h2>
+          <p className="mt-1 text-sm text-slate-500">Texto pre-preenchido ao clicar no link do WhatsApp. Se ficar vazio, envia sem mensagem.</p>
+        </div>
+        <Field label="Mensagem">
+          <Textarea
+            value={settings.whatsappMessage || ""}
+            onChange={event => update("whatsappMessage", event.target.value)}
+            placeholder="Ola! Gostaria de mais informacoes..."
+            rows={3}
+            className="sm:col-span-2"
+          />
+        </Field>
+      </section>
+
+      <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <h2 className="text-lg font-bold">Redes sociais</h2>
           <p className="mt-1 text-sm text-slate-500">Informe a URL completa. Icones sem URL nao aparecem.</p>
         </div>

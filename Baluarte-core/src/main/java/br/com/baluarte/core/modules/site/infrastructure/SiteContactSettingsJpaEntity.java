@@ -44,6 +44,9 @@ public class SiteContactSettingsJpaEntity {
     @Column(name = "youtube_url", length = 300)
     private String youtubeUrl;
 
+    @Column(name = "whatsapp_message", columnDefinition = "TEXT")
+    private String whatsappMessage;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -62,7 +65,8 @@ public class SiteContactSettingsJpaEntity {
             "Seg a Sex, 9h às 18h",
             "https://instagram.com",
             "https://facebook.com",
-            "https://youtube.com"
+            "https://youtube.com",
+            "Ola! Gostaria de mais informacoes sobre os produtos da Baluarte."
         ));
         return entity;
     }
@@ -76,6 +80,7 @@ public class SiteContactSettingsJpaEntity {
         this.instagramUrl = clean(values.instagramUrl());
         this.facebookUrl = clean(values.facebookUrl());
         this.youtubeUrl = clean(values.youtubeUrl());
+        this.whatsappMessage = clean(values.whatsappMessage());
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -88,7 +93,8 @@ public class SiteContactSettingsJpaEntity {
             businessHours,
             instagramUrl,
             facebookUrl,
-            youtubeUrl
+            youtubeUrl,
+            whatsappMessage
         );
     }
 

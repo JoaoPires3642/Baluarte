@@ -53,6 +53,8 @@ function formatDateBr(dateIso: string) {
   return `${day}/${month}/${year}`
 }
 
+const CUTOFF_HOUR = 18
+
 function nextAvailableDateForDay(dayKey: string) {
   const targetDay = deliveryDayIndexes[dayKey]
   if (targetDay === undefined) return ""
@@ -61,6 +63,7 @@ function nextAvailableDateForDay(dayKey: string) {
   const targetDate = new Date(today)
   let daysToAdd = (targetDay - today.getDay() + 7) % 7
   if (daysToAdd === 0) daysToAdd = 7
+  if (daysToAdd === 1 && today.getHours() >= CUTOFF_HOUR) daysToAdd += 7
   targetDate.setDate(today.getDate() + daysToAdd)
 
   const year = targetDate.getFullYear()
@@ -702,9 +705,9 @@ export default function CheckoutPage() {
                             className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           >
                             <option value="">Selecione o próximo dia disponível</option>
-                            {stationDelivery.stations && Object.entries(stationDelivery.stations).map(([dayKey]) => (
+                            {stationDelivery.stations && Object.entries(stationDelivery.stations).map(([dayKey, stations]) => (
                               <option key={dayKey} value={dayKey}>
-                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey} ({formatDateBr(nextAvailableDateForDay(dayKey))})
+                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey} ({formatDateBr(nextAvailableDateForDay(dayKey))}) - {stations.join(", ")}
                               </option>
                             ))}
                           </select>

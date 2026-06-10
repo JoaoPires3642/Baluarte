@@ -12,11 +12,12 @@ const fallbackSettings: SiteContactSettings = {
   businessHours: "Seg a Sex, 9h às 18h",
   instagramUrl: "https://instagram.com",
   youtubeUrl: "https://youtube.com",
+  whatsappMessage: "Ola! Gostaria de mais informacoes sobre os produtos da Baluarte.",
 }
 
 export async function Footer() {
   const settings = await loadContactSettings()
-  const whatsappHref = buildWhatsappHref(settings.whatsapp)
+  const whatsappHref = buildWhatsappHref(settings.whatsapp, settings.whatsappMessage)
   const hasSocialLinks = !!(settings.instagramUrl || whatsappHref || settings.youtubeUrl)
   const hasContactInfo = !!(settings.email || settings.phone || settings.whatsapp || settings.businessHours)
 
@@ -111,10 +112,12 @@ function SocialLink({ href, label, icon }: { href: string; label: string; icon: 
   )
 }
 
-function buildWhatsappHref(value?: string | null) {
+function buildWhatsappHref(value?: string | null, message?: string | null) {
   if (!value) return null
   if (value.startsWith("http://") || value.startsWith("https://")) return value
   const digits = value.replace(/\D/g, "")
   if (!digits) return null
-  return `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  const base = `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  if (message) return `${base}?text=${encodeURIComponent(message)}`
+  return base
 }
