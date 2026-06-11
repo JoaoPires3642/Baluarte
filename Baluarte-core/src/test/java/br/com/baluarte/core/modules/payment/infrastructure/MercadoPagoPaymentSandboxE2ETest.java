@@ -295,6 +295,7 @@ class MercadoPagoPaymentSandboxE2ETest {
                       "price": %s,
                       "imageUrl": "https://cdn.baluarte.com/produto.png",
                       "customizationEnabled": false,
+                      "sizeCategory": "camisas",
                       "variants": [
                         {"size": "M", "stockQuantity": %d}
                       ]

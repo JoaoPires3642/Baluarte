@@ -83,6 +83,7 @@ class AdminProductCreationIntegrationTest {
                       "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-iii-2024.png",
                       "customizationEnabled": true,
                       "customizationTemplatePng": "https://cdn.baluarte.com/templates/flamengo-iii.png",
+                      "sizeCategory": "camisas",
                       "variants": [
                         {"size": "P", "stockQuantity": 2},
                         {"size": "M", "stockQuantity": 3}
@@ -121,6 +122,7 @@ class AdminProductCreationIntegrationTest {
                       "price": 249.9,
                       "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-iv-2024.png",
                       "customizationEnabled": false,
+                      "sizeCategory": "camisas",
                       "variants": [
                         {"size": "P", "stockQuantity": 2},
                         {"size": "P", "stockQuantity": -1}
@@ -154,6 +156,7 @@ class AdminProductCreationIntegrationTest {
                       "price": 249.9,
                       "imageUrl": "https://cdn.baluarte.com/produtos/teste.png",
                       "customizationEnabled": false,
+                      "sizeCategory": "camisas",
                       "variants": [
                         {"size": "P", "stockQuantity": 1}
                       ]
@@ -180,6 +183,7 @@ class AdminProductCreationIntegrationTest {
               "price": 229.9,
               "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-atualizavel.png",
               "customizationEnabled": false,
+              "sizeCategory": "camisas",
               "variants": [
                 {"size": "P", "stockQuantity": 1},
                 {"size": "M", "stockQuantity": 2}
@@ -203,6 +207,7 @@ class AdminProductCreationIntegrationTest {
                       "imageUrl": "https://cdn.baluarte.com/produtos/palmeiras-reclassificada.png",
                       "customizationEnabled": true,
                       "customizationTemplatePng": "https://cdn.baluarte.com/templates/palmeiras.png",
+                      "sizeCategory": "camisas",
                       "variants": [
                         {"size": "P", "stockQuantity": 3},
                         {"size": "M", "stockQuantity": 0},
@@ -237,6 +242,7 @@ class AdminProductCreationIntegrationTest {
               "price": 199.9,
               "imageUrl": "https://cdn.baluarte.com/produtos/flamengo-removivel.png",
               "customizationEnabled": false,
+              "sizeCategory": "camisas",
               "variants": [
                 {"size": "P", "stockQuantity": 4},
                 {"size": "M", "stockQuantity": 1}

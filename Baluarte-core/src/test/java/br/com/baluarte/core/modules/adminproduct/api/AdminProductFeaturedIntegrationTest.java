@@ -75,6 +75,7 @@ class AdminProductFeaturedIntegrationTest {
                   "imageUrl": "https://cdn.baluarte.com/produtos/destaque-%d.png",
                   "customizationEnabled": false,
                   "featured": true,
+                  "sizeCategory": "camisas",
                   "variants": [{"size": "M", "stockQuantity": 1}]
                 }
                 """.formatted(index, index))
