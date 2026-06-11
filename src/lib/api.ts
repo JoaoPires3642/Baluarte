@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+import { getBrowserSafeApiBaseUrl, getBrowserSafeUploadUrl } from "@/lib/api-base"
+
 const PUBLIC_CATALOG_CACHE = { next: { revalidate: 60, tags: ["catalog"] } }
 
 type ApiRequestInit = RequestInit & {
@@ -9,7 +10,7 @@ type ApiRequestInit = RequestInit & {
 }
 
 async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${getBrowserSafeApiBaseUrl()}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -304,7 +305,7 @@ export async function createShippingLabel(orderId: string) {
 }
 
 export async function fetchAdminShippingSettings() {
-  const url = typeof window === "undefined" ? `${API_BASE_URL}/admin/shipping-settings` : "/api/admin/admin/shipping-settings"
+  const url = typeof window === "undefined" ? `${getBrowserSafeApiBaseUrl()}/admin/shipping-settings` : "/api/admin/admin/shipping-settings"
   const response = await fetch(url, { cache: "no-store" })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
@@ -340,7 +341,7 @@ export async function uploadImage(
     headers["X-Clerk-User-Id"] = auth.userId
     if (auth.email) headers["X-Clerk-Email"] = auth.email
   }
-  const response = await fetch(`${API_BASE_URL}/admin/media/upload`, {
+  const response = await fetch(getBrowserSafeUploadUrl(), {
     method: "POST",
     headers,
     body: formData,

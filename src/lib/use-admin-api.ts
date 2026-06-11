@@ -1,7 +1,6 @@
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useCallback } from "react"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+import { getBrowserSafeApiBaseUrl } from "@/lib/api-base"
 
 export function useAdminApi() {
   const { getToken, userId } = useAuth()
@@ -18,7 +17,7 @@ export function useAdminApi() {
       ...(options?.headers as Record<string, string>),
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const response = await fetch(`${getBrowserSafeApiBaseUrl()}${path}`, {
       ...options,
       headers,
     })
