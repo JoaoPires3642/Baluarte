@@ -166,7 +166,7 @@ class CheckoutOrderSecurityIntegrationTest {
                       "price": 249.90,
                       "imageUrl": "https://cdn.baluarte.com/produto.png",
                       "customizationEnabled": false,
-                      "sizeCategory": "camisas",
+                      "sizeCategory": "ADULTO",
                       "variants": [
                         {"size": "M", "stockQuantity": %d}
                       ]
