@@ -25,6 +25,7 @@ public record AdminProduct(
     boolean available,
     int stockQuantity,
     List<AdminProductVariant> variants,
+    ProductSizeCategory sizeCategory,
     LocalDateTime createdAt
 ) {
 }

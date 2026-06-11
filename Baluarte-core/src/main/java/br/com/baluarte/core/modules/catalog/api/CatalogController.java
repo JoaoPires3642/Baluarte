@@ -176,7 +176,7 @@ public class CatalogController {
 
     private CatalogModelListResponse toCatalogModelListResponse(AdminProduct product, long salesCount) {
         List<AdminProductVariantResponse> variants = product.variants().stream()
-            .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
+            .map(variant -> new AdminProductVariantResponse(variant.size().getDbValue(), variant.stockQuantity(), variant.available()))
             .toList();
 
         return new CatalogModelListResponse(
@@ -203,7 +203,7 @@ public class CatalogController {
 
     private CatalogModelDetailResponse toCatalogModelDetailResponse(AdminProduct product) {
         List<AdminProductVariantResponse> variants = product.variants().stream()
-            .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
+            .map(variant -> new AdminProductVariantResponse(variant.size().getDbValue(), variant.stockQuantity(), variant.available()))
             .toList();
 
         return new CatalogModelDetailResponse(

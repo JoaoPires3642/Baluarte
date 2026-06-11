@@ -1,0 +1,51 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 1277 >>
+stream
+BT /F2 18 Tf 50 790 Td (Separacao de pedidos) Tj ET
+BT /F1 11 Tf 50 765 Td (Data de separacao: 10/06/2026 - 5 pedidos) Tj ET
+BT /F2 14 Tf 50 725 Td (SEDEX - 2 pedidos) Tj ET
+BT /F1 10 Tf 50 705 Td (BAL1042 | Cliente: Ana Souza | Entrega: Rua das Palmeiras 120 - Sao Paulo SP) Tj ET
+BT /F1 10 Tf 50 690 Td (Itens: 1x Camisa Brasil Home M; 1x Camisa Flamengo III G) Tj ET
+BT /F1 10 Tf 50 670 Td (BAL1047 | Cliente: Lucas Martins | Entrega: Av Paulista 900 - Sao Paulo SP) Tj ET
+BT /F1 10 Tf 50 655 Td (Itens: 1x Camisa Corinthians Away GG) Tj ET
+BT /F2 14 Tf 50 615 Td (PAC - 1 pedido) Tj ET
+BT /F1 10 Tf 50 595 Td (BAL1049 | Cliente: Mariana Lima | Entrega: Rua Amazonas 44 - Campinas SP) Tj ET
+BT /F1 10 Tf 50 580 Td (Itens: 2x Camisa Palmeiras Home P) Tj ET
+BT /F2 14 Tf 50 540 Td (Entrega em Estacao - Tatuape - 1 pedido) Tj ET
+BT /F1 10 Tf 50 520 Td (BAL1051 | Cliente: Rafael Oliveira | Entrega: Tatuape - 17:00-20:00) Tj ET
+BT /F1 10 Tf 50 505 Td (Itens: 1x Camisa Sao Paulo Home M) Tj ET
+BT /F2 14 Tf 50 465 Td (Entrega em Estacao - Corinthians Itaquera - 1 pedido) Tj ET
+BT /F1 10 Tf 50 445 Td (BAL1052 | Cliente: Beatriz Ramos | Entrega: Corinthians Itaquera - 10:00-14:00) Tj ET
+BT /F1 10 Tf 50 430 Td (Itens: 1x Camisa Argentina Away P; 1x Camisa Real Madrid M) Tj ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000000321 00000 n 
+0000000396 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1725
+%%EOF

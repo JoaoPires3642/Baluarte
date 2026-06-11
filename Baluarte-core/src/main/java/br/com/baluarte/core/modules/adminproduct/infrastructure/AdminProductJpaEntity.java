@@ -71,6 +71,9 @@ public class AdminProductJpaEntity {
     @Column(nullable = false)
     private Boolean available;
 
+    @Column(name = "size_category", nullable = false, length = 20)
+    private String sizeCategory;
+
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity;
 
@@ -102,6 +105,7 @@ public class AdminProductJpaEntity {
         entity.featured = product.featured();
         entity.active = product.active();
         entity.available = product.available();
+        entity.sizeCategory = product.sizeCategory().name();
         entity.stockQuantity = product.stockQuantity();
         entity.createdAt = product.createdAt();
         entity.variants = new ArrayList<>(product.variants().stream()
@@ -129,6 +133,7 @@ public class AdminProductJpaEntity {
         this.featured = product.featured();
         this.active = product.active();
         this.available = product.available();
+        this.sizeCategory = product.sizeCategory().name();
         this.stockQuantity = product.stockQuantity();
         this.createdAt = product.createdAt();
     }

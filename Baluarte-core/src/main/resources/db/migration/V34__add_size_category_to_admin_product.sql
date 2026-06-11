@@ -1,0 +1,2 @@
+ALTER TABLE admin_product
+ADD COLUMN size_category VARCHAR(20) NOT NULL DEFAULT 'ADULTO';

@@ -1,6 +1,11 @@
 import type { AdminProduct, Variant } from "@/lib/api"
 
-export const ADMIN_STOCK_SIZES = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]
+export const ADULT_SIZES = ["P", "M", "G", "GG", "G1", "G2", "G3", "G4"]
+export const CHILD_SIZES = ["2", "4", "6", "8", "10", "12", "14"]
+
+export function getSizesForCategory(category?: string): string[] {
+  return category === "INFANTIL" ? CHILD_SIZES : ADULT_SIZES
+}
 
 export type AdminLowStockVariant = {
   product: AdminProduct
@@ -17,11 +22,12 @@ export type AdminLowStockReportItem = {
 }
 
 export function getAdminLowStockVariants(products: AdminProduct[], threshold: number): AdminLowStockVariant[] {
-  return products.flatMap(product =>
-    ADMIN_STOCK_SIZES.map(size => product.variants.find(variant => variant.size === size) || { size, stockQuantity: 0, available: false })
+  return products.flatMap(product => {
+    const sizes = getSizesForCategory(product.sizeCategory)
+    return sizes.map(size => product.variants.find(variant => variant.size === size) || { size, stockQuantity: 0, available: false })
       .filter(variant => variant.stockQuantity < threshold)
       .map(variant => ({ product, variant }))
-  )
+  })
 }
 
 export function toAdminLowStockReportItems(items: AdminLowStockVariant[]): AdminLowStockReportItem[] {

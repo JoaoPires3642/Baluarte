@@ -3,6 +3,8 @@ package br.com.baluarte.core.modules.adminproduct.infrastructure;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductLowStockVariant;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
+import br.com.baluarte.core.modules.adminproduct.domain.ProductSize;
+import br.com.baluarte.core.modules.adminproduct.domain.ProductSizeCategory;
 import br.com.baluarte.core.modules.catalog.infrastructure.CategoryJpaEntity;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataCategoryJpaRepository;
 import br.com.baluarte.core.modules.catalog.infrastructure.SpringDataTeamJpaRepository;
@@ -127,7 +129,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             .map(variant -> new AdminProductLowStockVariant(
                 variant.getProductId(),
                 variant.getProductName(),
-                variant.getSize(),
+                ProductSize.fromString(variant.getSize()),
                 variant.getStockQuantity() == null ? 0 : variant.getStockQuantity()
             ))
             .toList();
@@ -154,6 +156,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
             Boolean.TRUE.equals(entity.getAvailable()),
             entity.getStockQuantity(),
             entity.getVariants().stream().map(AdminProductVariantJpaEntity::toDomain).toList(),
+            ProductSizeCategory.valueOf(entity.getSizeCategory()),
             entity.getCreatedAt()
         );
     }

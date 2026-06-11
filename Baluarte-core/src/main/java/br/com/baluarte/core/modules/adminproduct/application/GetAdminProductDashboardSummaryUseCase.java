@@ -18,7 +18,7 @@ public class GetAdminProductDashboardSummaryUseCase {
                 .map(variant -> new AdminProductDashboardSummaryView.LowStockVariantView(
                     variant.productId(),
                     variant.productName(),
-                    variant.size().name(),
+                    variant.size().getDbValue(),
                     variant.stockQuantity()
                 ))
                 .toList()

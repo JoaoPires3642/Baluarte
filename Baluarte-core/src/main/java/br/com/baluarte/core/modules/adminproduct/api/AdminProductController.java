@@ -101,6 +101,7 @@ public class AdminProductController {
                 request.customizationTemplatePng(),
                 request.customizationTemplateMetadata(),
                 request.featured(),
+                request.sizeCategory(),
                 request.variants().stream()
                     .map(variant -> new CreateAdminProductVariantCommand(variant.size(), variant.stockQuantity()))
                     .toList()
@@ -142,6 +143,7 @@ public class AdminProductController {
             existing.available(),
             existing.stockQuantity(),
             existing.variants(),
+            existing.sizeCategory(),
             existing.createdAt()
         );
 
@@ -164,6 +166,7 @@ public class AdminProductController {
             request.customizationTemplatePng(),
             request.customizationTemplateMetadata(),
             request.featured(),
+            request.sizeCategory(),
             request.variants().stream()
                 .map(variant -> new CreateAdminProductVariantCommand(variant.size(), variant.stockQuantity()))
                 .toList()
@@ -172,7 +175,7 @@ public class AdminProductController {
 
     private AdminProductResponse toResponse(AdminProduct product) {
         List<AdminProductVariantResponse> variants = product.variants().stream()
-            .map(variant -> new AdminProductVariantResponse(variant.size().name(), variant.stockQuantity(), variant.available()))
+            .map(variant -> new AdminProductVariantResponse(variant.size().getDbValue(), variant.stockQuantity(), variant.available()))
             .toList();
 
         return new AdminProductResponse(
@@ -192,6 +195,7 @@ public class AdminProductController {
             product.active(),
             product.available(),
             product.stockQuantity(),
+            product.sizeCategory().name(),
             variants
         );
     }

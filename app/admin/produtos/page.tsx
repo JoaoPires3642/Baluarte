@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog, ProductFormDialog } from "./product-form-dialog"
 import { ProductFilters, ProductListSection } from "./product-list-section"
 import { ProductStockSection } from "./product-stock-section"
-import { emptyForm, LOW_STOCK_THRESHOLD, SIZES, type ProductFormData } from "./admin-products-types"
+import { emptyForm, LOW_STOCK_THRESHOLD, getSizes, type ProductFormData } from "./admin-products-types"
 
 function normalizeImageUrls(values: Array<string | undefined>) {
   return Array.from(new Set(values.map(value => value?.trim()).filter(Boolean) as string[]))
@@ -108,6 +108,8 @@ export default function AdminProductsPage() {
 
   const openEdit = (product: AdminProduct, initialStep = 0) => {
     const imageUrls = normalizeImageUrls([...(product.images || []), product.imageUrl])
+    const sizeCategory = product.sizeCategory || "ADULTO"
+    const sizes = getSizes(sizeCategory)
     setEditingId(product.id)
     setForm({
       modelName: product.modelName,
@@ -119,7 +121,8 @@ export default function AdminProductsPage() {
       imageUrl: imageUrls.join("\n"),
       imageUrls,
       featured: Boolean(product.featured),
-      variants: Object.fromEntries(SIZES.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])),
+      sizeCategory,
+      variants: Object.fromEntries(sizes.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])),
     })
     setStep(initialStep)
     setError("")
@@ -137,7 +140,8 @@ export default function AdminProductsPage() {
     if (currentStep === 1) {
       const price = parseMoney(form.price)
       const originalPrice = form.originalPrice ? parseMoney(form.originalPrice) : undefined
-      const hasStock = SIZES.some(size => parseInt(form.variants[size] || "0") > 0)
+      const sizes = getSizes(form.sizeCategory)
+      const hasStock = sizes.some(size => parseInt(form.variants[size] || "0") > 0)
       if (!price || price <= 0) { setError("Preço inválido"); return false }
       if (originalPrice && originalPrice > 0 && price > originalPrice) { setError("Preço atual não pode ser maior que o preço original"); return false }
       if (!hasStock) { setError("Adicione estoque em pelo menos um tamanho"); return false }
@@ -172,6 +176,7 @@ export default function AdminProductsPage() {
     try {
       const imageUrls = normalizeImageUrls(form.imageUrls)
       const originalPrice = form.originalPrice ? parseMoney(form.originalPrice) : undefined
+      const sizes = getSizes(form.sizeCategory)
       const payload = {
         categorySlug: form.categorySlug,
         teamSlug: form.teamSlug,
@@ -183,7 +188,8 @@ export default function AdminProductsPage() {
         images: imageUrls,
         customizationEnabled: false,
         featured: form.featured,
-        variants: SIZES.filter(size => parseInt(form.variants[size] || "0") > 0).map(size => ({ size, stockQuantity: parseInt(form.variants[size] || "0") })),
+        sizeCategory: form.sizeCategory,
+        variants: sizes.filter(size => parseInt(form.variants[size] || "0") > 0).map(size => ({ size, stockQuantity: parseInt(form.variants[size] || "0") })),
       }
       if (editingId) await authedFetch(`/admin/products/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
       else await authedFetch("/admin/products", { method: "POST", body: JSON.stringify(payload) })

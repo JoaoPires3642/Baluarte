@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { Copy, Check, X } from "lucide-react"
+import { Copy, Check, X, MessageCircle } from "lucide-react"
 import { useState } from "react"
 
 type Props = {
@@ -10,9 +10,10 @@ type Props = {
   total: number
   orderReference: string
   onClose: () => void
+  whatsappHref?: string | null
 }
 
-export function PaymentPixModal({ qrCodeBase64, copyPasteCode, total, orderReference, onClose }: Props) {
+export function PaymentPixModal({ qrCodeBase64, copyPasteCode, total, orderReference, onClose, whatsappHref }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -75,6 +76,18 @@ export function PaymentPixModal({ qrCodeBase64, copyPasteCode, total, orderRefer
             </button>
           </div>
         </div>
+
+        {whatsappHref && (
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Falar no WhatsApp sobre o Uber
+          </a>
+        )}
 
         <p className="text-center text-xs text-slate-400">
           Após fechar, acompanhe o pagamento na página do pedido.

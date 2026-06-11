@@ -45,7 +45,7 @@ public class AdminProductVariantJpaEntity {
         AdminProductVariantJpaEntity entity = new AdminProductVariantJpaEntity();
         entity.id = variant.id();
         entity.product = product;
-        entity.size = variant.size().name();
+        entity.size = variant.size().getDbValue();
         entity.stockQuantity = variant.stockQuantity();
         entity.available = variant.available();
         entity.createdAt = variant.createdAt();

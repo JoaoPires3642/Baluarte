@@ -52,6 +52,7 @@ public class DeactivateAdminProductUseCase {
             false,
             0,
             deactivatedVariants,
+            existing.sizeCategory(),
             existing.createdAt()
         );
 

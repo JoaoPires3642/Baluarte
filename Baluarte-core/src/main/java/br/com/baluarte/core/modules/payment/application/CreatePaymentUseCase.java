@@ -12,6 +12,9 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +47,10 @@ public class CreatePaymentUseCase {
     @Transactional
     public CreatePaymentResponse execute(CreatePaymentRequest request, String provider, String clerkUserId) {
         validateCpf(request.payer().identification().type(), request.payer().identification().number());
+
+        if ("uber".equals(request.shippingType())) {
+            validateUberDeliveryTime();
+        }
 
         Optional<PaymentTransaction> existingTx = 
             transactionRepository.findByIdempotencyKey(request.idempotencyKey());
@@ -218,6 +225,23 @@ public class CreatePaymentUseCase {
     }
 
     private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice) {}
+
+    private void validateUberDeliveryTime() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"));
+        DayOfWeek day = now.getDayOfWeek();
+        int hour = now.getHour();
+        int minute = now.getMinute();
+
+        if (day == DayOfWeek.SUNDAY) {
+            throw new PaymentValidationException("Entrega via Uber nao disponivel aos domingos");
+        }
+        if (day == DayOfWeek.SATURDAY && (hour > 14 || (hour == 14 && minute > 0))) {
+            throw new PaymentValidationException("Entrega via Uber disponivel apenas ate as 14:00 aos sabados");
+        }
+        if (day != DayOfWeek.SATURDAY && (hour > 19 || (hour == 19 && minute > 0))) {
+            throw new PaymentValidationException("Entrega via Uber disponivel apenas ate as 19:00 de segunda a sexta");
+        }
+    }
 
     private CreatePaymentResponse mapToResponse(PaymentTransaction tx, String provider, String method, Long orderNumber) {
         PixPayload pix = null;

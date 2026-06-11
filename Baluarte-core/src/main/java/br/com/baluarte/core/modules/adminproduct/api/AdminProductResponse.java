@@ -21,6 +21,7 @@ public record AdminProductResponse(
     boolean active,
     boolean available,
     int stockQuantity,
+    String sizeCategory,
     List<AdminProductVariantResponse> variants
 ) {
 }

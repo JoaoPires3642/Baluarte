@@ -6,7 +6,7 @@ import { CreditCard, Loader2, MapPin, MapPinned, Plus, Truck } from "lucide-reac
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
 import { useUser } from "@clerk/nextjs"
-import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, fetchStationDeliverySettings, deliveryDayLabels, type Address, type PaymentResponse, type ShippingQuote, type StationDeliverySettings } from "@/lib/api"
+import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, fetchStationDeliverySettings, fetchSiteContactSettings, deliveryDayLabels, type Address, type PaymentResponse, type ShippingQuote, type StationDeliverySettings, type SiteContactSettings } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -100,7 +100,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix")
   const [paymentResult, setPaymentResult] = useState<PaymentResponse | null>(null)
   const [paymentError, setPaymentError] = useState("")
-  const [pixModal, setPixModal] = useState<{ qrCodeBase64: string; copyPasteCode: string; orderReference: string } | null>(null)
+  const [pixModal, setPixModal] = useState<{ qrCodeBase64: string; copyPasteCode: string; orderReference: string; whatsappHref?: string | null } | null>(null)
 
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
@@ -129,6 +129,10 @@ export default function CheckoutPage() {
   const [selectedStation, setSelectedStation] = useState("")
   const [stationRecipientName, setStationRecipientName] = useState("")
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("")
+
+  const [useUberDelivery, setUseUberDelivery] = useState(false)
+  const [uberRecipientName, setUberRecipientName] = useState("")
+  const [contactSettings, setContactSettings] = useState<SiteContactSettings | null>(null)
 
   const [cepLoading, setCepLoading] = useState(false)
   const [shippingLoading, setShippingLoading] = useState(false)
@@ -254,6 +258,7 @@ export default function CheckoutPage() {
         setSelectedTimeSlot(data.timeSlots[0])
       }
     }).catch(() => {}).finally(() => setStationDeliveryLoading(false))
+    fetchSiteContactSettings().then(data => setContactSettings(data.data)).catch(() => {})
   }, [])
 
   const resetNewAddress = () => {
@@ -369,19 +374,26 @@ export default function CheckoutPage() {
 
     const addr = showNewAddress && newAddr.street ? newAddr : address
 
-    if (useStationDelivery) {
+    if (useUberDelivery) {
+      if (!uberRecipientName) {
+        showToast("Preencha o nome de quem vai receber", "error")
+        return
+      }
+    } else if (useStationDelivery) {
       if (!stationRecipientName || !selectedDeliveryDay || !selectedDeliveryDate || !selectedStation || !selectedTimeSlot) {
-        showToast("Preencha nome, dia, estação e horário da entrega", "error")
+        showToast("Preencha nome, dia, esta\u00e7\u00e3o e hor\u00e1rio da entrega", "error")
         return
       }
     } else {
-      if (!addr.recipientName || !addr.street || !addr.neighborhood || !addr.city) {
-        showToast("Preencha o endereço completo", "error")
+      if (!(addr as any)?.recipientName || !(addr as any)?.street || !(addr as any)?.neighborhood || !(addr as any)?.city) {
+        showToast("Preencha o endere\u00e7o completo", "error")
         return
       }
     }
 
-    const shipping = shippingOptions.find((s) => s.id === selectedShipping)
+    const shipping = useUberDelivery
+      ? { id: "uber", label: "Uber / Retirar no local", price: 0, estimatedDays: "" }
+      : shippingOptions.find((s) => s.id === selectedShipping)
     if (!shipping) return
 
     const cardData = cardOverride || (paymentMethod === "card" ? await cardFormRef.current?.createToken() : null)
@@ -395,7 +407,7 @@ export default function CheckoutPage() {
     setPaymentError("")
     try {
       // Save new address to profile if user is signed in and it's a new one
-      if (!useStationDelivery && isSignedIn && !selectedAddressId && cep && addr.street) {
+      if (!useStationDelivery && !useUberDelivery && isSignedIn && !selectedAddressId && cep && (addr as any)?.street) {
         try {
           const existing = addresses.map(a => ({
             addressId: a.addressId,
@@ -439,22 +451,23 @@ export default function CheckoutPage() {
           email: payer.email,
           identification: { type: "CPF" as const, number: payer.cpf },
         },
-        shippingAddress: {
-          recipientName: useStationDelivery ? stationRecipientName : addr.recipientName,
-          cep: useStationDelivery ? "00000000" : cep.replace(/\D/g, ""),
-          street: useStationDelivery ? `Estação ${selectedStation}` : addr.street,
-          number: useStationDelivery ? "s/n" : addr.number,
-          complement: useStationDelivery ? selectedTimeSlot : (addr.complement || undefined),
-          neighborhood: useStationDelivery ? selectedDeliveryDay : addr.neighborhood,
-          city: useStationDelivery ? "São Paulo" : addr.city,
-          state: useStationDelivery ? "SP" : addr.state,
-        },
+            shippingAddress: {
+              cep: useUberDelivery ? "" : ((addr as any)?.cep ?? ""),
+              street: useUberDelivery ? "" : ((addr as any)?.street ?? ""),
+              number: useUberDelivery ? "" : ((addr as any)?.number ?? ""),
+              complement: useUberDelivery ? "" : ((addr as any)?.complement ?? ""),
+              neighborhood: useUberDelivery ? "" : ((addr as any)?.neighborhood ?? ""),
+              city: useUberDelivery ? "" : ((addr as any)?.city ?? ""),
+              state: useUberDelivery ? "" : ((addr as any)?.state ?? ""),
+              recipientName: useUberDelivery ? uberRecipientName : ((addr as any)?.recipientName ?? ""),
+              additionalInfo: useStationDelivery ? stationRecipientName : (useUberDelivery ? "Uber / Retirar no local" : ""),
+            },
         shipping: {
           optionId: shipping.id,
           label: shipping.label,
           price: shipping.price,
         },
-        shippingType: useStationDelivery ? "station" : "delivery",
+        shippingType: useUberDelivery ? "uber" : useStationDelivery ? "station" : "delivery",
         deliveryStation: useStationDelivery ? selectedStation : undefined,
         deliveryDay: useStationDelivery ? selectedDeliveryDay : undefined,
         deliveryDate: useStationDelivery ? selectedDeliveryDate : undefined,
@@ -475,17 +488,22 @@ export default function CheckoutPage() {
 
       setPaymentResult(res.data)
 
+      const uberWhatsappHref = useUberDelivery ? buildUberWhatsappHref(contactSettings, items, res.data.orderReference) : null
+
       if (paymentMethod === "pix" && res.data.pix) {
         setPixModal({
           qrCodeBase64: res.data.pix.qrCodeBase64,
           copyPasteCode: res.data.pix.copyPasteCode,
           orderReference: res.data.orderReference,
+          whatsappHref: uberWhatsappHref,
         })
         showToast("Pedido realizado com sucesso!", "success")
       } else if (res.data.status === "approved" || res.data.status === "pending") {
         clear()
         showToast("Pedido realizado com sucesso!", "success")
-        router.push(`/checkout/sucesso?order=${res.data.orderReference}`)
+        const params = new URLSearchParams({ order: res.data.orderReference })
+        if (useUberDelivery) params.set("uber", "1")
+        router.push(`/checkout/sucesso?${params.toString()}`)
       } else {
         setPaymentError(`Pagamento ${res.data.status}: ${res.data.statusDetail}`)
         showToast("Erro no pagamento", "error")
@@ -499,7 +517,7 @@ export default function CheckoutPage() {
 
   const regularShippingCost = shippingOptions.find((s) => s.id === selectedShipping)?.price || 0
   const stationShippingCost = stationDelivery?.price || 10
-  const shippingCost = useStationDelivery ? stationShippingCost : regularShippingCost
+  const shippingCost = useUberDelivery ? 0 : useStationDelivery ? stationShippingCost : regularShippingCost
 
   if (items.length === 0) {
     return (
@@ -658,8 +676,8 @@ export default function CheckoutPage() {
                         <input
                           type="radio"
                           name="shipping"
-                          checked={selectedShipping === option.id && !useStationDelivery}
-                          onChange={() => { setSelectedShipping(option.id); setUseStationDelivery(false) }}
+                          checked={selectedShipping === option.id && !useStationDelivery && !useUberDelivery}
+                          onChange={() => { setSelectedShipping(option.id); setUseStationDelivery(false); setUseUberDelivery(false) }}
                           className="mt-1 sm:mt-0"
                         />
                         <span className="leading-5">{option.label} - R$ {option.price.toFixed(2).replace(".", ",")} ({option.estimatedDays})</span>
@@ -683,6 +701,7 @@ export default function CheckoutPage() {
                           checked={useStationDelivery}
                           onChange={() => {
                             setUseStationDelivery(true)
+                            setUseUberDelivery(false)
                             setSelectedShipping("station")
                             if (stationDelivery.timeSlots?.length) {
                               setSelectedTimeSlot(stationDelivery.timeSlots[0])
@@ -755,6 +774,54 @@ export default function CheckoutPage() {
                               <option key={slot} value={slot}>{slot}</option>
                             ))}
                           </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!showNewAddress && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-3 rounded-2xl border p-3 text-sm cursor-pointer transition-colors"
+                        style={{
+                          borderColor: useUberDelivery ? "#0f274d" : "rgb(226 232 240)",
+                          backgroundColor: useUberDelivery ? "#f4f7fb" : undefined,
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="shipping"
+                          checked={useUberDelivery}
+                          onChange={() => {
+                            setUseUberDelivery(true)
+                            setUseStationDelivery(false)
+                            setSelectedShipping("uber")
+                          }}
+                          className="mt-1"
+                        />
+                        <span className="leading-5">
+                          <strong>Quero pedir um Uber / Retirar no local</strong> - Grátis
+                        </span>
+                      </label>
+                    </div>
+
+                    {useUberDelivery && (
+                      <div className="ml-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <Label>Nome de quem vai receber</Label>
+                          <Input
+                            value={uberRecipientName}
+                            onChange={e => setUberRecipientName(e.target.value)}
+                            placeholder="Nome completo"
+                            className="mt-1 bg-white"
+                          />
+                        </div>
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                          <p className="font-medium">Disponível:</p>
+                          <p>Segunda a Sexta: até 19:00</p>
+                          <p>Sábado: até 14:00</p>
+                          <p className="mt-1 text-xs text-blue-600">Você paga apenas o valor do produto. Após a confirmação, enviaremos seu pedido no WhatsApp para combinarmos a entrega.</p>
                         </div>
                       </div>
                     )}
@@ -927,6 +994,7 @@ export default function CheckoutPage() {
           copyPasteCode={pixModal.copyPasteCode}
           total={total + shippingCost}
           orderReference={pixModal.orderReference}
+          whatsappHref={pixModal.whatsappHref}
           onClose={() => {
             const ref = pixModal.orderReference
             setPixModal(null)
@@ -937,4 +1005,18 @@ export default function CheckoutPage() {
       )}
     </div>
   )
+}
+
+function buildUberWhatsappHref(
+  contactSettings: { whatsapp?: string | null; whatsappMessage?: string | null } | null,
+  items: { name: string; size: string; quantity: number }[],
+  orderReference: string,
+): string | null {
+  if (!contactSettings?.whatsapp) return null
+  const productList = items.map(i => `${i.name} (${i.size}) x${i.quantity}`).join(", ")
+  const message = `Olá! Fiz a compra do(s) produto(s): ${productList} pelo site (pedido #${orderReference}) e vou pedir um Uber para retirar. Pode me ajudar?`
+  const digits = contactSettings.whatsapp.replace(/\D/g, "")
+  if (!digits) return null
+  const base = `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  return `${base}?text=${encodeURIComponent(message)}`
 }

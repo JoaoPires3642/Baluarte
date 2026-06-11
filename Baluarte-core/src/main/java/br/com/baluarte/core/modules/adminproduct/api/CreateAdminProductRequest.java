@@ -20,6 +20,7 @@ public record CreateAdminProductRequest(
     String customizationTemplatePng,
     String customizationTemplateMetadata,
     boolean featured,
+    @NotBlank String sizeCategory,
     @NotNull @Valid List<CreateAdminProductVariantRequest> variants
 ) {
 }

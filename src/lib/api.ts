@@ -452,6 +452,8 @@ export interface PaymentRequest {
     neighborhood: string
     city: string
     state: string
+    phone?: string
+    additionalInfo?: string
   }
   shipping: {
     optionId: string
@@ -602,6 +604,7 @@ export interface AdminProduct {
   active: boolean
   available: boolean
   stockQuantity: number
+  sizeCategory?: string
   variants: Variant[]
 }
 

@@ -3,7 +3,7 @@ import type { AdminProduct } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LOW_STOCK_THRESHOLD, type LowStockVariant, SIZES } from "./admin-products-types"
+import { LOW_STOCK_THRESHOLD, type LowStockVariant, getSizes } from "./admin-products-types"
 
 type ProductStockSectionProps = {
   products: AdminProduct[]
@@ -77,6 +77,7 @@ function LowStockReport({ rows, onEditStock }: { rows: LowStockVariant[]; onEdit
 }
 
 function ProductStockCard({ product, onEditStock }: { product: AdminProduct; onEditStock: (product: AdminProduct) => void }) {
+  const sizes = getSizes(product.sizeCategory || "ADULTO")
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -87,7 +88,7 @@ function ProductStockCard({ product, onEditStock }: { product: AdminProduct; onE
         <Button variant="outline" size="sm" onClick={() => onEditStock(product)}>Repor</Button>
       </div>
       <div className="mt-4 grid grid-cols-4 gap-2">
-        {SIZES.map(size => {
+        {sizes.map(size => {
           const stockQuantity = product.variants.find(variant => variant.size === size)?.stockQuantity ?? 0
           const lowStock = stockQuantity < LOW_STOCK_THRESHOLD
           return (

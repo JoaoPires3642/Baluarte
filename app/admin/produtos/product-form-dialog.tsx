@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ProductFormData, SIZES, STEPS } from "./admin-products-types"
+import { ProductFormData, STEPS, SIZE_CATEGORIES, getSizes } from "./admin-products-types"
 
 type ProductFormDialogProps = {
   open: boolean
@@ -90,6 +90,8 @@ function ProgressBar({ step }: { step: number }) {
 export function ProductFormDialog(props: ProductFormDialogProps) {
   const { open, editingId, form, step, saving, uploadingImage, error, categories, teams, featuredCount, onClose, onBack, onNext, onSave, onFormChange, onImageUrlTextChange, onImageFiles, onRemoveImage } = props
 
+  const sizes = getSizes(form.sizeCategory)
+
   return (
     <Dialog open={open} onClose={onClose}>
       <h2 className="text-xl font-bold mb-4">{editingId ? "Editar Produto" : "Novo Produto"}</h2>
@@ -115,6 +117,12 @@ export function ProductFormDialog(props: ProductFormDialogProps) {
               </select>
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Categoria de Tamanho</Label>
+            <select value={form.sizeCategory} onChange={e => onFormChange(f => ({ ...f, sizeCategory: e.target.value, variants: Object.fromEntries(getSizes(e.target.value).map(size => [size, "0"])) }))} className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+              {SIZE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat === "ADULTO" ? "Adulto" : "Infantil"}</option>)}
+            </select>
+          </div>
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
             <input type="checkbox" checked={form.featured} disabled={!form.featured && featuredCount >= 10} onChange={e => onFormChange(f => ({ ...f, featured: e.target.checked }))} className="mt-1" />
             <span><span className="block font-semibold text-slate-800">Marcar como destaque</span><span className="block text-xs text-slate-500">{featuredCount}/10 produtos em destaque. Esses produtos aparecem na seção Destaque da home.</span></span>
@@ -131,7 +139,7 @@ export function ProductFormDialog(props: ProductFormDialogProps) {
           <div className="space-y-2">
             <Label>Estoque por Tamanho</Label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {SIZES.map(size => <div key={size} className="space-y-1"><span className="text-xs font-medium text-slate-500">{size}</span><Input value={form.variants[size]} onChange={e => onFormChange(f => ({ ...f, variants: { ...f.variants, [size]: e.target.value } }))} type="number" min="0" placeholder="0" /></div>)}
+              {sizes.map(size => <div key={size} className="space-y-1"><span className="text-xs font-medium text-slate-500">{size}</span><Input value={form.variants[size]} onChange={e => onFormChange(f => ({ ...f, variants: { ...f.variants, [size]: e.target.value } }))} type="number" min="0" placeholder="0" /></div>)}
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductVariant;
 import br.com.baluarte.core.modules.adminproduct.domain.ProductSize;
+import br.com.baluarte.core.modules.adminproduct.domain.ProductSizeCategory;
 import br.com.baluarte.core.modules.catalog.domain.CategoryRepository;
 import br.com.baluarte.core.modules.catalog.domain.TeamRepository;
 import java.time.LocalDateTime;
@@ -48,6 +49,7 @@ public class CreateAdminProductUseCase {
         var team = teamRepository.findPublicTeamByCategorySlugAndSlug(categorySlug, teamSlug)
             .orElseThrow(() -> new AdminProductValidationException(List.of("teamSlug time nao encontrado para a categoria informada")));
 
+        ProductSizeCategory sizeCategory = ProductSizeCategory.valueOf(command.sizeCategory().toUpperCase(java.util.Locale.ROOT));
         List<String> images = normalizeImages(command.imageUrl(), command.images());
         List<AdminProductVariant> variants = command.variants().stream()
             .map(item -> new AdminProductVariant(
@@ -80,6 +82,7 @@ public class CreateAdminProductUseCase {
             stockQuantity > 0,
             stockQuantity,
             variants,
+            sizeCategory,
             LocalDateTime.now()
         );
 
@@ -110,9 +113,25 @@ public class CreateAdminProductUseCase {
         if (normalizeImages(command.imageUrl(), command.images()).isEmpty()) {
             errors.add("images pelo menos uma imagem e obrigatoria");
         }
+        if (isBlank(command.sizeCategory())) {
+            errors.add("sizeCategory categoria de tamanho e obrigatoria");
+        } else {
+            try {
+                ProductSizeCategory.valueOf(command.sizeCategory().trim().toUpperCase(Locale.ROOT));
+            } catch (Exception exception) {
+                errors.add("sizeCategory categoria de tamanho invalida");
+            }
+        }
+
         if (command.variants() == null || command.variants().isEmpty()) {
             errors.add("variants pelo menos uma variante e obrigatoria");
         } else {
+            ProductSizeCategory category = null;
+            try {
+                category = ProductSizeCategory.valueOf(command.sizeCategory().trim().toUpperCase(Locale.ROOT));
+            } catch (Exception exception) {
+                // will be reported above
+            }
             Set<String> seenSizes = new LinkedHashSet<>();
             for (int index = 0; index < command.variants().size(); index++) {
                 CreateAdminProductVariantCommand variant = command.variants().get(index);
@@ -123,7 +142,10 @@ public class CreateAdminProductUseCase {
                 } else {
                     String normalizedSize = variant.size().trim().toUpperCase(Locale.ROOT);
                     try {
-                        ProductSize.fromString(normalizedSize);
+                        ProductSize size = ProductSize.fromString(normalizedSize);
+                        if (category != null && !size.getCategory().equals(category)) {
+                            errors.add(fieldPrefix + ".size tamanho incompativel com a categoria selecionada");
+                        }
                     } catch (Exception exception) {
                         errors.add(fieldPrefix + ".size tamanho invalido");
                     }
