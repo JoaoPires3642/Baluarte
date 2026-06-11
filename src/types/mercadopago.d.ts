@@ -3,6 +3,7 @@ interface MercadoPago {
     fields: {
       create(type: "cardNumber" | "expirationDate" | "securityCode", options?: { placeholder?: string }): {
         mount(elementId: string): void
+        on?(event: "binChange", callback: (data: { bin?: string } | string) => void): void
         unmount?(): void
       }
       createCardToken(data: Record<string, unknown>): Promise<{
@@ -15,6 +16,14 @@ interface MercadoPago {
     }
     cardForm(opts: Record<string, unknown>): void
     getIdentificationTypes(): Promise<Array<{ id: string; name: string; type: string }>>
+    getInstallments(data: { amount: string; bin: string; paymentTypeId: "credit_card" }): Promise<Array<{
+      payer_costs?: Array<{
+        installments: number
+        installment_amount: number
+        total_amount: number
+        recommended_message?: string
+      }>
+    }>>
   }
 }
 

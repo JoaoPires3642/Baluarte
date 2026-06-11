@@ -4,6 +4,7 @@ import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminP
 import br.com.baluarte.core.modules.checkout.infrastructure.SuperFreteShippingLabelService;
 import br.com.baluarte.core.modules.payment.application.PaymentGateway;
 import br.com.baluarte.core.modules.payment.application.PaymentRefundResult;
+import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
@@ -11,6 +12,8 @@ import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class OrderCancellationService {
     private static final List<String> CUSTOMER_CANCELLABLE_STATUSES = List.of("pending_payment", "paid");
     private static final List<String> ADMIN_CANCELLABLE_STATUSES = List.of("pending_payment", "pending", "paid", "processing");
     private static final List<String> REFUNDABLE_PAYMENT_STATUSES = List.of("approved", "paid", "processed");
+    private static final Logger log = LoggerFactory.getLogger(OrderCancellationService.class);
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
@@ -82,14 +86,20 @@ public class OrderCancellationService {
         }
 
         String idempotencyKey = "refund-" + order.getOrderId();
-        PaymentRefundResult refund = paymentGateway.refund(
-            transaction.getProvider(),
-            transaction.getProviderPaymentId(),
-            transaction.getProviderOrderId(),
-            idempotencyKey
-        );
-        transaction.setStatus(value(refund.status()).isBlank() ? "refunded" : refund.status());
-        transaction.setStatusDetail(value(refund.statusDetail()).isBlank() ? "refunded_by_cancellation" : refund.statusDetail());
+        try {
+            PaymentRefundResult refund = paymentGateway.refund(
+                transaction.getProvider(),
+                transaction.getProviderPaymentId(),
+                transaction.getProviderOrderId(),
+                idempotencyKey
+            );
+            transaction.setStatus(value(refund.status()).isBlank() ? "refunded" : refund.status());
+            transaction.setStatusDetail(value(refund.statusDetail()).isBlank() ? "refunded_by_cancellation" : refund.statusDetail());
+        } catch (PaymentValidationException exception) {
+            log.warn("Refund failed for order {}: {}", order.getOrderId(), exception.getMessage());
+            transaction.setStatus("refund_failed");
+            transaction.setStatusDetail("refund_failed: " + exception.getMessage());
+        }
         transaction.setUpdatedAt(Instant.now());
         paymentTransactionRepository.save(transaction);
     }

@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -35,6 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/v1/payment/webhooks/mercadopago")
 public class MercadoPagoWebhookController {
+    private static final Logger log = LoggerFactory.getLogger(MercadoPagoWebhookController.class);
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository transactionRepository;
@@ -101,11 +104,7 @@ public class MercadoPagoWebhookController {
 
         String previousStatus = order.getStatus();
         if ("cancelled".equals(previousStatus) && "paid".equals(nextStatus)) {
-            try {
-                refundPaymentReceivedAfterCancellation(order, mercadoPagoOrderId, payment, paymentStatusDetail);
-            } catch (PaymentValidationException exception) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, exception.getMessage());
-            }
+            refundPaymentReceivedAfterCancellation(order, mercadoPagoOrderId, payment, paymentStatusDetail);
             return ApiSuccessResponse.of(Map.of("status", "ok", "orderStatus", previousStatus));
         }
 
@@ -165,26 +164,39 @@ public class MercadoPagoWebhookController {
     private void refundPaymentReceivedAfterCancellation(CheckoutOrder order, String providerOrderId, Map<String, Object> payment, String statusDetail) {
         String providerPaymentId = payment != null ? stringValue(payment, "id") : null;
         if (providerPaymentId == null || providerPaymentId.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Mercado Pago payment id missing");
+            log.warn("Mercado Pago payment id missing for late refund, order={}", order.getOrderId());
+            return;
         }
 
         PaymentTransaction transaction = transactionRepository.findByOrderId(order.getOrderId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Transacao local nao encontrada"));
+            .orElse(null);
+        if (transaction == null) {
+            log.warn("Transaction not found for late refund, order={}", order.getOrderId());
+            return;
+        }
 
-        PaymentRefundResult refund = paymentGateway.refund(
-            transaction.getProvider(),
-            providerPaymentId,
-            providerOrderId,
-            "late-refund-" + order.getOrderId()
-        );
-        transaction.setProviderPaymentId(providerPaymentId);
-        transaction.setProviderOrderId(providerOrderId);
-        transaction.setStatus(refund.status() != null && !refund.status().isBlank() ? refund.status() : "refunded");
-        transaction.setStatusDetail(refund.statusDetail() != null && !refund.statusDetail().isBlank()
-            ? refund.statusDetail()
-            : "payment_received_after_cancellation_refunded");
-        if ("refunded".equals(transaction.getStatus()) && statusDetail != null && !statusDetail.isBlank()) {
-            transaction.setStatusDetail(transaction.getStatusDetail() + "; original_status_detail=" + statusDetail);
+        try {
+            PaymentRefundResult refund = paymentGateway.refund(
+                transaction.getProvider(),
+                providerPaymentId,
+                providerOrderId,
+                "late-refund-" + order.getOrderId()
+            );
+            transaction.setProviderPaymentId(providerPaymentId);
+            transaction.setProviderOrderId(providerOrderId);
+            transaction.setStatus(refund.status() != null && !refund.status().isBlank() ? refund.status() : "refunded");
+            transaction.setStatusDetail(refund.statusDetail() != null && !refund.statusDetail().isBlank()
+                ? refund.statusDetail()
+                : "payment_received_after_cancellation_refunded");
+            if ("refunded".equals(transaction.getStatus()) && statusDetail != null && !statusDetail.isBlank()) {
+                transaction.setStatusDetail(transaction.getStatusDetail() + "; original_status_detail=" + statusDetail);
+            }
+        } catch (PaymentValidationException exception) {
+            log.warn("Late refund failed for order {}: {}", order.getOrderId(), exception.getMessage());
+            transaction.setProviderPaymentId(providerPaymentId);
+            transaction.setProviderOrderId(providerOrderId);
+            transaction.setStatus("refund_failed");
+            transaction.setStatusDetail("late_refund_failed: " + exception.getMessage());
         }
         transactionRepository.save(transaction);
     }

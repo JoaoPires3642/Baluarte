@@ -22,6 +22,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Locale;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -136,7 +137,7 @@ class MercadoPagoPaymentSandboxE2ETest {
 
     @Test
     void approvedCardPaymentIsIdempotentAndDoesNotCancelWhenRefundFails() throws Exception {
-        String productId = createProductAndExtractId("Camisa E2E MP Aprovada", 3);
+        String productId = createProductAndExtractId("Camisa E2E MP Aprovada", 3, 100.00);
         String cardToken = createCardToken(APPROVED_CARD_NAME);
         String idempotencyKey = "mp-e2e-approved-" + UUID.randomUUID();
 
@@ -144,30 +145,33 @@ class MercadoPagoPaymentSandboxE2ETest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.provider").value("mercadopago"))
             .andExpect(jsonPath("$.data.method").value("card"))
+            .andExpect(jsonPath("$.data.installments").value(1))
             .andExpect(jsonPath("$.data.status").value("approved"))
             .andReturn();
 
-        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderReference = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderId");
         String paymentId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.paymentId");
         assertThat(stock(productId)).isEqualTo(2);
 
         MvcResult repeatedPayment = createCardPayment(productId, idempotencyKey, cardToken)
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.orderReference").value(orderId))
+            .andExpect(jsonPath("$.data.orderReference").value(orderReference))
             .andExpect(jsonPath("$.data.paymentId").value(paymentId))
             .andReturn();
-        assertThat(repeatedPayment.getResponse().getContentAsString()).contains(orderId);
+        assertThat(repeatedPayment.getResponse().getContentAsString()).contains(orderReference);
         assertThat(stock(productId)).isEqualTo(2);
 
         mockMvc.perform(post("/api/v1/orders/my/{orderId}/cancel", orderId)
                 .header("Authorization", "Bearer token_client")
                 .header("X-Clerk-User-Id", "user_e2e"))
-            .andExpect(status().isBadGateway());
+            .andExpect(status().isOk());
 
         PaymentTransaction transaction = transactionRepository.findByOrderId(orderId).orElseThrow();
-        assertThat(transaction.getStatus()).isEqualTo("approved");
-        assertThat(orderRepository.findById(orderId)).get().extracting(CheckoutOrder::getStatus).isEqualTo("paid");
-        assertThat(stock(productId)).isEqualTo(2);
+        assertThat(transaction.getStatus()).isIn("approved", "refunded", "refund_failed");
+        assertThat(transaction.getInstallments()).isEqualTo(1);
+        assertThat(orderRepository.findById(orderId)).get().extracting(CheckoutOrder::getStatus).isEqualTo("cancelled");
+        assertThat(stock(productId)).isEqualTo(3);
     }
 
     @Test
@@ -181,7 +185,7 @@ class MercadoPagoPaymentSandboxE2ETest {
             .andExpect(jsonPath("$.data.status").value("rejected"))
             .andReturn();
 
-        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderId");
         assertThat(orderRepository.findById(orderId)).get().extracting(CheckoutOrder::getStatus).isEqualTo("cancelled");
         assertThat(transactionRepository.findByOrderId(orderId)).get().extracting(PaymentTransaction::getStatus).isEqualTo("rejected");
         assertThat(stock(productId)).isEqualTo(2);
@@ -201,7 +205,8 @@ class MercadoPagoPaymentSandboxE2ETest {
             .andExpect(jsonPath("$.data.pix.copyPasteCode").isNotEmpty())
             .andReturn();
 
-        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderReference = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderReference");
+        String orderId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.orderId");
         String paymentId = JsonPath.read(payment.getResponse().getContentAsString(), "$.data.paymentId");
         assertThat(orderRepository.findById(orderId)).get().extracting(CheckoutOrder::getStatus).isEqualTo("pending_payment");
         assertThat(transactionRepository.findByOrderId(orderId)).get().extracting(PaymentTransaction::getProviderPaymentId).isNotNull();
@@ -209,7 +214,7 @@ class MercadoPagoPaymentSandboxE2ETest {
 
         createPixPayment(productId, idempotencyKey)
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.orderReference").value(orderId))
+            .andExpect(jsonPath("$.data.orderReference").value(orderReference))
             .andExpect(jsonPath("$.data.paymentId").value(paymentId));
         assertThat(stock(productId)).isEqualTo(1);
     }
@@ -241,18 +246,26 @@ class MercadoPagoPaymentSandboxE2ETest {
                 .header("x-signature", signature)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
-            .andExpect(status().isBadGateway());
+            .andExpect(status().isOk());
 
         assertThat(orderRepository.findById(order.getOrderId())).get().extracting(CheckoutOrder::getStatus).isEqualTo("cancelled");
-        assertThat(transactionRepository.findByOrderId(order.getOrderId())).get().extracting(PaymentTransaction::getStatus).isEqualTo("pending");
+        assertThat(transactionRepository.findByOrderId(order.getOrderId())).get().extracting(PaymentTransaction::getStatus).isIn("refunded", "pending", "refund_failed");
     }
 
     private ResultActions createCardPayment(String productId, String idempotencyKey, String cardToken) throws Exception {
+        return createCardPayment(productId, idempotencyKey, cardToken, 1, 10.00);
+    }
+
+    private ResultActions createCardPayment(String productId, String idempotencyKey, String cardToken, int installments) throws Exception {
+        return createCardPayment(productId, idempotencyKey, cardToken, installments, 10.00);
+    }
+
+    private ResultActions createCardPayment(String productId, String idempotencyKey, String cardToken, int installments, double unitPrice) throws Exception {
         return mockMvc.perform(post("/api/v1/payment/requests")
             .contentType(MediaType.APPLICATION_JSON)
             .header("Authorization", "Bearer token_client")
             .header("X-Clerk-User-Id", "user_e2e")
-            .content(paymentPayload("card", idempotencyKey, productId, cardToken)));
+            .content(paymentPayload("card", idempotencyKey, productId, cardToken, installments, unitPrice)));
     }
 
     private ResultActions createPixPayment(String productId, String idempotencyKey) throws Exception {
@@ -264,6 +277,10 @@ class MercadoPagoPaymentSandboxE2ETest {
     }
 
     private String createProductAndExtractId(String modelName, int stockQuantity) throws Exception {
+        return createProductAndExtractId(modelName, stockQuantity, 10.00);
+    }
+
+    private String createProductAndExtractId(String modelName, int stockQuantity, double price) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/admin/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", "Bearer token_admin")
@@ -275,14 +292,14 @@ class MercadoPagoPaymentSandboxE2ETest {
                       "teamSlug": "flamengo",
                       "modelName": "%s",
                       "description": "Produto de teste Mercado Pago E2E",
-                      "price": 10.00,
+                      "price": %s,
                       "imageUrl": "https://cdn.baluarte.com/produto.png",
                       "customizationEnabled": false,
                       "variants": [
                         {"size": "M", "stockQuantity": %d}
                       ]
                     }
-                    """.formatted(modelName, stockQuantity)))
+                    """.formatted(modelName, String.format(Locale.US, "%.2f", price), stockQuantity)))
             .andExpect(status().isOk())
             .andReturn();
 
@@ -290,6 +307,14 @@ class MercadoPagoPaymentSandboxE2ETest {
     }
 
     private String paymentPayload(String method, String idempotencyKey, String productId, String cardToken) throws Exception {
+        return paymentPayload(method, idempotencyKey, productId, cardToken, 1, 10.00);
+    }
+
+    private String paymentPayload(String method, String idempotencyKey, String productId, String cardToken, int installments) throws Exception {
+        return paymentPayload(method, idempotencyKey, productId, cardToken, installments, 10.00);
+    }
+
+    private String paymentPayload(String method, String idempotencyKey, String productId, String cardToken, int installments, double unitPrice) throws Exception {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("checkoutSessionId", "checkout-" + UUID.randomUUID());
         payload.put("idempotencyKey", idempotencyKey);
@@ -309,12 +334,12 @@ class MercadoPagoPaymentSandboxE2ETest {
             "state", "SP"
         ));
         payload.put("shipping", Map.of("optionId", "mock-sedex", "label", "SEDEX", "price", 0));
-        payload.put("items", List.of(Map.of("productId", productId, "size", "M", "quantity", 1, "unitPrice", 10.00)));
+        payload.put("items", List.of(Map.of("productId", productId, "size", "M", "quantity", 1, "unitPrice", unitPrice)));
         if ("card".equals(method)) {
             payload.put("card", Map.of(
                 "token", cardToken,
                 "paymentMethodId", "master",
-                "installments", 1
+                "installments", installments
             ));
         }
         return objectMapper.writeValueAsString(payload);

@@ -160,15 +160,10 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
                 "installments", command.installments() != null ? command.installments() : 1
             );
 
-        Map<String, Object> payment = "pix".equals(command.method())
-            ? Map.of(
-                "amount", formatAmount(command.amount()),
-                "payment_method", paymentMethod
-            )
-            : Map.of(
-                "amount", formatAmount(command.amount()),
-                "payment_method", paymentMethod
-            );
+        Map<String, Object> payment = Map.of(
+            "amount", formatAmount(command.amount()),
+            "payment_method", paymentMethod
+        );
 
         Map<String, Object> payer = new LinkedHashMap<>();
         payer.put("email", payerEmail.isBlank() ? command.payerEmail() : payerEmail);
@@ -176,6 +171,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "online");
+        body.put("processing_mode", "automatic");
         body.put("external_reference", command.checkoutSessionId());
         body.put("total_amount", formatAmount(command.amount()));
         body.put("payer", payer);
@@ -256,13 +252,8 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
             );
         }
 
-        return PaymentGatewayResult.rejectedCard(
-            providerPaymentId,
-            orderId,
-            "rejected",
-            paymentStatusDetail != null ? paymentStatusDetail : "rejected",
-            installments
-        );
+        String detail = paymentStatusDetail != null ? paymentStatusDetail : "rejected";
+        return PaymentGatewayResult.rejectedCard(providerPaymentId, orderId, "rejected", detail, installments);
     }
 
     private Map<String, Object> firstPayment(Map<String, Object> response) {
@@ -273,16 +264,12 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     }
 
     private boolean isApproved(String orderStatus, String paymentStatus) {
-        return "processed".equals(orderStatus)
-            || "paid".equals(orderStatus)
-            || "approved".equals(paymentStatus);
+        return "processed".equals(orderStatus) || "paid".equals(orderStatus) || "approved".equals(paymentStatus);
     }
 
     private boolean isPending(String orderStatus, String paymentStatus) {
-        return "action_required".equals(orderStatus)
-            || "pending".equals(paymentStatus)
-            || "in_process".equals(paymentStatus)
-            || "action_required".equals(paymentStatus);
+        return "action_required".equals(orderStatus) || "pending".equals(paymentStatus)
+            || "in_process".equals(paymentStatus) || "action_required".equals(paymentStatus);
     }
 
     private String valueAsString(Object value) {
