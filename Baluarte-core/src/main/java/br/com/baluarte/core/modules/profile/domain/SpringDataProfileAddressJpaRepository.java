@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SpringDataProfileAddressJpaRepository extends JpaRepository<ProfileAddressJpaEntity, String> {
 
-    List<ProfileAddressJpaEntity> findAllByClerkUserIdOrderByDefaultAddressDescUpdatedAtDesc(String clerkUserId);
+    List<ProfileAddressJpaEntity> findAllByUserIdOrderByDefaultAddressDescUpdatedAtDesc(String userId);
 
-    List<ProfileAddressJpaEntity> findAllByClerkUserId(String clerkUserId);
+    List<ProfileAddressJpaEntity> findAllByUserId(String userId);
 }

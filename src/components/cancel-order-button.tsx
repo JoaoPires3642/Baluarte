@@ -1,6 +1,6 @@
 "use client"
 
-import { useAuth } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8
 
 export function CancelOrderButton({ orderId }: { orderId: string }) {
   const router = useRouter()
-  const { getToken, userId } = useAuth()
+  const { data: session } = useSession()
+  const userId = session?.user?.id
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -19,13 +20,11 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
     setLoading(true)
     setError("")
     try {
-      const token = await getToken()
       const response = await fetch(`${API_BASE_URL}/orders/my/${orderId}/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(userId ? { "X-Clerk-User-Id": userId } : {}),
+          ...(userId ? { "X-User-Id": userId } : {}),
         },
       })
 

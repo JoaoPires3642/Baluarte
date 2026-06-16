@@ -6,7 +6,6 @@ import br.com.baluarte.core.modules.profile.api.ProfileAddressUpsertRequest;
 import br.com.baluarte.core.modules.profile.domain.ProfileAddressJpaEntity;
 import br.com.baluarte.core.modules.profile.domain.SpringDataProfileAddressJpaRepository;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,17 +24,17 @@ public class ProfileAddressService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProfileAddressResponse> listAddresses(String clerkUserId) {
-        return profileAddressRepository.findAllByClerkUserIdOrderByDefaultAddressDescUpdatedAtDesc(clerkUserId)
+    public List<ProfileAddressResponse> listAddresses(String userId) {
+        return profileAddressRepository.findAllByUserIdOrderByDefaultAddressDescUpdatedAtDesc(userId)
             .stream()
             .map(ProfileAddressService::toResponse)
             .toList();
     }
 
     @Transactional
-    public List<ProfileAddressResponse> syncAddresses(String clerkUserId, ProfileAddressSyncRequest request) {
+    public List<ProfileAddressResponse> syncAddresses(String userId, ProfileAddressSyncRequest request) {
         List<ProfileAddressUpsertRequest> incoming = request.addresses() == null ? List.of() : request.addresses();
-        List<ProfileAddressJpaEntity> current = profileAddressRepository.findAllByClerkUserId(clerkUserId);
+        List<ProfileAddressJpaEntity> current = profileAddressRepository.findAllByUserId(userId);
 
         if (incoming.isEmpty()) {
             profileAddressRepository.deleteAll(current);
@@ -57,7 +56,7 @@ public class ProfileAddressService {
         for (ResolvedAddress resolved : resolvedIncoming) {
             ProfileAddressJpaEntity entity = currentById.remove(resolved.addressId()) ;
             if (entity == null) {
-                entity = ProfileAddressJpaEntity.create(clerkUserId, resolved.address(), resolved.addressId().equals(resolvedDefaultId));
+                entity = ProfileAddressJpaEntity.create(userId, resolved.address(), resolved.addressId().equals(resolvedDefaultId));
                 entity.setAddressIdIfMissing(resolved.addressId());
             } else {
                 entity.apply(resolved.address(), resolved.addressId().equals(resolvedDefaultId));
@@ -69,7 +68,7 @@ public class ProfileAddressService {
         profileAddressRepository.deleteAll(currentById.values());
         profileAddressRepository.saveAll(saved);
 
-        return profileAddressRepository.findAllByClerkUserIdOrderByDefaultAddressDescUpdatedAtDesc(clerkUserId)
+        return profileAddressRepository.findAllByUserIdOrderByDefaultAddressDescUpdatedAtDesc(userId)
             .stream()
             .map(ProfileAddressService::toResponse)
             .toList();

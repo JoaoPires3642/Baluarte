@@ -31,7 +31,7 @@ public class CheckoutOrderJpaEntity {
     private String customerRef;
 
     @Column(name = "clerk_user_id", length = 120)
-    private String clerkUserId;
+    private String userId;
 
     @Column(name = "payer_email", length = 160)
     private String payerEmail;
@@ -138,7 +138,7 @@ public class CheckoutOrderJpaEntity {
         }
         this.checkoutSessionId = order.getCheckoutSessionId();
         this.customerRef = order.getCustomerRef();
-        this.clerkUserId = order.getClerkUserId();
+        this.userId = order.getUserId();
         this.payerEmail = order.getPayerEmail();
         this.payerDocumentType = order.getPayerDocumentType();
         this.payerDocumentNumber = order.getPayerDocumentNumber();
@@ -170,7 +170,7 @@ public class CheckoutOrderJpaEntity {
     }
 
     public CheckoutOrder toDomain() {
-        CheckoutOrder order = new CheckoutOrder(orderId, checkoutSessionId, customerRef, clerkUserId,
+        CheckoutOrder order = new CheckoutOrder(orderId, checkoutSessionId, customerRef, userId,
                 payerEmail, payerDocumentType, payerDocumentNumber, recipientName, status, totalAmount,
                 shippingPrice, shippingCep, shippingStreet, shippingNumber, shippingComplement, shippingNeighborhood,
                 shippingCity, shippingState);

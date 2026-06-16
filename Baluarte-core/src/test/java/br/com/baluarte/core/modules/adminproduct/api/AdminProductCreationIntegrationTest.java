@@ -1,8 +1,5 @@
 package br.com.baluarte.core.modules.adminproduct.api;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,18 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductJpaRepository;
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
-import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
-import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -44,15 +36,10 @@ class AdminProductCreationIntegrationTest {
     @Autowired
     private SpringDataAdminProductVariantJpaRepository variantRepository;
 
-    @MockBean
-    private ClerkJwtVerifier clerkJwtVerifier;
-
     @BeforeEach
     void setUp() {
         productRepository.deleteAll();
         variantRepository.deleteAll();
-        when(clerkJwtVerifier.verify(any())).thenReturn(null);
-        when(clerkJwtVerifier.verify(eq("token_admin"))).thenReturn(jwtWithIdentity("user_789", "admin@baluarte.com"));
     }
 
     @Test
@@ -61,7 +48,7 @@ class AdminProductCreationIntegrationTest {
             options("/api/v1/admin/products")
                 .header("Origin", "http://localhost:3000")
                 .header("Access-Control-Request-Method", "POST")
-                .header("Access-Control-Request-Headers", "authorization,content-type,x-clerk-email,x-clerk-user-id,x-internal-role")
+                .header("Access-Control-Request-Headers", "authorization,content-type,x-user-id,x-user-email,x-internal-role")
         )
             .andExpect(status().isOk())
             .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
@@ -90,9 +77,8 @@ class AdminProductCreationIntegrationTest {
                       ]
                     }
                     """)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.categorySlug").value("nacionais"))
@@ -129,9 +115,8 @@ class AdminProductCreationIntegrationTest {
                       ]
                     }
                     """)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
@@ -162,9 +147,8 @@ class AdminProductCreationIntegrationTest {
                       ]
                     }
                     """)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
@@ -215,9 +199,8 @@ class AdminProductCreationIntegrationTest {
                       ]
                     }
                     """)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(productId))
@@ -254,9 +237,8 @@ class AdminProductCreationIntegrationTest {
 
         mockMvc.perform(
             delete("/api/v1/admin/products/{productId}", productId)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(productId))
@@ -277,9 +259,8 @@ class AdminProductCreationIntegrationTest {
             post("/api/v1/admin/products")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "user_789")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "user_789")
+                .header("X-User-Email", "admin@baluarte.com")
         )
             .andExpect(status().isOk())
             .andReturn()
@@ -287,19 +268,5 @@ class AdminProductCreationIntegrationTest {
             .getContentAsString();
 
         return com.jayway.jsonpath.JsonPath.read(responseBody, "$.data.id");
-    }
-
-    private Jwt jwtWithIdentity(String userId, String email) {
-        Instant now = Instant.now();
-
-        return Jwt.withTokenValue("test-token")
-            .header("alg", "RS256")
-            .issuedAt(now.minusSeconds(60))
-            .expiresAt(now.plusSeconds(3600))
-            .claim("iss", "https://clerk.example")
-            .claim("sub", userId)
-            .claim("email", email)
-            .claims((claims) -> claims.putAll(Map.of("sub", userId, "email", email)))
-            .build();
     }
 }

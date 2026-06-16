@@ -12,7 +12,6 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
-import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import br.com.baluarte.core.shared.auth.InternalRole;
 import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import jakarta.validation.Valid;
@@ -23,7 +22,6 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -43,7 +41,6 @@ public class OrderController {
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
-    private final ClerkJwtVerifier clerkJwtVerifier;
     private final InternalRoleResolver internalRoleResolver;
     private final PixOrderExpirationService pixOrderExpirationService;
     private final ShippingLabelGenerationService shippingLabelGenerationService;
@@ -53,11 +50,10 @@ public class OrderController {
     public ApiSuccessResponse<List<OrderResponse>> listOrders(
         @RequestParam(value = "page", defaultValue = "0") int page,
         @RequestParam(value = "size", defaultValue = "30") int size,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
         long total = orderRepository.countAll();
@@ -75,11 +71,9 @@ public class OrderController {
 
     @GetMapping("/my")
     public ApiSuccessResponse<List<OrderResponse>> listMyOrders(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+        @RequestHeader("X-User-Id") String userId
     ) {
-        String userId = resolveUserId(authorizationHeader, clerkUserId);
-        return ApiSuccessResponse.of(orderRepository.findByClerkUserId(userId).stream()
+        return ApiSuccessResponse.of(orderRepository.findByUserId(userId).stream()
             .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
             .toList());
     }
@@ -87,11 +81,10 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ApiSuccessResponse<OrderResponse> getOrder(
         @PathVariable String orderId,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
@@ -103,11 +96,10 @@ public class OrderController {
     @GetMapping("/station-deliveries")
     public ApiSuccessResponse<List<OrderResponse>> listStationDeliveries(
         @RequestParam("date") String date,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         return ApiSuccessResponse.of(orderRepository.findStationDeliveriesByDate(date).stream()
             .map(this::toResponse)
             .toList());
@@ -116,11 +108,10 @@ public class OrderController {
     @GetMapping("/separation-report")
     public ApiSuccessResponse<List<OrderResponse>> listSeparationReport(
         @RequestParam("date") String date,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         return ApiSuccessResponse.of(orderRepository.findSeparationReportByCreatedDate(LocalDate.parse(date)).stream()
             .map(this::toResponse)
             .toList());
@@ -129,11 +120,9 @@ public class OrderController {
     @GetMapping("/my/{orderId}")
     public ApiSuccessResponse<OrderResponse> getMyOrder(
         @PathVariable String orderId,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+        @RequestHeader("X-User-Id") String userId
     ) {
-        String userId = resolveUserId(authorizationHeader, clerkUserId);
-        CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
+        CheckoutOrder order = orderRepository.findByIdAndUserId(orderId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
         return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
@@ -144,11 +133,10 @@ public class OrderController {
     public ApiSuccessResponse<OrderResponse> updateOrderStatus(
         @PathVariable String orderId,
         @Valid @RequestBody UpdateOrderStatusRequest request,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
@@ -171,11 +159,9 @@ public class OrderController {
     @Transactional
     public ApiSuccessResponse<OrderResponse> cancelMyOrder(
         @PathVariable String orderId,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId
+        @RequestHeader("X-User-Id") String userId
     ) {
-        String userId = resolveUserId(authorizationHeader, clerkUserId);
-        CheckoutOrder order = orderRepository.findByIdAndClerkUserId(orderId, userId)
+        CheckoutOrder order = orderRepository.findByIdAndUserId(orderId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
         try {
@@ -190,11 +176,10 @@ public class OrderController {
     @PostMapping("/{orderId}/shipping-label")
     public ApiSuccessResponse<OrderResponse> createShippingLabel(
         @PathVariable String orderId,
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
 
@@ -214,11 +199,10 @@ public class OrderController {
     @PostMapping("/shipping-labels/generate-pending")
     @Transactional
     public ApiSuccessResponse<BulkShippingLabelResponse> generatePendingShippingLabels(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail
+        @RequestHeader(value = "X-User-Id") String userId,
+        @RequestHeader(value = "X-User-Email") String userEmail
     ) {
-        resolveAdmin(authorizationHeader, clerkUserId, clerkEmail);
+        resolveAdmin(userId, userEmail);
         BulkShippingLabelGenerationResult result = shippingLabelGenerationService.generatePending(null);
         return ApiSuccessResponse.of(new BulkShippingLabelResponse(result.candidates(), result.generated(), result.failures()));
     }
@@ -233,33 +217,19 @@ public class OrderController {
         }
     }
 
-    private String resolveUserId(String authorizationHeader, String clerkUserId) {
-        Jwt jwt = clerkJwtVerifier.verify(extractBearerToken(authorizationHeader));
-        if (jwt == null || clerkUserId == null || !clerkUserId.equals(jwt.getSubject())) {
+    private void resolveUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
-        return jwt.getSubject();
     }
 
-    private void resolveAdmin(String authorizationHeader, String clerkUserId, String clerkEmail) {
-        Jwt jwt = clerkJwtVerifier.verify(extractBearerToken(authorizationHeader));
-        if (jwt == null || clerkUserId == null || !clerkUserId.equals(jwt.getSubject())) {
+    private void resolveAdmin(String userId, String userEmail) {
+        if (userId == null || userId.isBlank() || userEmail == null || userEmail.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
         }
-        if (clerkEmail == null || clerkEmail.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
-        }
-        if (internalRoleResolver.resolveFromIdentity(jwt.getSubject(), clerkEmail) != InternalRole.ADMIN) {
+        if (internalRoleResolver.resolveFromIdentity(userId, userEmail) != InternalRole.ADMIN) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin privileges required");
         }
-    }
-
-    private String extractBearerToken(String authorizationHeader) {
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = authorizationHeader.substring("Bearer ".length()).trim();
-        return token.isBlank() ? null : token;
     }
 
     private OrderResponse toResponse(CheckoutOrder order) {
@@ -327,52 +297,3 @@ public class OrderController {
         );
     }
 }
-
-record OrderResponse(
-    String id,
-    String orderReference,
-    String status,
-    String createdAt,
-    String updatedAt,
-    Double total,
-    List<OrderItemResponse> items,
-    ShippingResponse shipping,
-    PaymentResponse payment
-) {}
-
-record BulkShippingLabelResponse(
-    int candidates,
-    int generated,
-    List<BulkShippingLabelGenerationFailure> failures
-) {}
-
-record OrderItemResponse(
-    String productId,
-    String name,
-    String size,
-    Integer quantity,
-    Double unitPrice
-) {}
-
-record ShippingResponse(
-    String recipientName,
-    String address,
-    String trackingCode,
-    String provider,
-    String serviceId,
-    String serviceName,
-    String labelId,
-    String labelUrl,
-    String shippingType,
-    String deliveryStation,
-    String deliveryDay,
-    String deliveryDate,
-    String deliveryTimeSlot
-) {}
-
-record PaymentResponse(
-    String method,
-    String pixQrCode,
-    String pixQrCodeBase64,
-    String pixCopyPasteCode
-) {}

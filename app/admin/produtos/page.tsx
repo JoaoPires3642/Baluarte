@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { PackagePlus } from "lucide-react"
 import { fetchCategories, fetchPublicTeams, uploadImage, type AdminProduct, type Category, type Team } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
@@ -28,11 +28,11 @@ function getCsvValue(value: string | number) {
 
 export default function AdminProductsPage() {
   const { authedFetch } = useAdminApi()
-  const { getToken, userId } = useAuth()
-  const { user } = useUser()
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+  const userEmail = session?.user?.email
   const router = useRouter()
   const searchParams = useSearchParams()
-  const userEmail = user?.primaryEmailAddress?.emailAddress
 
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -153,12 +153,11 @@ export default function AdminProductsPage() {
   const handleImageFiles = async (files: FileList | null) => {
     const selectedFiles = Array.from(files || [])
     if (selectedFiles.length === 0) return
-    const token = await getToken()
-    if (!token) { setError("Sessão expirada, faça login novamente"); return }
+    if (!userId) { setError("Sessão expirada, faça login novamente"); return }
     setUploadingImage(true)
     try {
       const uploadedUrls: string[] = []
-      for (const file of selectedFiles) uploadedUrls.push((await uploadImage(file, { token, userId: userId || "", email: userEmail })).data.url)
+      for (const file of selectedFiles) uploadedUrls.push((await uploadImage(file, { userId, email: userEmail ?? undefined })).data.url)
       setForm(current => {
         const imageUrls = normalizeImageUrls([...current.imageUrls, ...uploadedUrls])
         return { ...current, imageUrl: imageUrls.join("\n"), imageUrls }

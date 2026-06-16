@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { CreditCard, Loader2, MapPin, MapPinned, Plus, Truck } from "lucide-react"
 import { useCart } from "@/context/cart-context"
 import { useToast } from "@/context/toast-context"
-import { useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { fetchShippingQuotes, createPayment, fetchAddresses, syncAddresses, lookupCep, fetchStationDeliverySettings, fetchSiteContactSettings, deliveryDayLabels, type Address, type PaymentResponse, type ShippingQuote, type StationDeliverySettings, type SiteContactSettings } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -90,7 +90,8 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { items, total, clear } = useCart()
   const { showToast } = useToast()
-  const { isSignedIn } = useUser()
+  const { data: session } = useSession()
+  const isSignedIn = session?.user != null
   const cardFormRef = useRef<PaymentCardFormRef>(null)
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<CheckoutStep>(1)

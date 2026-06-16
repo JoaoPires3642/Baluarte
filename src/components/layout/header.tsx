@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { createPortal } from "react-dom"
 import { Heart, Menu, ShieldCheck, ShoppingBag, UserRound, X } from "lucide-react"
-import { UserButton, useUser } from "@clerk/nextjs"
+import { useSession, signIn, signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useCart } from "@/context/cart-context"
@@ -20,7 +20,9 @@ export function Header() {
   )
   const { items } = useCart()
   const { items: wishlistItems } = useWishlist()
-  const { isLoaded, isSignedIn } = useUser()
+  const { data: session, status } = useSession()
+  const isLoaded = status !== "loading"
+  const isSignedIn = status === "authenticated"
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const [compactMobileHeader, setCompactMobileHeader] = useState(false)
   const [compactTabletHeader, setCompactTabletHeader] = useState(false)
@@ -120,7 +122,7 @@ export function Header() {
                 <Button variant="outline" size="sm" className="px-5" asChild>
                   <Link href="/conta">Minha conta</Link>
                 </Button>
-                <UserButton />
+                <Button variant="outline" size="sm" className="px-3" onClick={() => signOut()}>Sair</Button>
                 </>
               )}
             </div>

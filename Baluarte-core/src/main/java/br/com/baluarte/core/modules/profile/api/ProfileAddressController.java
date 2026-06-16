@@ -2,7 +2,6 @@ package br.com.baluarte.core.modules.profile.api;
 
 import br.com.baluarte.core.modules.profile.application.ProfileAddressService;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
-import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import br.com.baluarte.core.shared.error.ApiErrorPayload;
 import br.com.baluarte.core.shared.error.ApiErrorResponse;
@@ -16,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,30 +31,26 @@ public class ProfileAddressController {
     private static final Logger logger = LoggerFactory.getLogger(ProfileAddressController.class);
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
-    private final ClerkJwtVerifier clerkJwtVerifier;
     private final InternalRoleResolver internalRoleResolver;
     private final ProfileAddressService profileAddressService;
 
     public ProfileAddressController(
-        ClerkJwtVerifier clerkJwtVerifier,
         InternalRoleResolver internalRoleResolver,
         ProfileAddressService profileAddressService
     ) {
-        this.clerkJwtVerifier = clerkJwtVerifier;
         this.internalRoleResolver = internalRoleResolver;
         this.profileAddressService = profileAddressService;
     }
 
     @GetMapping
     public ResponseEntity<?> listAddresses(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail,
+        @RequestHeader(value = "X-User-Id", required = false) String userId,
+        @RequestHeader(value = "X-User-Email", required = false) String userEmail,
         HttpServletRequest request
     ) {
-        AuthenticatedIdentity identity = resolveIdentity(authorizationHeader, clerkUserId, clerkEmail, request);
+        AuthenticatedIdentity identity = resolveIdentity(userId, userEmail, request);
         if (identity == null) {
-            return unauthorized(request, "Authentication required", "Invalid Clerk identity");
+            return unauthorized(request, "Authentication required", "Invalid identity");
         }
 
         return ResponseEntity.ok(ApiSuccessResponse.of(profileAddressService.listAddresses(identity.userId())));
@@ -64,61 +58,39 @@ public class ProfileAddressController {
 
     @PutMapping
     public ResponseEntity<?> syncAddresses(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail,
+        @RequestHeader(value = "X-User-Id", required = false) String userId,
+        @RequestHeader(value = "X-User-Email", required = false) String userEmail,
         @RequestBody ProfileAddressSyncRequest requestBody,
         HttpServletRequest request
     ) {
-        AuthenticatedIdentity identity = resolveIdentity(authorizationHeader, clerkUserId, clerkEmail, request);
+        AuthenticatedIdentity identity = resolveIdentity(userId, userEmail, request);
         if (identity == null) {
-            return unauthorized(request, "Authentication required", "Invalid Clerk identity");
+            return unauthorized(request, "Authentication required", "Invalid identity");
         }
 
         return ResponseEntity.ok(ApiSuccessResponse.of(profileAddressService.syncAddresses(identity.userId(), requestBody)));
     }
 
     private AuthenticatedIdentity resolveIdentity(
-        String authorizationHeader,
-        String clerkUserId,
-        String clerkEmail,
+        String userId,
+        String userEmail,
         HttpServletRequest request
     ) {
-        String token = extractBearerToken(authorizationHeader);
-        Jwt jwt = clerkJwtVerifier.verify(token);
-        if (jwt == null) {
-            return null;
-        }
-
-        if (isBlank(clerkUserId)) {
+        if (isBlank(userId)) {
             logger.warn(
-                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=missing-clerk-user-id path={}",
+                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=missing-user-id path={}",
                 request.getRequestURI()
             );
             return null;
         }
 
-        String normalizedHeaderUserId = normalize(clerkUserId);
-        String normalizedTokenUserId = normalize(jwt.getSubject());
+        String normalizedUserId = normalize(userId);
+        String normalizedEmail = normalize(userEmail);
+        String resolvedIdentityEmail = !normalizedEmail.isBlank() ? normalizedEmail
+            : normalizedUserId + "@users";
 
-        if (normalizedTokenUserId.isBlank() || !normalizedTokenUserId.equals(normalizedHeaderUserId)) {
-            logger.warn(
-                "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=clerk-identity-mismatch path={} headerUserId={} tokenUserId={}",
-                request.getRequestURI(),
-                clerkUserId,
-                jwt.getSubject()
-            );
-            return null;
-        }
-
-        String normalizedHeaderEmail = normalize(clerkEmail);
-        String normalizedTokenEmail = normalize(extractJwtEmail(jwt));
-        String resolvedIdentityEmail = !normalizedTokenEmail.isBlank() ? normalizedTokenEmail
-            : !normalizedHeaderEmail.isBlank() ? normalizedHeaderEmail
-            : normalizedHeaderUserId + "@clerk.users";
-
-        internalRoleResolver.resolveFromIdentity(normalizedTokenUserId, resolvedIdentityEmail);
-        return new AuthenticatedIdentity(normalizedTokenUserId, resolvedIdentityEmail);
+        internalRoleResolver.resolveFromIdentity(normalizedUserId, resolvedIdentityEmail);
+        return new AuthenticatedIdentity(normalizedUserId, resolvedIdentityEmail);
     }
 
     private ResponseEntity<ApiErrorResponse> unauthorized(HttpServletRequest request, String message, String detail) {
@@ -128,29 +100,6 @@ public class ProfileAddressController {
 
         ApiErrorResponse payload = new ApiErrorResponse(new ApiErrorPayload("UNAUTHORIZED", message, List.of(detail)), traceId);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(payload);
-    }
-
-    private String extractJwtEmail(Jwt jwt) {
-        String email = jwt.getClaimAsString("email");
-        if (!isBlank(email)) {
-            return email;
-        }
-
-        return jwt.getClaimAsString("email_address");
-    }
-
-    private String extractBearerToken(String authorizationHeader) {
-        if (isBlank(authorizationHeader)) {
-            return null;
-        }
-
-        String prefix = "Bearer ";
-        if (!authorizationHeader.startsWith(prefix)) {
-            return null;
-        }
-
-        String token = authorizationHeader.substring(prefix.length()).trim();
-        return token.isBlank() ? null : token;
     }
 
     private boolean isBlank(String value) {

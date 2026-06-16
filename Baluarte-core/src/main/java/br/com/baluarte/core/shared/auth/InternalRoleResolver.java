@@ -14,7 +14,7 @@ public class InternalRoleResolver {
     private static final Logger log = LoggerFactory.getLogger(InternalRoleResolver.class);
 
     private final Set<String> adminEmails;
-    private final Set<String> adminClerkUserIds;
+    private final Set<String> adminUserIds;
     private final SpringDataAuthUserJpaRepository authUserRepository;
 
     public InternalRoleResolver(AdminAuthorizationProperties properties, SpringDataAuthUserJpaRepository authUserRepository) {
@@ -23,7 +23,7 @@ public class InternalRoleResolver {
             .map(this::normalize)
             .filter(value -> !value.isBlank())
             .collect(Collectors.toSet());
-        this.adminClerkUserIds = properties.getAdminClerkUserIds()
+        this.adminUserIds = properties.getAdminUserIds()
             .stream()
             .map(this::normalize)
             .filter(value -> !value.isBlank())
@@ -32,8 +32,8 @@ public class InternalRoleResolver {
     }
 
     @Transactional
-    public InternalRole resolveFromIdentity(String clerkUserId, String email) {
-        String normalizedUserId = normalize(clerkUserId);
+    public InternalRole resolveFromIdentity(String userId, String email) {
+        String normalizedUserId = normalize(userId);
         String normalizedEmail = normalize(email);
 
         if (normalizedUserId.isBlank() || normalizedEmail.isBlank()) {
@@ -53,10 +53,10 @@ public class InternalRoleResolver {
         } else {
             user = AuthUserJpaEntity.createDefaultCustomer(normalizedUserId, normalizedEmail);
             authUserRepository.saveAndFlush(user);
-            log.info("Created auth_user: clerkUserId={}, email={}", normalizedUserId, normalizedEmail);
+            log.info("Created auth_user: userId={}, email={}", normalizedUserId, normalizedEmail);
         }
 
-        boolean adminFromAllowlist = adminClerkUserIds.contains(normalizedUserId) || adminEmails.contains(normalizedEmail);
+        boolean adminFromAllowlist = adminUserIds.contains(normalizedUserId) || adminEmails.contains(normalizedEmail);
         if (adminFromAllowlist) {
             return InternalRole.ADMIN;
         }
@@ -68,8 +68,8 @@ public class InternalRoleResolver {
         return resolveFromIdentity(null, email);
     }
 
-    public boolean existsByIdentity(String clerkUserId) {
-        String normalizedUserId = normalize(clerkUserId);
+    public boolean existsByIdentity(String userId) {
+        String normalizedUserId = normalize(userId);
         return !normalizedUserId.isBlank() && authUserRepository.existsById(normalizedUserId);
     }
 

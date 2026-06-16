@@ -8,9 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AdminAuthorizationProperties {
 
     private List<String> adminEmails = new ArrayList<>();
-    private List<String> adminClerkUserIds = new ArrayList<>();
-    private String clerkIssuer;
-    private String clerkJwksUri;
+    private List<String> adminUserIds = new ArrayList<>();
     private boolean devBypassEnabled;
     private String devBypassKey;
 
@@ -22,28 +20,12 @@ public class AdminAuthorizationProperties {
         this.adminEmails = adminEmails;
     }
 
-    public List<String> getAdminClerkUserIds() {
-        return adminClerkUserIds;
+    public List<String> getAdminUserIds() {
+        return adminUserIds;
     }
 
-    public void setAdminClerkUserIds(List<String> adminClerkUserIds) {
-        this.adminClerkUserIds = adminClerkUserIds;
-    }
-
-    public String getClerkIssuer() {
-        return clerkIssuer;
-    }
-
-    public void setClerkIssuer(String clerkIssuer) {
-        this.clerkIssuer = clerkIssuer;
-    }
-
-    public String getClerkJwksUri() {
-        return clerkJwksUri;
-    }
-
-    public void setClerkJwksUri(String clerkJwksUri) {
-        this.clerkJwksUri = clerkJwksUri;
+    public void setAdminUserIds(List<String> adminUserIds) {
+        this.adminUserIds = adminUserIds;
     }
 
     public boolean isDevBypassEnabled() {

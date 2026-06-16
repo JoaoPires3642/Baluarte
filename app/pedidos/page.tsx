@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -37,12 +38,11 @@ type Order = {
 
 async function getOrders(): Promise<Order[]> {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return []
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return []
 
     const res = await fetch(`${API_BASE_URL}/orders/my`, {
-      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      headers: { "X-User-Id": session.user.id, "X-User-Email": session.user.email ?? "" },
       cache: "no-store",
     })
     if (!res.ok) return []

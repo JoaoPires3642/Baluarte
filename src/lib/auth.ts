@@ -1,4 +1,5 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -10,18 +11,14 @@ type BackendAuthSession = {
 }
 
 export async function resolveServerAuthSession() {
-  const { userId, getToken } = await auth()
-  if (!userId) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user?.id || !session?.user?.email) {
     return { isAuthenticated: false as const, isAdmin: false as const, session: null }
   }
 
-  const user = await currentUser()
-  const email = user?.emailAddresses?.[0]?.emailAddress?.trim().toLowerCase()
-  const token = await getToken()
-
-  if (!email || !token) {
-    return { isAuthenticated: true as const, isAdmin: false as const, session: null }
-  }
+  const userId = session.user.id
+  const email = session.user.email
 
   try {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
@@ -29,9 +26,8 @@ export async function resolveServerAuthSession() {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId,
-        "X-Clerk-Email": email,
+        "X-User-Id": userId,
+        "X-User-Email": email,
       },
       cache: "no-store",
     })
@@ -41,15 +37,25 @@ export async function resolveServerAuthSession() {
     }
 
     const payload = await response.json().catch(() => null) as { data?: BackendAuthSession } | null
-    const session = payload?.data ?? null
-    const internalRole = String(session?.internalRole || session?.role || "").toLowerCase()
+    const backendSession = payload?.data ?? null
+    const internalRole = String(backendSession?.internalRole || backendSession?.role || "").toLowerCase()
 
     return {
       isAuthenticated: true as const,
       isAdmin: internalRole === "admin",
-      session,
+      session: backendSession,
     }
   } catch {
     return { isAuthenticated: true as const, isAdmin: false as const, session: null }
   }
+}
+
+export async function getServerUserId(): Promise<string | null> {
+  const session = await getServerSession(authOptions)
+  return session?.user?.id ?? null
+}
+
+export async function getServerUserEmail(): Promise<string | null> {
+  const session = await getServerSession(authOptions)
+  return session?.user?.email ?? null
 }

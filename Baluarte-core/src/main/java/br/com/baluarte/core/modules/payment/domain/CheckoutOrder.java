@@ -10,7 +10,7 @@ public class CheckoutOrder {
     private Long orderNumber;
     private String checkoutSessionId;
     private String customerRef;
-    private String clerkUserId;
+    private String userId;
     private String payerEmail;
     private String payerDocumentType;
     private String payerDocumentNumber;
@@ -48,7 +48,7 @@ public class CheckoutOrder {
         String orderId,
         String checkoutSessionId,
         String customerRef,
-        String clerkUserId,
+        String userId,
         String payerEmail,
         String payerDocumentType,
         String payerDocumentNumber,
@@ -67,7 +67,7 @@ public class CheckoutOrder {
         this.orderId = orderId;
         this.checkoutSessionId = checkoutSessionId;
         this.customerRef = customerRef;
-        this.clerkUserId = clerkUserId;
+        this.userId = userId;
         this.payerEmail = payerEmail;
         this.payerDocumentType = payerDocumentType;
         this.payerDocumentNumber = payerDocumentNumber;
@@ -94,8 +94,8 @@ public class CheckoutOrder {
     public void setCheckoutSessionId(String checkoutSessionId) { this.checkoutSessionId = checkoutSessionId; }
     public String getCustomerRef() { return customerRef; }
     public void setCustomerRef(String customerRef) { this.customerRef = customerRef; }
-    public String getClerkUserId() { return clerkUserId; }
-    public void setClerkUserId(String clerkUserId) { this.clerkUserId = clerkUserId; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     public String getPayerEmail() { return payerEmail; }
     public void setPayerEmail(String payerEmail) { this.payerEmail = payerEmail; }
     public String getPayerDocumentType() { return payerDocumentType; }

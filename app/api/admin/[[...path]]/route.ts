@@ -1,7 +1,8 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { NextRequest, NextResponse } from "next/server"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 const DEFAULT_API_BASE = "http://localhost:8080/api/v1"
 const API_BASE = process.env.BACKEND_INTERNAL_URL || (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_API_BASE_URL : DEFAULT_API_BASE)
@@ -31,44 +32,17 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
   const pathStr = path && path.length > 0 ? `/${path.join("/")}` : ""
   const url = `${API_BASE}${pathStr}${req.nextUrl.search}`
 
-  let token = req.headers.get("X-Clerk-Session-Token") || null
-  let resolvedUserId = req.headers.get("X-Clerk-User-Id") || null
-  let resolvedEmail = req.headers.get("X-Clerk-Email") || null
-
-  if (!token || !resolvedUserId) {
-    const { userId, getToken } = await auth()
-    if (!token) token = await getToken()
-    if (!resolvedUserId) resolvedUserId = userId
-  }
-
-  if (!token || !resolvedUserId) {
-    const sessionCookie = extractSessionCookie(req)
-    if (sessionCookie) {
-      token = sessionCookie
-      const payload = decodeJwtPayload(sessionCookie)
-      if (payload?.sub && typeof payload.sub === "string") resolvedUserId = payload.sub
-    }
-  }
-
-  if (!resolvedEmail && token) {
-    resolvedEmail = extractEmailFromJwt(token)
-  }
-
-  if (!resolvedEmail && resolvedUserId) {
-    const user = await currentUser().catch(() => null)
-    resolvedEmail = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() || null
-  }
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+  const email = session?.user?.email
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   }
 
-  if (resolvedUserId && token) {
-    headers["X-Clerk-User-Id"] = resolvedUserId
-    headers["Authorization"] = `Bearer ${token}`
-    if (resolvedEmail) {
-      headers["X-Clerk-Email"] = resolvedEmail
-    }
+  if (userId) {
+    headers["X-User-Id"] = userId
+    if (email) headers["X-User-Email"] = email
   }
 
   let body: BodyInit | undefined
@@ -90,35 +64,4 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
       { status: 502 }
     )
   }
-}
-
-function extractSessionCookie(req: NextRequest): string | null {
-  const cookieHeader = req.headers.get("cookie")
-  if (!cookieHeader) return null
-  for (const part of cookieHeader.split(";")) {
-    const trimmed = part.trim()
-    if (trimmed.startsWith("__session=")) {
-      return trimmed.slice("__session=".length)
-    }
-  }
-  return null
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split(".")
-    if (parts.length !== 3) return null
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/")
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
-    return JSON.parse(atob(padded))
-  } catch {
-    return null
-  }
-}
-
-function extractEmailFromJwt(token: string): string | null {
-  const payload = decodeJwtPayload(token)
-  if (!payload) return null
-  const email = payload.email || payload.email_address
-  return typeof email === "string" && email.includes("@") ? email : null
 }

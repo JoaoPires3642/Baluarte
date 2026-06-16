@@ -7,7 +7,8 @@ import { Separator } from "@/components/ui/separator"
 import { UpdateOrderStatus } from "@/components/update-order-status"
 import { CreateShippingLabel } from "@/components/create-shipping-label"
 import { notFound } from "next/navigation"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -43,15 +44,12 @@ type Props = {
 
 async function getOrder(id: string) {
   try {
-    const { userId, getToken } = await auth()
-    const user = await currentUser()
-    const token = await getToken()
+    const session = await getServerSession(authOptions)
     const res = await fetch(`${API_BASE_URL}/orders/${id}`, {
       cache: "no-store",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId || "",
-        "X-Clerk-Email": user?.emailAddresses?.[0]?.emailAddress || "",
+        "X-User-Id": session?.user?.id || "",
+        "X-User-Email": session?.user?.email || "",
       },
     })
     if (!res.ok) return null

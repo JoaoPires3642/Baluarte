@@ -21,7 +21,7 @@ public class ProfileAddressJpaEntity {
     private String addressId;
 
     @Column(name = "clerk_user_id", nullable = false, length = 120)
-    private String clerkUserId;
+    private String userId;
 
     @Column(name = "label", nullable = false, length = 80)
     private String label;
@@ -59,10 +59,10 @@ public class ProfileAddressJpaEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static ProfileAddressJpaEntity create(String clerkUserId, ProfileAddressUpsertRequest request, boolean defaultAddress) {
+    public static ProfileAddressJpaEntity create(String userId, ProfileAddressUpsertRequest request, boolean defaultAddress) {
         ProfileAddressJpaEntity entity = new ProfileAddressJpaEntity();
         entity.addressId = normalizeId(request.id());
-        entity.clerkUserId = clerkUserId;
+        entity.userId = userId;
         entity.apply(request, defaultAddress);
         entity.createdAt = LocalDateTime.now();
         entity.updatedAt = entity.createdAt;

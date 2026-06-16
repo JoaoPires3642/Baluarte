@@ -23,10 +23,10 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
     List<CheckoutOrderJpaEntity> findByCustomerRef(String customerRef);
 
     @EntityGraph(attributePaths = "items")
-    List<CheckoutOrderJpaEntity> findByClerkUserIdOrderByCreatedAtDesc(String clerkUserId);
+    List<CheckoutOrderJpaEntity> findByUserIdOrderByCreatedAtDesc(String userId);
 
     @EntityGraph(attributePaths = "items")
-    Optional<CheckoutOrderJpaEntity> findByOrderIdAndClerkUserId(String orderId, String clerkUserId);
+    Optional<CheckoutOrderJpaEntity> findByOrderIdAndUserId(String orderId, String userId);
 
     @Override
     @EntityGraph(attributePaths = "items")

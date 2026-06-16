@@ -16,8 +16,8 @@ public class AdminSessionController {
     public ApiSuccessResponse<AdminSessionResponse> getSession(HttpServletRequest request) {
         AuthContext authContext = (AuthContext) request.getAttribute(AdminAuthFilter.AUTH_CONTEXT_REQUEST_ATTRIBUTE);
         AdminSessionResponse data = new AdminSessionResponse(
-            authContext.clerkUserId(),
-            authContext.clerkEmail(),
+            authContext.userId(),
+            authContext.email(),
             authContext.internalRole().name()
         );
         return ApiSuccessResponse.of(data);

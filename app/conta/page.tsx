@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
-import { useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { Home, MapPin, Package, Plus, Trash2, ChevronRight, Loader2 } from "lucide-react"
 import { fetchAddresses, syncAddresses, lookupCep, type Address } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,9 @@ function formatCep(value: string) {
 }
 
 export default function AccountPage() {
-  const { isSignedIn, isLoaded } = useUser()
+  const { data: session, status } = useSession()
+  const isLoaded = status !== "loading"
+  const isSignedIn = status === "authenticated"
   const [activeTab, setActiveTab] = useState("pedidos")
   const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(true)

@@ -16,7 +16,6 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
-import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
@@ -43,7 +42,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -90,9 +88,6 @@ class MercadoPagoPaymentSandboxE2ETest {
     @Autowired
     private PaymentTransactionRepository transactionRepository;
 
-    @MockBean
-    private ClerkJwtVerifier clerkJwtVerifier;
-
     private RestClient mercadoPagoClient;
 
     static boolean mercadoPagoE2eEnabled() {
@@ -130,9 +125,6 @@ class MercadoPagoPaymentSandboxE2ETest {
             .baseUrl(envOr("APP_PAYMENT_MERCADOPAGO_BASE_URL", "https://api.mercadopago.com"))
             .build();
 
-        when(clerkJwtVerifier.verify(any())).thenReturn(null);
-        when(clerkJwtVerifier.verify(eq("token_admin"))).thenReturn(jwtWithIdentity("admin_e2e", "admin@baluarte.com"));
-        when(clerkJwtVerifier.verify(eq("token_client"))).thenReturn(jwtWithIdentity("user_e2e", e2eEmail()));
     }
 
     @Test
@@ -163,8 +155,7 @@ class MercadoPagoPaymentSandboxE2ETest {
         assertThat(stock(productId)).isEqualTo(2);
 
         mockMvc.perform(post("/api/v1/orders/my/{orderId}/cancel", orderId)
-                .header("Authorization", "Bearer token_client")
-                .header("X-Clerk-User-Id", "user_e2e"))
+                .header("X-User-Id", "user_e2e"))
             .andExpect(status().isOk());
 
         PaymentTransaction transaction = transactionRepository.findByOrderId(orderId).orElseThrow();
@@ -263,16 +254,14 @@ class MercadoPagoPaymentSandboxE2ETest {
     private ResultActions createCardPayment(String productId, String idempotencyKey, String cardToken, int installments, double unitPrice) throws Exception {
         return mockMvc.perform(post("/api/v1/payment/requests")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("Authorization", "Bearer token_client")
-            .header("X-Clerk-User-Id", "user_e2e")
+            .header("X-User-Id", "user_e2e")
             .content(paymentPayload("card", idempotencyKey, productId, cardToken, installments, unitPrice)));
     }
 
     private ResultActions createPixPayment(String productId, String idempotencyKey) throws Exception {
         return mockMvc.perform(post("/api/v1/payment/requests")
             .contentType(MediaType.APPLICATION_JSON)
-            .header("Authorization", "Bearer token_client")
-            .header("X-Clerk-User-Id", "user_e2e")
+            .header("X-User-Id", "user_e2e")
             .content(paymentPayload("pix", idempotencyKey, productId, null)));
     }
 
@@ -283,9 +272,8 @@ class MercadoPagoPaymentSandboxE2ETest {
     private String createProductAndExtractId(String modelName, int stockQuantity, double price) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/admin/products")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer token_admin")
-                .header("X-Clerk-User-Id", "admin_e2e")
-                .header("X-Clerk-Email", "admin@baluarte.com")
+                .header("X-User-Id", "admin_e2e")
+                .header("X-User-Email", "admin@baluarte.com")
                 .content("""
                     {
                       "categorySlug": "nacionais",
@@ -449,19 +437,6 @@ class MercadoPagoPaymentSandboxE2ETest {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(WEBHOOK_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         return "ts=" + timestamp + ",v1=" + HexFormat.of().formatHex(mac.doFinal(manifest.getBytes(StandardCharsets.UTF_8)));
-    }
-
-    private Jwt jwtWithIdentity(String userId, String email) {
-        Instant now = Instant.now();
-        return Jwt.withTokenValue("test-token")
-            .header("alg", "RS256")
-            .issuedAt(now.minusSeconds(60))
-            .expiresAt(now.plusSeconds(3600))
-            .claim("iss", "https://clerk.example")
-            .claim("sub", userId)
-            .claim("email", email)
-            .claims((claims) -> claims.putAll(Map.of("sub", userId, "email", email)))
-            .build();
     }
 
     private static String e2eEmail() {

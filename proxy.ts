@@ -1,11 +1,21 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { withAuth } from "next-auth/middleware"
 
-const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/pedidos(.*)", "/checkout(.*)", "/conta(.*)"])
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect()
-  }
+export default withAuth({
+  callbacks: {
+    authorized({ req, token }) {
+      const path = req.nextUrl.pathname
+      const isProtected = ["/admin", "/pedidos", "/checkout", "/conta"].some(
+        (prefix) => path === prefix || path.startsWith(prefix + "/")
+      )
+      const isApiProtected = ["/api/admin", "/api/orders", "/api/payment", "/api/profile"].some(
+        (prefix) => path === prefix || path.startsWith(prefix + "/")
+      )
+      if (isProtected || isApiProtected) {
+        return !!token
+      }
+      return true
+    },
+  },
 })
 
 export const config = {

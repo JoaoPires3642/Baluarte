@@ -37,7 +37,7 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
 
   const headers: Record<string, string> = {}
   req.headers.forEach((value, key) => {
-    if (["content-type", "authorization", "x-clerk-user-id", "x-clerk-email"].includes(key.toLowerCase())) {
+    if (["content-type", "authorization", "x-user-id", "x-user-email"].includes(key.toLowerCase())) {
       headers[key] = value
     }
   })

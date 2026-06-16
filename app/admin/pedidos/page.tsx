@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { GeneratePendingShippingLabels } from "@/components/generate-pending-shipping-labels"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -45,15 +46,12 @@ type OrdersPayload = {
 
 async function getOrders(page: number): Promise<OrdersPayload> {
   try {
-    const { userId, getToken } = await auth()
-    const user = await currentUser()
-    const token = await getToken()
+    const session = await getServerSession(authOptions)
     const res = await fetch(`${API_BASE_URL}/orders?page=${page}&size=30`, {
       cache: "no-store",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "X-Clerk-User-Id": userId || "",
-        "X-Clerk-Email": user?.emailAddresses?.[0]?.emailAddress || "",
+        "X-User-Id": session?.user?.id || "",
+        "X-User-Email": session?.user?.email || "",
       },
     })
     if (!res.ok) return emptyOrdersPayload(page)

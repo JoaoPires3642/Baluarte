@@ -1,13 +1,13 @@
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id || !session?.user?.email) {
       return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Não autenticado" } }, { status: 401 })
     }
 
@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-        "X-Clerk-User-Id": userId,
+        "X-User-Id": session.user.id,
+        "X-User-Email": session.user.email,
       },
       body,
       cache: "no-store",

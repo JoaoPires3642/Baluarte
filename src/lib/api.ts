@@ -331,15 +331,14 @@ export async function updateAdminShippingSettings(settings: AdminShippingSetting
 // Image Upload
 export async function uploadImage(
   file: File,
-  auth?: { token: string; userId: string; email?: string }
+  auth?: { userId: string; email?: string }
 ) {
   const formData = new FormData()
   formData.append("file", file)
   const headers: Record<string, string> = {}
   if (auth) {
-    headers["Authorization"] = `Bearer ${auth.token}`
-    headers["X-Clerk-User-Id"] = auth.userId
-    if (auth.email) headers["X-Clerk-Email"] = auth.email
+    headers["X-User-Id"] = auth.userId
+    if (auth.email) headers["X-User-Email"] = auth.email
   }
   const response = await fetch(getBrowserSafeUploadUrl(), {
     method: "POST",
@@ -652,7 +651,7 @@ export interface UpdateProductRequest {
 
 export interface Address {
   addressId: string
-  clerkUserId: string
+  userId?: string
   recipientName?: string
   label: string
   cep: string
@@ -665,17 +664,17 @@ export interface Address {
   isDefault: boolean
 }
 
-type AddressApiResponse = Omit<Address, "addressId" | "clerkUserId"> & {
+type AddressApiResponse = Omit<Address, "addressId" | "userId"> & {
   id?: string
   addressId?: string
-  clerkUserId?: string
+  userId?: string
 }
 
 function normalizeAddress(address: AddressApiResponse): Address {
   return {
     ...address,
     addressId: address.addressId || address.id || "",
-    clerkUserId: address.clerkUserId || "",
+    userId: address.userId || "",
   }
 }
 

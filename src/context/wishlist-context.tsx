@@ -1,6 +1,6 @@
 "use client"
 
-import { useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
 type WishlistItem = {
@@ -33,10 +33,12 @@ function readStoredWishlist(storageKey: string): WishlistItem[] {
 }
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const { isLoaded, user } = useUser()
+  const { data: session, status } = useSession()
+  const isLoaded = status !== "loading"
+  const userId = session?.user?.id
   const storageKey = useMemo(
-    () => `${WISHLIST_STORAGE_PREFIX}.${user?.id || "guest"}`,
-    [user?.id]
+    () => `${WISHLIST_STORAGE_PREFIX}.${userId || "guest"}`,
+    [userId]
   )
   const [items, setItems] = useState<WishlistItem[]>([])
 

@@ -1,7 +1,6 @@
 package br.com.baluarte.core.modules.auth.api;
 
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
-import br.com.baluarte.core.shared.auth.ClerkJwtVerifier;
 import br.com.baluarte.core.shared.auth.InternalRole;
 import br.com.baluarte.core.shared.auth.InternalRoleResolver;
 import br.com.baluarte.core.shared.error.ApiErrorPayload;
@@ -16,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,76 +27,41 @@ public class AuthSessionController {
     private static final Logger logger = LoggerFactory.getLogger(AuthSessionController.class);
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
-    private final ClerkJwtVerifier clerkJwtVerifier;
     private final InternalRoleResolver internalRoleResolver;
 
-    public AuthSessionController(ClerkJwtVerifier clerkJwtVerifier, InternalRoleResolver internalRoleResolver) {
-        this.clerkJwtVerifier = clerkJwtVerifier;
+    public AuthSessionController(InternalRoleResolver internalRoleResolver) {
         this.internalRoleResolver = internalRoleResolver;
     }
 
     @GetMapping("/session")
     public ResponseEntity<?> getSession(
-        @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-        @RequestHeader(value = "X-Clerk-User-Id", required = false) String clerkUserId,
-        @RequestHeader(value = "X-Clerk-Email", required = false) String clerkEmail,
+        @RequestHeader(value = "X-User-Id", required = false) String userId,
+        @RequestHeader(value = "X-User-Email", required = false) String userEmail,
         HttpServletRequest request
     ) {
-        String token = extractBearerToken(authorizationHeader);
-        Jwt jwt = clerkJwtVerifier.verify(token);
-        if (jwt == null) {
-            return error(request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Authentication required", "Missing or malformed bearer token");
-        }
-
-        if (isBlank(clerkUserId) || isBlank(clerkEmail) || !EMAIL_PATTERN.matcher(clerkEmail).matches()) {
+        if (isBlank(userId) || isBlank(userEmail) || !EMAIL_PATTERN.matcher(userEmail).matches()) {
             logger.warn(
-                "security.audit event=AUTH_ROUTE_UNAUTHORIZED reason=invalid-clerk-identity path={} userId={} email={}",
+                "security.audit event=AUTH_ROUTE_UNAUTHORIZED reason=invalid-identity path={} userId={} email={}",
                 request.getRequestURI(),
-                clerkUserId,
-                clerkEmail
+                userId,
+                userEmail
             );
             return error(
                 request,
                 HttpStatus.UNAUTHORIZED,
                 "UNAUTHORIZED",
                 "Authentication required",
-                "Missing or malformed Clerk identity headers"
+                "Missing or malformed identity headers"
             );
         }
 
-        String normalizedHeaderUserId = normalize(clerkUserId);
-        String normalizedHeaderEmail = normalize(clerkEmail);
-        String normalizedTokenUserId = normalize(jwt.getSubject());
-        String normalizedTokenEmail = normalize(extractJwtEmail(jwt));
-        boolean hasTokenEmail = !normalizedTokenEmail.isBlank();
-        String resolvedIdentityEmail = hasTokenEmail ? normalizedTokenEmail : normalizedHeaderEmail;
+        String normalizedUserId = normalize(userId);
+        String normalizedEmail = normalize(userEmail);
 
-        if (
-            normalizedTokenUserId.isBlank() ||
-            !normalizedTokenUserId.equals(normalizedHeaderUserId) ||
-            (hasTokenEmail && !normalizedTokenEmail.equals(normalizedHeaderEmail))
-        ) {
-            logger.warn(
-                "security.audit event=AUTH_ROUTE_UNAUTHORIZED reason=clerk-identity-mismatch path={} headerUserId={} tokenUserId={} headerEmail={} tokenEmail={}",
-                request.getRequestURI(),
-                clerkUserId,
-                jwt.getSubject(),
-                clerkEmail,
-                extractJwtEmail(jwt)
-            );
-            return error(
-                request,
-                HttpStatus.UNAUTHORIZED,
-                "UNAUTHORIZED",
-                "Authentication required",
-                "Clerk identity headers do not match authenticated token claims"
-            );
-        }
-
-        InternalRole role = internalRoleResolver.resolveFromIdentity(normalizedTokenUserId, resolvedIdentityEmail);
+        InternalRole role = internalRoleResolver.resolveFromIdentity(normalizedUserId, normalizedEmail);
         AuthSessionResponse data = new AuthSessionResponse(
-            normalizedTokenUserId,
-            resolvedIdentityEmail,
+            normalizedUserId,
+            normalizedEmail,
             role == InternalRole.ADMIN ? "admin" : "client"
         );
 
@@ -118,29 +81,6 @@ public class AuthSessionController {
 
         ApiErrorResponse payload = new ApiErrorResponse(new ApiErrorPayload(code, message, List.of(detail)), traceId);
         return ResponseEntity.status(status).body(payload);
-    }
-
-    private String extractJwtEmail(Jwt jwt) {
-        String email = jwt.getClaimAsString("email");
-        if (!isBlank(email)) {
-            return email;
-        }
-
-        return jwt.getClaimAsString("email_address");
-    }
-
-    private String extractBearerToken(String authorizationHeader) {
-        if (isBlank(authorizationHeader)) {
-            return null;
-        }
-
-        String prefix = "Bearer ";
-        if (!authorizationHeader.startsWith(prefix)) {
-            return null;
-        }
-
-        String token = authorizationHeader.substring(prefix.length()).trim();
-        return token.isBlank() ? null : token;
     }
 
     private boolean isBlank(String value) {

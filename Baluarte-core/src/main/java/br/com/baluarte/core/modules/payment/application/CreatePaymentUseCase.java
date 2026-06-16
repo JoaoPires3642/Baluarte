@@ -45,7 +45,7 @@ public class CreatePaymentUseCase {
     }
 
     @Transactional
-    public CreatePaymentResponse execute(CreatePaymentRequest request, String provider, String clerkUserId) {
+    public CreatePaymentResponse execute(CreatePaymentRequest request, String provider, String userId) {
         validateCpf(request.payer().identification().type(), request.payer().identification().number());
 
         if ("uber".equals(request.shippingType())) {
@@ -78,7 +78,7 @@ public class CreatePaymentUseCase {
             orderId,
             request.checkoutSessionId(),
             request.payer().email(),
-            clerkUserId,
+            userId,
             request.payer().email(),
             request.payer().identification().type(),
             request.payer().identification().number(),
@@ -121,7 +121,7 @@ public class CreatePaymentUseCase {
             request.payer().email(),
             request.payer().identification().type(),
             request.payer().identification().number(),
-            clerkUserId,
+            userId,
             request.shippingAddress().recipientName(),
             request.shippingAddress().cep(),
             request.shippingAddress().street(),

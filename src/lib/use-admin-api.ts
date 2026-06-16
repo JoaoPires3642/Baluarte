@@ -1,19 +1,17 @@
-import { useAuth, useUser } from "@clerk/nextjs"
+import { useSession } from "next-auth/react"
 import { useCallback } from "react"
 import { getBrowserSafeApiBaseUrl } from "@/lib/api-base"
 
 export function useAdminApi() {
-  const { getToken, userId } = useAuth()
-  const { user } = useUser()
-  const email = user?.primaryEmailAddress?.emailAddress
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+  const email = session?.user?.email
 
   const authedFetch = useCallback(async (path: string, options?: RequestInit) => {
-    const token = await getToken()
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(userId ? { "X-Clerk-User-Id": userId } : {}),
-      ...(email ? { "X-Clerk-Email": email } : {}),
+      ...(userId ? { "X-User-Id": userId } : {}),
+      ...(email ? { "X-User-Email": email } : {}),
       ...(options?.headers as Record<string, string>),
     }
 
@@ -30,7 +28,7 @@ export function useAdminApi() {
     }
 
     return response.json()
-  }, [getToken, userId, email])
+  }, [userId, email])
 
   return { authedFetch }
 }

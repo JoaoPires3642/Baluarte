@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { MapPin, PackageSearch, Train } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -63,12 +64,11 @@ function formatDateBr(dateIso?: string) {
 
 async function getOrder(id: string): Promise<Order | null> {
   try {
-    const { userId, getToken } = await auth()
-    const token = await getToken()
-    if (!userId || !token) return null
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return null
 
     const res = await fetch(`${API_BASE_URL}/orders/my/${id}`, {
-      headers: { Authorization: `Bearer ${token}`, "X-Clerk-User-Id": userId },
+      headers: { "X-User-Id": session.user.id, "X-User-Email": session.user.email ?? "" },
       cache: "no-store",
     })
     if (!res.ok) return null

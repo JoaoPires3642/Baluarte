@@ -9,7 +9,7 @@ public record CreatePaymentCommand(
     String payerEmail,
     String payerDocumentType,
     String payerDocumentNumber,
-    String clerkUserId,
+    String userId,
     String recipientName,
     String shippingCep,
     String shippingStreet,

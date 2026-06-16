@@ -1,4 +1,5 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -6,23 +7,13 @@ export const runtime = "nodejs"
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 async function getAuthHeaders() {
-  const { userId, getToken, sessionClaims } = await auth()
-  if (!userId) return null
-
-  const token = await getToken()
-  if (!token) return null
-
-  const user = await currentUser()
-  const email = user?.emailAddresses?.[0]?.emailAddress?.trim().toLowerCase()
-    || (sessionClaims?.email as string)
-    || (sessionClaims?.email_address as string)
-    || `${userId}@clerk.users`
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id || !session?.user?.email) return null
 
   return {
     "Content-Type": "application/json",
-    "X-Clerk-User-Id": userId,
-    "Authorization": `Bearer ${token}`,
-    "X-Clerk-Email": email,
+    "X-User-Id": session.user.id,
+    "X-User-Email": session.user.email,
   }
 }
 

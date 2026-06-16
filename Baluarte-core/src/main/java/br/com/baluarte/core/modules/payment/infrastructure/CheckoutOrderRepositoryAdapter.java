@@ -130,15 +130,15 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
     }
 
     @Transactional(readOnly = true)
-    public List<CheckoutOrder> findByClerkUserId(String clerkUserId) {
-        return jpaRepository.findByClerkUserIdOrderByCreatedAtDesc(clerkUserId).stream()
+    public List<CheckoutOrder> findByUserId(String userId) {
+        return jpaRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
             .map(CheckoutOrderJpaEntity::toDomain)
             .toList();
     }
 
     @Transactional(readOnly = true)
-    public Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId) {
-        return jpaRepository.findByOrderIdAndClerkUserId(orderId, clerkUserId).map(CheckoutOrderJpaEntity::toDomain);
+    public Optional<CheckoutOrder> findByIdAndUserId(String orderId, String userId) {
+        return jpaRepository.findByOrderIdAndUserId(orderId, userId).map(CheckoutOrderJpaEntity::toDomain);
     }
 
     @Override

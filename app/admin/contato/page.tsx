@@ -1,6 +1,7 @@
 import { AdminContactSettingsForm } from "@/components/admin-contact-settings-form"
 import type { SiteContactSettings } from "@/lib/api"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -34,17 +35,13 @@ export default async function AdminContactSettingsPage() {
 }
 
 async function fetchSettings() {
-  const { userId, getToken } = await auth()
-  const user = await currentUser()
-  const token = await getToken()
-  const email = user?.emailAddresses?.[0]?.emailAddress || ""
+  const session = await getServerSession(authOptions)
 
   const response = await fetch(`${API_BASE_URL}/admin/contact-settings`, {
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      "X-Clerk-User-Id": userId || "",
-      "X-Clerk-Email": email,
+      "X-User-Id": session?.user?.id || "",
+      "X-User-Email": session?.user?.email || "",
     },
     cache: "no-store",
   })

@@ -8,8 +8,8 @@ public interface CheckoutOrderRepository {
     Optional<CheckoutOrder> findByCheckoutSessionId(String checkoutSessionId);
     Optional<CheckoutOrder> findByShippingLabelId(String shippingLabelId);
     List<CheckoutOrder> findByCustomerRef(String customerRef);
-    List<CheckoutOrder> findByClerkUserId(String clerkUserId);
-    Optional<CheckoutOrder> findByIdAndClerkUserId(String orderId, String clerkUserId);
+    List<CheckoutOrder> findByUserId(String userId);
+    Optional<CheckoutOrder> findByIdAndUserId(String orderId, String userId);
     List<CheckoutOrder> findAll();
     List<CheckoutOrder> findAll(int page, int size);
     List<CheckoutOrder> findByStatusIn(List<String> statuses);

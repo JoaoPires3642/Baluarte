@@ -20,7 +20,7 @@ public class AuthUserJpaEntity implements Persistable<String> {
 
     @Id
     @Column(name = "clerk_user_id", nullable = false, length = 120)
-    private String clerkUserId;
+    private String userId;
 
     @Column(name = "email", nullable = false, length = 320)
     private String email;
@@ -39,7 +39,7 @@ public class AuthUserJpaEntity implements Persistable<String> {
 
     @Override
     public String getId() {
-        return clerkUserId;
+        return userId;
     }
 
     @Override
@@ -53,10 +53,10 @@ public class AuthUserJpaEntity implements Persistable<String> {
         this.isNew = false;
     }
 
-    public static AuthUserJpaEntity createDefaultCustomer(String clerkUserId, String email) {
+    public static AuthUserJpaEntity createDefaultCustomer(String userId, String email) {
         AuthUserJpaEntity entity = new AuthUserJpaEntity();
         LocalDateTime now = LocalDateTime.now();
-        entity.clerkUserId = clerkUserId;
+        entity.userId = userId;
         entity.email = email;
         entity.role = "client";
         entity.createdAt = now;

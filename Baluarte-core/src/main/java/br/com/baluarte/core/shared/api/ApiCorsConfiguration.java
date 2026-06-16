@@ -29,8 +29,8 @@ public class ApiCorsConfiguration implements WebMvcConfigurer {
             .allowedHeaders(
                 "Authorization",
                 "Content-Type",
-                "X-Clerk-User-Id",
-                "X-Clerk-Email",
+                "X-User-Id",
+                "X-User-Email",
                 "X-Internal-Role",
                 "X-Admin-Bypass-Key",
                 "X-Requested-With"

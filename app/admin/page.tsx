@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth-config"
 import { AlertTriangle, ChevronRight } from "lucide-react"
 import { type AdminProduct, type AdminProductDashboardSummary, type Order } from "@/lib/api"
 import { getAdminLowStockVariants, toAdminLowStockReportItems } from "@/lib/admin-low-stock"
@@ -34,17 +35,12 @@ const statusColors: Record<string, string> = {
 const LOW_STOCK_THRESHOLD = 5
 
 async function getAdminHeaders() {
-  const { userId, getToken } = await auth()
-  const token = await getToken()
-  const user = await currentUser()
-  const email = user?.emailAddresses?.[0]?.emailAddress
-
-  if (!userId || !token) return null
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return null
 
   return {
-    Authorization: `Bearer ${token}`,
-    "X-Clerk-User-Id": userId,
-    ...(email && { "X-Clerk-Email": email }),
+    "X-User-Id": session.user.id,
+    ...(session.user.email && { "X-User-Email": session.user.email }),
   }
 }
 
