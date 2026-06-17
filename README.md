@@ -39,7 +39,6 @@ Baluarte/
 ├── Baluarte-core/         # Spring Boot backend
 │   ├── src/main/java/     # Java modules
 │   └── src/main/resources/db/migration/  # Flyway SQL
-├── Baluarte-web/          # React Native (Expo) mobile app
 ├── infra/                 # Infrastructure (DB init SQL)
 ├── docs/                  # Documentation
 ├── docker-compose.yml

@@ -52,7 +52,7 @@ services:
       APP_SHIPPING_SUPERFRETE_CHECKOUT_PATH: ${APP_SHIPPING_SUPERFRETE_CHECKOUT_PATH:-/api/v0/checkout}
       APP_SHIPPING_SUPERFRETE_LABEL_LINK_PATH: ${APP_SHIPPING_SUPERFRETE_LABEL_LINK_PATH:-/api/v0/tag/print}
       APP_SHIPPING_SUPERFRETE_WEBHOOK_SECRET: ${APP_SHIPPING_SUPERFRETE_WEBHOOK_SECRET:-}
-      APP_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:8081,exp://*"
+      APP_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
       APP_MEDIA_UPLOAD_DIR: ${APP_MEDIA_UPLOAD_DIR:-/var/www/uploads}
       APP_STORAGE_S3_ENDPOINT: ${APP_STORAGE_S3_ENDPOINT:-}
       APP_STORAGE_S3_REGION: ${APP_STORAGE_S3_REGION:-}
@@ -88,28 +88,6 @@ services:
       - core
     ports:
       - "3000:3000"
-
-  web:
-    build:
-      context: ./Baluarte-web
-    container_name: baluarte-web
-    restart: unless-stopped
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${PORT:-8081}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://core:8080}
-      EXPO_PUBLIC_API_BASE_URL: ${EXPO_PUBLIC_API_BASE_URL:-http://core:8080}
-      EXPO_PUBLIC_ENV: ${EXPO_PUBLIC_ENV:-development}
-      EXPO_PUBLIC_USE_MOCK_CATEGORIES: ${EXPO_PUBLIC_USE_MOCK_CATEGORIES:-false}
-      EXPO_PUBLIC_ADMIN_EMAILS: ${EXPO_PUBLIC_ADMIN_EMAILS:-}
-      EXPO_PUBLIC_ADMIN_BYPASS_KEY: ${EXPO_PUBLIC_ADMIN_BYPASS_KEY:-}
-      EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: ${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
-      EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${EXPO_PUBLIC_MERCADOPAGO_PUBLIC_KEY:-}
-      EXPO_PUBLIC_SHIPPING_PROVIDER: ${EXPO_PUBLIC_SHIPPING_PROVIDER:-melhor_envio}
-    depends_on:
-      - core
-    ports:
-      - "8081:8081"
 
 volumes:
   postgres_data:

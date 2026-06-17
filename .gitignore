@@ -87,7 +87,6 @@ sonar-project.properties
 
 # Docker local overrides
 docker-compose.override.yml
-Baluarte-web/REFATORACAO-ETAPAS.md
 .vercel
 
 .scannerwork/
