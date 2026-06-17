@@ -7,15 +7,15 @@ O front-end web fica em `/Baluarte` (raiz do Next.js) e faz deploy automático v
 ### Stack
 
 - **Next.js 16** (Turbopack, App Router)
-- **Clerk** (autenticação)
-- **Proxy (ex-middleware)** roda em Node.js runtime (`proxy.ts`, renomeado conforme Next.js 16)
+- **next-auth** com FusionAuth (autenticação via CredentialsProvider)
+- Proxy roda em Node.js runtime
 
 ### Estrutura
 
 ```
 Baluarte/          ← raiz do Next.js (detectada automaticamente pela Vercel)
 ├── app/           ← rotas App Router
-├── proxy.ts       ← Clerk middleware
+├── proxy.ts       ← proxy de API
 ├── src/           ← componentes, lib, API client
 └── .vercel/       ← link do projeto Vercel
 ```
@@ -27,7 +27,6 @@ Configure no dashboard da Vercel (`https://vercel.com/.../settings/environment-v
 Públicas (prefixo `NEXT_PUBLIC_`):
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_<...>
 NEXT_PUBLIC_API_BASE_URL=https://<backend-host>/api/v1
 NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=<mercadopago-public-key>
 ```
@@ -35,7 +34,12 @@ NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=<mercadopago-public-key>
 Secretas:
 
 ```env
-CLERK_SECRET_KEY=sk_<...>
+NEXTAUTH_URL=https://<seu-dominio>
+NEXTAUTH_SECRET=<random-secret>
+FUSIONAUTH_ISSUER=https://auth.stackway.xyz
+FUSIONAUTH_CLIENT_ID=<fusionauth-client-id>
+FUSIONAUTH_CLIENT_SECRET=<fusionauth-client-secret>
+FUSIONAUTH_API_KEY=<fusionauth-api-key>
 ```
 
 Não coloque valores reais em `.env` versionado. Use o dashboard da Vercel para secrets.
@@ -60,11 +64,21 @@ npm run build
 - Anteriormente usava Cloudflare Pages com `@cloudflare/next-on-pages`
 - Migrado para Vercel após limite de 3 MiB em Workers free
 - `middleware.ts` renomeado para `proxy.ts` (convenção Next.js 16)
-- Monorepo eliminado: `baluarte-next/` movido para raiz do repositório
+- Autenticação migrada de Clerk → Keycloak → FusionAuth
 
-## Backend Spring Boot no Railway
+## Backend Spring Boot
 
 O backend `Baluarte-core` é Spring Boot com PostgreSQL, JPA e Flyway.
+
+### Stack do backend
+
+- Java 21 (GraalVM native image opcional)
+- Spring Boot + Spring Security + NimbusJwtDecoder (validação JWT RS256 via JWKS)
+- Flyway (migrations)
+- PostgreSQL (H2 para testes)
+- S3-compatible storage (R2, MinIO)
+- Mercado Pago (pagamentos)
+- SuperFrete (frete)
 
 ### Ordem correta
 
@@ -154,10 +168,12 @@ Se o nome do serviço de banco no Railway não for `Postgres`, ajuste o prefixo 
 Auth, CORS, pagamento e frete:
 
 ```env
-APP_AUTH_CLERK_ISSUER=https://<clerk-domain>.clerk.accounts.dev
-APP_AUTH_CLERK_JWKS_URI=https://<clerk-domain>.clerk.accounts.dev/.well-known/jwks.json
+APP_FUSIONAUTH_ISSUER=auth.stackway.xyz
+APP_FUSIONAUTH_JWKS_URI=https://auth.stackway.xyz/.well-known/jwks.json
+APP_FUSIONAUTH_API_KEY=<fusionauth-api-key>
+APP_FUSIONAUTH_APPLICATION_ID=<fusionauth-app-id>
 APP_AUTH_ADMIN_EMAILS=<emails-admin-separados-por-virgula>
-APP_AUTH_ADMIN_CLERK_USER_IDS=<ids-admin-separados-por-virgula>
+APP_AUTH_ADMIN_USER_IDS=<ids-admin-separados-por-virgula>
 APP_AUTH_DEV_BYPASS_ENABLED=false
 APP_CORS_ALLOWED_ORIGINS=https://baluarte-ozb5.vercel.app,https://<dominio-customizado>
 
@@ -171,6 +187,12 @@ APP_SHIPPING_SUPERFRETE_BASE_URL=https://sandbox.superfrete.com
 APP_SHIPPING_SUPERFRETE_TOKEN=<secret>
 APP_SHIPPING_SUPERFRETE_SERVICES=1,2,17
 APP_SHIPPING_SUPERFRETE_USER_AGENT=Baluarte/1.0 (contato@baluarte.com)
+
+APP_STORAGE_S3_ENDPOINT=<s3-endpoint>
+APP_STORAGE_S3_REGION=auto
+APP_STORAGE_S3_BUCKET=<bucket-name>
+APP_STORAGE_S3_ACCESS_KEY_ID=<access-key>
+APP_STORAGE_S3_SECRET_ACCESS_KEY=<secret-key>
 ```
 
 Para produção SuperFrete, a troca deve ser só por variável de ambiente:
@@ -202,12 +224,6 @@ Resposta esperada:
 
 ```json
 {"status":"UP"}
-```
-
-Também valide CORS pelo frontend depois de configurar a Vercel:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=https://baluarte-core-native-production.up.railway.app/api/v1
 ```
 
 ### Webhooks externos
@@ -282,6 +298,6 @@ curl https://<backend-host>/actuator/health
 Após deploy do front-end, validar no navegador:
 
 - carregamento da home;
-- login Clerk (sign-in / sign-up);
+- login com FusionAuth (sign-in / sign-up);
 - chamadas para `NEXT_PUBLIC_API_BASE_URL`;
 - fluxo de checkout (se credenciais de pagamento configuradas).

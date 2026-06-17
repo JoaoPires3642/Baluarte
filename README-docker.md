@@ -1,8 +1,8 @@
-# Baluarte - Docker + PostgreSQL (Supabase-compatible)
+# Baluarte - Docker + PostgreSQL
 
 This setup runs:
 - PostgreSQL local database
-- Core API service
+- Core API service (Spring Boot)
 - Next.js frontend
 
 ## 0) Environment variables (required for external integrations)
@@ -15,19 +15,19 @@ cp .env.example .env
 
 Then fill the real values for:
 
-- Clerk backend auth (`APP_AUTH_CLERK_ISSUER`, `APP_AUTH_CLERK_JWKS_URI`, `APP_AUTH_CLERK_SECRET_KEY`, `APP_AUTH_CLERK_WEBHOOK_SECRET`)
+- FusionAuth backend auth (`APP_FUSIONAUTH_ISSUER`, `APP_FUSIONAUTH_JWKS_URI`, `APP_FUSIONAUTH_API_KEY`, `APP_FUSIONAUTH_APPLICATION_ID`)
 - Mercado Pago (`APP_PAYMENT_MERCADOPAGO_ACCESS_TOKEN`, `APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET`)
-- Shipping and label provider (`APP_SHIPPING_API_TOKEN`, `APP_SHIPPING_WEBHOOK_SECRET`)
+- Shipping provider (`APP_SHIPPING_SUPERFRETE_TOKEN`, `APP_SHIPPING_SUPERFRETE_WEBHOOK_SECRET`)
+- S3 storage (`APP_STORAGE_S3_*`)
 
 Important:
 
 - Do not commit `.env`.
 - Secret keys must stay only in backend/server environments.
-- Web/Expo should use only public keys (`EXPO_PUBLIC_*`).
 
-### Optional local-only admin bypass (without real Clerk token)
+### Optional local-only admin bypass
 
-For manual local testing of admin flows, you can bypass Clerk JWT verification using a shared dev key.
+For manual local testing of admin flows, you can bypass FusionAuth JWT verification using a shared dev key.
 
 Add in `.env`:
 
@@ -124,6 +124,6 @@ DB_PASSWORD=<password>
 ## 5) Notes
 
 - Core service is Spring Boot (`Baluarte-core`) with Actuator health endpoint.
-- Frontend is containerized in production mode (`npm run build` + `npm start`).
+- Frontend is containerized in production mode (`npm run build` + standalone).
 - You can evolve the SQL and API without changing the docker base structure.
 - The compose file reads integration credentials directly from root `.env`.
