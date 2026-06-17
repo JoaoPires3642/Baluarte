@@ -47,6 +47,13 @@ jobs:
           -Dspring.datasource.url=jdbc:postgresql://localhost:5432/baluarte_test
           -Dspring.datasource.driver-class-name=org.postgresql.Driver
 
+      - name: Upload coverage to Codacy
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: |
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) report \
+            -r Baluarte-core/target/site/jacoco/jacoco.xml
+
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v6
         with:
