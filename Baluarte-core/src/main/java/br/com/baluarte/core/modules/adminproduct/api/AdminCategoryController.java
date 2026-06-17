@@ -22,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/admin/categories")
 public class AdminCategoryController {
 
+    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Categoria nao encontrada";
+
     private final CategoryRepository categoryRepository;
 
     public AdminCategoryController(CategoryRepository categoryRepository) {
@@ -39,7 +41,7 @@ public class AdminCategoryController {
     @GetMapping("/{id}")
     public ApiSuccessResponse<CategoryResponse> getCategory(@PathVariable UUID id) {
         Category category = categoryRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria nao encontrada"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CATEGORY_NOT_FOUND_MESSAGE));
         return ApiSuccessResponse.of(toResponse(category));
     }
 
@@ -62,7 +64,7 @@ public class AdminCategoryController {
         @Valid @RequestBody UpdateCategoryRequest request
     ) {
         Category existing = categoryRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria nao encontrada"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CATEGORY_NOT_FOUND_MESSAGE));
         Category updated = categoryRepository.save(new Category(
             id,
             request.name(),
@@ -77,7 +79,7 @@ public class AdminCategoryController {
     @DeleteMapping("/{id}")
     public ApiSuccessResponse<Void> deleteCategory(@PathVariable UUID id) {
         Category existing = categoryRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoria nao encontrada"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, CATEGORY_NOT_FOUND_MESSAGE));
         categoryRepository.deleteById(id);
         return ApiSuccessResponse.of(null);
     }

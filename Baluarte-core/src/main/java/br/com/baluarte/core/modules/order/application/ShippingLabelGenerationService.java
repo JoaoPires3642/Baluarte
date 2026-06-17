@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ShippingLabelGenerationService {
 
+    private static final String STATUS_PROCESSING = "processing";
+
     private final CheckoutOrderRepository orderRepository;
     private final SuperFreteShippingLabelService shippingLabelService;
 
@@ -26,7 +28,7 @@ public class ShippingLabelGenerationService {
     @Transactional
     public CheckoutOrder generateForOrder(CheckoutOrder order) {
         if ("station".equals(order.getShippingType())) {
-            order.setStatus("processing");
+            order.setStatus(STATUS_PROCESSING);
             order.setUpdatedAt(Instant.now());
             return orderRepository.save(order);
         }
@@ -54,14 +56,14 @@ public class ShippingLabelGenerationService {
             }
         }
 
-        order.setStatus("processing");
+        order.setStatus(STATUS_PROCESSING);
         order.setUpdatedAt(Instant.now());
         return orderRepository.save(order);
     }
 
     @Transactional
     public BulkShippingLabelGenerationResult generatePending(Instant createdBefore) {
-        List<CheckoutOrder> candidates = orderRepository.findByStatusIn(List.of("paid", "processing")).stream()
+        List<CheckoutOrder> candidates = orderRepository.findByStatusIn(List.of("paid", STATUS_PROCESSING)).stream()
             .filter(order -> !"station".equals(order.getShippingType()))
             .filter(order -> order.getShippingLabelUrl() == null || order.getShippingLabelUrl().isBlank())
             .filter(order -> createdBefore == null || order.getCreatedAt() == null || order.getCreatedAt().isBefore(createdBefore))

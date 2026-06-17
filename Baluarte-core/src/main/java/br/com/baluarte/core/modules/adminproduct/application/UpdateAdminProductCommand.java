@@ -20,5 +20,5 @@ public record UpdateAdminProductCommand(
     boolean featured,
     String sizeCategory,
     List<CreateAdminProductVariantCommand> variants
-) {
+) implements AdminProductCommandInput {
 }

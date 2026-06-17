@@ -39,6 +39,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String UNAUTHORIZED_CODE = "UNAUTHORIZED";
 
     private final ObjectMapper objectMapper;
     private final FusionAuthProperties properties;
@@ -69,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
-        String auth = request.getHeader("Authorization");
+        String auth = request.getHeader(AUTHORIZATION_HEADER);
         return auth == null || !auth.startsWith(BEARER_PREFIX);
     }
 
@@ -79,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
+        String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
 
         try {
@@ -87,7 +89,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String userId = jwt.getSubject();
             if (userId == null || userId.isBlank()) {
-                writeError(response, request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid token subject");
+                writeError(response, request, HttpStatus.UNAUTHORIZED, UNAUTHORIZED_CODE, "Invalid token subject");
                 return;
             }
 
@@ -99,7 +101,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             if (email == null || email.isBlank()) {
-                writeError(response, request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Unable to resolve user identity");
+                writeError(response, request, HttpStatus.UNAUTHORIZED, UNAUTHORIZED_CODE, "Unable to resolve user identity");
                 return;
             }
 
@@ -117,7 +119,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } catch (BadJwtException e) {
             logger.debug("JWT validation failed: {}", e.getMessage());
-            writeError(response, request, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired token");
+            writeError(response, request, HttpStatus.UNAUTHORIZED, UNAUTHORIZED_CODE, "Invalid or expired token");
         }
     }
 
@@ -151,7 +153,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String apiBase = properties.getIssuer().startsWith("http") ? properties.getIssuer() : "https://" + properties.getIssuer();
             java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
                 .uri(java.net.URI.create(apiBase + "/api/user/" + userId))
-                .header("Authorization", properties.getApiKey())
+                .header(AUTHORIZATION_HEADER, properties.getApiKey())
                 .timeout(Duration.ofSeconds(5))
                 .GET()
                 .build();

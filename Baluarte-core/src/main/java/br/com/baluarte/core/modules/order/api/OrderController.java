@@ -39,6 +39,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class OrderController {
 
+    private static final String ORDER_NOT_FOUND_MESSAGE = "Pedido nao encontrado";
+
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final InternalRoleResolver internalRoleResolver;
@@ -87,7 +89,7 @@ public class OrderController {
         resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE);
         }
 
         return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
@@ -123,7 +125,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") String userId
     ) {
         CheckoutOrder order = orderRepository.findByIdAndUserId(orderId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE));
 
         return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
     }
@@ -138,7 +140,7 @@ public class OrderController {
     ) {
         resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE));
 
         if (!List.of("pending_payment", "pending", "paid", "processing", "shipped", "delivered", "cancelled").contains(request.status())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status invalido");
@@ -162,7 +164,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") String userId
     ) {
         CheckoutOrder order = orderRepository.findByIdAndUserId(orderId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE));
 
         try {
             return ApiSuccessResponse.of(toResponse(orderCancellationService.cancelByCustomer(order)));
@@ -181,7 +183,7 @@ public class OrderController {
     ) {
         resolveAdmin(userId, userEmail);
         CheckoutOrder order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE));
 
         if (!List.of("paid", "processing").contains(order.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Etiqueta so pode ser gerada para pedido pago");
@@ -233,54 +235,17 @@ public class OrderController {
     }
 
     private OrderResponse toResponse(CheckoutOrder order) {
-        List<OrderItemResponse> items = order.getItems() != null
-            ? order.getItems().stream()
-                .map(item -> new OrderItemResponse(
-                    item.getProductId(),
-                    item.getProductName() != null ? item.getProductName() : "Produto #" + item.getProductId(),
-                    item.getSize(),
-                    item.getQuantity(),
-                    item.getUnitPrice().doubleValue()
-                ))
-                .toList()
-            : List.of();
-
-        String shippingAddress = order.getShippingStreet() != null
-            ? String.format("%s, %s%s - %s, %s - %s",
-                order.getShippingStreet(),
-                order.getShippingNumber() != null ? order.getShippingNumber() : "s/n",
-                order.getShippingComplement() != null && !order.getShippingComplement().isBlank() ? " - " + order.getShippingComplement() : "",
-                order.getShippingNeighborhood() != null ? order.getShippingNeighborhood() : "",
-                order.getShippingCity() != null ? order.getShippingCity() : "",
-                order.getShippingState() != null ? order.getShippingState() : "")
-            : null;
-
-        PaymentResponse payment = null;
-        if ("pending_payment".equals(order.getStatus())) {
-            Optional<PaymentTransaction> tx = paymentTransactionRepository.findByOrderId(order.getOrderId());
-            if (tx.isPresent() && "pix".equals(tx.get().getMethod())) {
-                PaymentTransaction p = tx.get();
-                payment = new PaymentResponse(
-                    p.getMethod(),
-                    p.getPixQrCode(),
-                    p.getPixQrCodeBase64(),
-                    p.getPixQrCode()
-                );
-            }
-        }
-
-        String orderReference = order.getOrderNumber() != null ? "BAL" + order.getOrderNumber() : order.getOrderId();
         return new OrderResponse(
             order.getOrderId(),
-            orderReference,
+            resolveOrderReference(order),
             order.getStatus(),
-            order.getCreatedAt() != null ? order.getCreatedAt().toString() : "",
-            order.getUpdatedAt() != null ? order.getUpdatedAt().toString() : "",
+            formatInstant(order.getCreatedAt()),
+            formatInstant(order.getUpdatedAt()),
             order.getTotalAmount().doubleValue(),
-            items,
+            buildItems(order),
             new ShippingResponse(
                 order.getRecipientName(),
-                shippingAddress,
+                buildShippingAddress(order),
                 order.getTrackingCode(),
                 order.getShippingProvider(),
                 order.getShippingServiceId(),
@@ -293,7 +258,56 @@ public class OrderController {
                 order.getDeliveryDate(),
                 order.getDeliveryTimeSlot()
             ),
-            payment
+            resolvePayment(order)
         );
+    }
+
+    private String resolveOrderReference(CheckoutOrder order) {
+        return order.getOrderNumber() != null ? "BAL" + order.getOrderNumber() : order.getOrderId();
+    }
+
+    private String formatInstant(Instant instant) {
+        return instant != null ? instant.toString() : "";
+    }
+
+    private List<OrderItemResponse> buildItems(CheckoutOrder order) {
+        if (order.getItems() == null) {
+            return List.of();
+        }
+        return order.getItems().stream()
+            .map(item -> new OrderItemResponse(
+                item.getProductId(),
+                item.getProductName() != null ? item.getProductName() : "Produto #" + item.getProductId(),
+                item.getSize(),
+                item.getQuantity(),
+                item.getUnitPrice().doubleValue()
+            ))
+            .toList();
+    }
+
+    private String buildShippingAddress(CheckoutOrder order) {
+        if (order.getShippingStreet() == null) {
+            return null;
+        }
+        return String.format("%s, %s%s - %s, %s - %s",
+            order.getShippingStreet(),
+            order.getShippingNumber() != null ? order.getShippingNumber() : "s/n",
+            order.getShippingComplement() != null && !order.getShippingComplement().isBlank()
+                ? " - " + order.getShippingComplement() : "",
+            order.getShippingNeighborhood() != null ? order.getShippingNeighborhood() : "",
+            order.getShippingCity() != null ? order.getShippingCity() : "",
+            order.getShippingState() != null ? order.getShippingState() : "");
+    }
+
+    private PaymentResponse resolvePayment(CheckoutOrder order) {
+        if (!"pending_payment".equals(order.getStatus())) {
+            return null;
+        }
+        Optional<PaymentTransaction> tx = paymentTransactionRepository.findByOrderId(order.getOrderId());
+        if (tx.isEmpty() || !"pix".equals(tx.get().getMethod())) {
+            return null;
+        }
+        PaymentTransaction p = tx.get();
+        return new PaymentResponse(p.getMethod(), p.getPixQrCode(), p.getPixQrCodeBase64(), p.getPixQrCode());
     }
 }

@@ -23,6 +23,9 @@ import org.springframework.web.client.RestClient;
 public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy {
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+    private static final String FIELD_STATUS = "status";
+    private static final String FIELD_STATUS_DETAIL = "status_detail";
+    private static final String STATUS_PENDING = "pending";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -109,8 +112,8 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
                 ? refundOrder(providerOrderId, idempotencyKey)
                 : refundPayment(providerPaymentId, idempotencyKey);
 
-            String status = valueAsString(response != null ? response.get("status") : null);
-            String statusDetail = valueAsString(response != null ? response.get("status_detail") : null);
+            String status = valueAsString(response != null ? response.get(FIELD_STATUS) : null);
+            String statusDetail = valueAsString(response != null ? response.get(FIELD_STATUS_DETAIL) : null);
             return new PaymentRefundResult(
                 status != null ? status : "refunded",
                 statusDetail != null ? statusDetail : "refunded"
@@ -206,54 +209,54 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     }
 
     private PaymentGatewayResult mapOrderToResult(Map<String, Object> response, String method, Integer installments) {
-        String orderStatus = valueAsString(response.get("status"));
-        String orderStatusDetail = valueAsString(response.get("status_detail"));
+        String orderStatus = valueAsString(response.get(FIELD_STATUS));
+        String orderStatusDetail = valueAsString(response.get(FIELD_STATUS_DETAIL));
         String orderId = valueAsString(response.get("id"));
 
         Map<String, Object> payment = firstPayment(response);
-        String paymentStatus = payment != null ? valueAsString(payment.get("status")) : orderStatus;
-        String paymentStatusDetail = payment != null ? valueAsString(payment.get("status_detail")) : orderStatusDetail;
+        String paymentStatus = payment != null ? valueAsString(payment.get(FIELD_STATUS)) : orderStatus;
+        String paymentStatusDetail = payment != null ? valueAsString(payment.get(FIELD_STATUS_DETAIL)) : orderStatusDetail;
         String providerPaymentId = payment != null ? valueAsString(payment.get("id")) : orderId;
 
         if (isApproved(orderStatus, paymentStatus)) {
             return PaymentGatewayResult.approvedCard(
-                providerPaymentId,
-                orderId,
-                "approved",
-                paymentStatusDetail != null ? paymentStatusDetail : "accredited",
-                installments
-            );
-        }
-
-        if ("pix".equals(method) && isPending(orderStatus, paymentStatus)) {
-            Map<String, Object> paymentMethod = payment != null ? (Map<String, Object>) payment.get("payment_method") : null;
-            String qrCode = paymentMethod != null ? valueAsString(paymentMethod.get("qr_code")) : null;
-            String qrCodeBase64 = paymentMethod != null ? valueAsString(paymentMethod.get("qr_code_base64")) : null;
-            return PaymentGatewayResult.pendingPix(
-                providerPaymentId,
-                orderId,
-                "pending",
-                paymentStatusDetail != null ? paymentStatusDetail : "waiting_transfer",
-                qrCode,
-                qrCodeBase64,
-                qrCode
+                providerPaymentId, orderId, "approved",
+                firstNonNull(paymentStatusDetail, "accredited"), installments
             );
         }
 
         if (isPending(orderStatus, paymentStatus)) {
+            return buildPendingResult(method, payment, providerPaymentId, orderId, paymentStatusDetail);
+        }
+
+        return PaymentGatewayResult.rejectedCard(
+            providerPaymentId, orderId, "rejected",
+            firstNonNull(paymentStatusDetail, "rejected"), installments
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private PaymentGatewayResult buildPendingResult(
+        String method, Map<String, Object> payment, String providerPaymentId, String orderId, String paymentStatusDetail
+    ) {
+        if (!"pix".equals(method)) {
             return PaymentGatewayResult.pendingPix(
-                providerPaymentId,
-                orderId,
-                "pending",
-                paymentStatusDetail != null ? paymentStatusDetail : "pending",
-                null,
-                null,
-                null
+                providerPaymentId, orderId, STATUS_PENDING,
+                firstNonNull(paymentStatusDetail, STATUS_PENDING), null, null, null
             );
         }
 
-        String detail = paymentStatusDetail != null ? paymentStatusDetail : "rejected";
-        return PaymentGatewayResult.rejectedCard(providerPaymentId, orderId, "rejected", detail, installments);
+        Map<String, Object> paymentMethod = payment != null ? (Map<String, Object>) payment.get("payment_method") : null;
+        String qrCode = paymentMethod != null ? valueAsString(paymentMethod.get("qr_code")) : null;
+        String qrCodeBase64 = paymentMethod != null ? valueAsString(paymentMethod.get("qr_code_base64")) : null;
+        return PaymentGatewayResult.pendingPix(
+            providerPaymentId, orderId, STATUS_PENDING,
+            firstNonNull(paymentStatusDetail, "waiting_transfer"), qrCode, qrCodeBase64, qrCode
+        );
+    }
+
+    private String firstNonNull(String value, String defaultValue) {
+        return value != null ? value : defaultValue;
     }
 
     private Map<String, Object> firstPayment(Map<String, Object> response) {
@@ -268,7 +271,7 @@ public class MercadoPagoPaymentGatewayStrategy implements PaymentGatewayStrategy
     }
 
     private boolean isPending(String orderStatus, String paymentStatus) {
-        return "action_required".equals(orderStatus) || "pending".equals(paymentStatus)
+        return "action_required".equals(orderStatus) || STATUS_PENDING.equals(paymentStatus)
             || "in_process".equals(paymentStatus) || "action_required".equals(paymentStatus);
     }
 

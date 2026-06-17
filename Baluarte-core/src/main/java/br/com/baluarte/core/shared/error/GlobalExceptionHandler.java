@@ -21,6 +21,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String VALIDATION_ERROR_CODE = "VALIDATION_ERROR";
+    private static final String VALIDATION_FAILED_MESSAGE = "Request validation failed";
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
@@ -34,8 +36,8 @@ public class GlobalExceptionHandler {
 
         return buildResponse(
             HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
-            "Request validation failed",
+            VALIDATION_ERROR_CODE,
+            VALIDATION_FAILED_MESSAGE,
             details,
             request
         );
@@ -53,8 +55,8 @@ public class GlobalExceptionHandler {
 
         return buildResponse(
             HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
-            "Request validation failed",
+            VALIDATION_ERROR_CODE,
+            VALIDATION_FAILED_MESSAGE,
             details,
             request
         );
@@ -78,8 +80,8 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
-            "Request validation failed",
+            VALIDATION_ERROR_CODE,
+            VALIDATION_FAILED_MESSAGE,
             exception.getFieldErrors(),
             request
         );
@@ -92,7 +94,7 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
-            "VALIDATION_ERROR",
+            VALIDATION_ERROR_CODE,
             exception.getMessage(),
             List.of(),
             request

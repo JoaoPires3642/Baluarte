@@ -25,6 +25,8 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/admin/teams")
 public class AdminTeamController {
 
+    private static final String TEAM_NOT_FOUND_MESSAGE = "Time nao encontrado";
+
     private final TeamRepository teamRepository;
     private final CategoryRepository categoryRepository;
 
@@ -44,7 +46,7 @@ public class AdminTeamController {
     @GetMapping("/{id}")
     public ApiSuccessResponse<TeamResponse> getTeam(@PathVariable UUID id) {
         Team team = teamRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Time nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND_MESSAGE));
         return ApiSuccessResponse.of(toResponse(team));
     }
 
@@ -74,7 +76,7 @@ public class AdminTeamController {
         @Valid @RequestBody UpdateTeamRequest request
     ) {
         Team existing = teamRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Time nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND_MESSAGE));
         var category = categoryRepository.findById(request.categoryId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Categoria nao encontrada"));
 
@@ -96,7 +98,7 @@ public class AdminTeamController {
     @DeleteMapping("/{id}")
     public ApiSuccessResponse<Void> deleteTeam(@PathVariable UUID id) {
         teamRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Time nao encontrado"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND_MESSAGE));
         teamRepository.deleteById(id);
         return ApiSuccessResponse.of(null);
     }

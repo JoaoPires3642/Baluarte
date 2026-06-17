@@ -18,5 +18,5 @@ public record CreateAdminProductCommand(
     boolean featured,
     String sizeCategory,
     List<CreateAdminProductVariantCommand> variants
-) {
+) implements AdminProductCommandInput {
 }

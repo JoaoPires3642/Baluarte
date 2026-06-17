@@ -19,6 +19,12 @@ public class SuperFreteShippingLabelService {
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private static final TypeReference<List<Object>> LIST_TYPE = new TypeReference<>() {};
+    private static final String ORDERS_KEY = "orders";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String[] TRACKING_KEYS = {
+        "tracking_code", "tracking", "code", "authorization_code",
+        "object_code", "codigo_rastreio", "codigoRastreio", "rastreio"
+    };
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -121,29 +127,26 @@ public class SuperFreteShippingLabelService {
         if (labelId == null || labelId.isBlank()) {
             throw new IllegalStateException("SuperFrete label id missing");
         }
-        Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of("orders", List.of(labelId)), settings);
+        Map<String, Object> checkoutResponse = post(settings.superfreteCheckoutPath(), Map.of(ORDERS_KEY, List.of(labelId)), settings);
         String checkoutLabelId = firstValue(checkoutResponse, "id", "order_id", "protocol", "uuid");
         if (checkoutLabelId != null && !checkoutLabelId.isBlank()) {
             labelId = checkoutLabelId;
         }
 
         String labelUrl = firstValue(checkoutResponse, "label_url", "print_url", "url", "link");
-        String trackingCode = firstValue(checkoutResponse, "tracking_code", "tracking", "code", "authorization_code",
-            "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+        String trackingCode = firstValue(checkoutResponse, TRACKING_KEYS);
         if (labelUrl == null || labelUrl.isBlank() || trackingCode == null || trackingCode.isBlank()) {
             Map<String, Object> linkResponse = printLabel(labelId, settings);
             if (labelUrl == null || labelUrl.isBlank()) {
                 labelUrl = firstValue(linkResponse, "label_url", "print_url", "url", "link");
             }
             if (trackingCode == null || trackingCode.isBlank()) {
-                trackingCode = firstValue(linkResponse, "tracking_code", "tracking", "code", "authorization_code",
-                    "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+                trackingCode = firstValue(linkResponse, TRACKING_KEYS);
             }
         }
         if (trackingCode == null || trackingCode.isBlank()) {
             Map<String, Object> orderInfoResponse = orderInfo(labelId, settings);
-            trackingCode = firstValue(orderInfoResponse, "tracking_code", "tracking", "code", "authorization_code",
-                "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+            trackingCode = firstValue(orderInfoResponse, TRACKING_KEYS);
         }
 
         return new ShippingLabelResult(labelId, labelUrl, trackingCode);
@@ -156,8 +159,7 @@ public class SuperFreteShippingLabelService {
             throw new IllegalStateException("SuperFrete label id missing");
         }
         Map<String, Object> orderInfoResponse = orderInfo(labelId, settings);
-        String trackingCode = firstValue(orderInfoResponse, "tracking_code", "tracking", "code", "authorization_code",
-            "object_code", "codigo_rastreio", "codigoRastreio", "rastreio");
+        String trackingCode = firstValue(orderInfoResponse, TRACKING_KEYS);
         return new ShippingLabelResult(labelId, null, trackingCode);
     }
 
@@ -257,8 +259,8 @@ public class SuperFreteShippingLabelService {
             .uri(path)
             .header("Authorization", "Bearer " + settings.superfreteToken())
             .header("User-Agent", settings.superfreteUserAgent())
-            .header("accept", "application/json")
-            .header("content-type", "application/json")
+            .header("accept", APPLICATION_JSON)
+            .header("content-type", APPLICATION_JSON)
             .body(body)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
@@ -272,7 +274,7 @@ public class SuperFreteShippingLabelService {
             .uri(path)
             .header("Authorization", "Bearer " + settings.superfreteToken())
             .header("User-Agent", settings.superfreteUserAgent())
-            .header("accept", "application/json")
+            .header("accept", APPLICATION_JSON)
             .retrieve()
             .onStatus(HttpStatusCode::isError, (req, resp) -> {
                 throw new IllegalStateException("SuperFrete label link failed: " + resp.getStatusCode() + " - " + responseBody(resp));
@@ -285,7 +287,7 @@ public class SuperFreteShippingLabelService {
         if (path == null || path.isBlank() || path.contains("{id}")) {
             path = "/api/v0/tag/print";
         }
-        return post(path, Map.of("orders", List.of(labelId)), settings);
+        return post(path, Map.of(ORDERS_KEY, List.of(labelId)), settings);
     }
 
     private Map<String, Object> orderInfo(String labelId, AdminShippingSettingsValues settings) {
@@ -307,7 +309,7 @@ public class SuperFreteShippingLabelService {
             String text = stringFromCandidate(value, keys);
             if (text != null) return text;
         }
-        for (String containerKey : List.of("data", "orders", "order")) {
+        for (String containerKey : List.of("data", ORDERS_KEY, "order")) {
             String text = stringFromCandidate(source.get(containerKey), keys);
             if (text != null) return text;
         }

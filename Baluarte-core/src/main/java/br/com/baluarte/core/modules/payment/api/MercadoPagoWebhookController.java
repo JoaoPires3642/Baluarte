@@ -38,6 +38,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/payment/webhooks/mercadopago")
 public class MercadoPagoWebhookController {
     private static final Logger log = LoggerFactory.getLogger(MercadoPagoWebhookController.class);
+    private static final String FIELD_STATUS = "status";
+    private static final String STATUS_CANCELLED = "cancelled";
+    private static final String STATUS_REFUNDED = "refunded";
 
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository transactionRepository;
@@ -96,16 +99,16 @@ public class MercadoPagoWebhookController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido local nao encontrado"));
 
         Map<String, Object> payment = firstPayment(mercadoPagoOrder);
-        String orderStatus = stringValue(mercadoPagoOrder, "status");
+        String orderStatus = stringValue(mercadoPagoOrder, FIELD_STATUS);
         String orderStatusDetail = stringValue(mercadoPagoOrder, "status_detail");
-        String paymentStatus = payment != null ? stringValue(payment, "status") : orderStatus;
+        String paymentStatus = payment != null ? stringValue(payment, FIELD_STATUS) : orderStatus;
         String paymentStatusDetail = payment != null ? stringValue(payment, "status_detail") : orderStatusDetail;
         String nextStatus = resolveLocalOrderStatus(orderStatus, paymentStatus);
 
         String previousStatus = order.getStatus();
-        if ("cancelled".equals(previousStatus) && "paid".equals(nextStatus)) {
+        if (STATUS_CANCELLED.equals(previousStatus) && "paid".equals(nextStatus)) {
             refundPaymentReceivedAfterCancellation(order, mercadoPagoOrderId, payment, paymentStatusDetail);
-            return ApiSuccessResponse.of(Map.of("status", "ok", "orderStatus", previousStatus));
+            return ApiSuccessResponse.of(Map.of(FIELD_STATUS, "ok", "orderStatus", previousStatus));
         }
 
         if (!previousStatus.equals(nextStatus)) {
@@ -116,11 +119,11 @@ public class MercadoPagoWebhookController {
 
         updatePaymentTransaction(order.getOrderId(), mercadoPagoOrderId, payment, nextStatus, paymentStatusDetail);
 
-        if ("cancelled".equals(nextStatus) && "pending_payment".equals(previousStatus)) {
+        if (STATUS_CANCELLED.equals(nextStatus) && "pending_payment".equals(previousStatus)) {
             releaseOrderStock(order);
         }
 
-        return ApiSuccessResponse.of(Map.of("status", "ok", "orderStatus", nextStatus));
+        return ApiSuccessResponse.of(Map.of(FIELD_STATUS, "ok", "orderStatus", nextStatus));
     }
 
     private Map<String, Object> fetchMercadoPagoOrder(String orderId) {
@@ -184,11 +187,11 @@ public class MercadoPagoWebhookController {
             );
             transaction.setProviderPaymentId(providerPaymentId);
             transaction.setProviderOrderId(providerOrderId);
-            transaction.setStatus(refund.status() != null && !refund.status().isBlank() ? refund.status() : "refunded");
+            transaction.setStatus(refund.status() != null && !refund.status().isBlank() ? refund.status() : STATUS_REFUNDED);
             transaction.setStatusDetail(refund.statusDetail() != null && !refund.statusDetail().isBlank()
                 ? refund.statusDetail()
                 : "payment_received_after_cancellation_refunded");
-            if ("refunded".equals(transaction.getStatus()) && statusDetail != null && !statusDetail.isBlank()) {
+            if (STATUS_REFUNDED.equals(transaction.getStatus()) && statusDetail != null && !statusDetail.isBlank()) {
                 transaction.setStatusDetail(transaction.getStatusDetail() + "; original_status_detail=" + statusDetail);
             }
         } catch (PaymentValidationException exception) {
@@ -205,9 +208,9 @@ public class MercadoPagoWebhookController {
         if (isAny(orderStatus, "processed", "paid") || isAny(paymentStatus, "processed", "approved")) {
             return "paid";
         }
-        if (isAny(orderStatus, "cancelled", "canceled", "expired", "failed", "refunded")
-            || isAny(paymentStatus, "cancelled", "canceled", "expired", "failed", "rejected", "refunded")) {
-            return "cancelled";
+        if (isAny(orderStatus, STATUS_CANCELLED, "canceled", "expired", "failed", STATUS_REFUNDED)
+            || isAny(paymentStatus, STATUS_CANCELLED, "canceled", "expired", "failed", "rejected", STATUS_REFUNDED)) {
+            return STATUS_CANCELLED;
         }
         return "pending_payment";
     }
