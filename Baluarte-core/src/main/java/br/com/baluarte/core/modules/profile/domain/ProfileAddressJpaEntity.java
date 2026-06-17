@@ -20,7 +20,7 @@ public class ProfileAddressJpaEntity {
     @Column(name = "address_id", nullable = false, length = 36)
     private String addressId;
 
-    @Column(name = "clerk_user_id", nullable = false, length = 120)
+    @Column(name = "user_id", nullable = false, length = 120)
     private String userId;
 
     @Column(name = "label", nullable = false, length = 80)

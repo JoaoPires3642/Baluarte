@@ -30,7 +30,7 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "customer_ref", length = 120)
     private String customerRef;
 
-    @Column(name = "clerk_user_id", length = 120)
+    @Column(name = "user_id", length = 120)
     private String userId;
 
     @Column(name = "payer_email", length = 160)

@@ -43,7 +43,7 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   fusionauth:
-    issuer: ${APP_FUSIONAUTH_ISSUER:https://auth.stackway.xyz}
+    issuer: ${APP_FUSIONAUTH_ISSUER:auth.stackway.xyz}
     jwks-uri: ${APP_FUSIONAUTH_JWKS_URI:https://auth.stackway.xyz/.well-known/jwks.json}
     api-key: ${APP_FUSIONAUTH_API_KEY:}
     application-id: ${APP_FUSIONAUTH_APPLICATION_ID:}

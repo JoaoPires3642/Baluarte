@@ -148,8 +148,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
 
+            String apiBase = properties.getIssuer().startsWith("http") ? properties.getIssuer() : "https://" + properties.getIssuer();
             java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
-                .uri(java.net.URI.create(properties.getIssuer() + "/api/user/" + userId))
+                .uri(java.net.URI.create(apiBase + "/api/user/" + userId))
                 .header("Authorization", properties.getApiKey())
                 .timeout(Duration.ofSeconds(5))
                 .GET()

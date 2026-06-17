@@ -15,9 +15,12 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:3000
+  fusionauth:
+    issuer: auth.stackway.xyz
+    jwks-uri: https://auth.stackway.xyz/.well-known/jwks.json
+    api-key: test-api-key
+    application-id: test-app-id
   auth:
-    clerk-issuer: https://clerk.example
-    clerk-jwks-uri: https://clerk.example/.well-known/jwks.json
     dev-bypass-enabled: false
   storage:
     s3:

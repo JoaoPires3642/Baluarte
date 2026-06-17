@@ -19,7 +19,7 @@ import org.springframework.data.domain.Persistable;
 public class AuthUserJpaEntity implements Persistable<String> {
 
     @Id
-    @Column(name = "clerk_user_id", nullable = false, length = 120)
+    @Column(name = "user_id", nullable = false, length = 120)
     private String userId;
 
     @Column(name = "email", nullable = false, length = 320)
