@@ -85,7 +85,7 @@ export function BulkEditModal({ products, onApply, onClose }: BulkEditModalProps
         }}
       />
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {totalAffected > 0 && (
         <View style={[styles.summaryCard, { backgroundColor: "#eff6ff", marginTop: 12 }]}>

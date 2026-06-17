@@ -69,7 +69,7 @@ export function AdminOrdersScreen({ user, orders, onBack, onUpdateOrders }: Admi
                 <Pressable
                   style={styles.secondaryActionButton}
                   onPress={() => {
-                    const tracking = `BR${Math.random().toString(36).slice(2, 8).toUpperCase()}${Date.now().toString().slice(-5)}`;
+                    const tracking = `BR${crypto.randomUUID().slice(0, 8).toUpperCase()}${Date.now().toString().slice(-5)}`;
                     setLabels((prev) => ({ ...prev, [order.id]: tracking }));
                   }}
                 >

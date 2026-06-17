@@ -161,7 +161,7 @@ export function AddressManager({
           <Text style={styles.primaryActionButtonText}>{editingId ? "Atualizar" : "Adicionar"} Endereço</Text>
         </Pressable>
 
-        {message && <Text style={message.includes("erro") || message.includes("Preencha") ? styles.errorText : styles.screenDescription}>{message}</Text>}
+        {message ? <Text style={message.includes("erro") || message.includes("Preencha") ? styles.errorText : styles.screenDescription}>{message}</Text> : null}
       </View>
     );
   }

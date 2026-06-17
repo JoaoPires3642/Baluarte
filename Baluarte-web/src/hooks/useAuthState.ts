@@ -100,13 +100,16 @@ export function useAuthState() {
 
   const createSessionToken = (role: User["role"]) => {
     const now = Date.now();
-    return `sess-${role}-${now.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    const arr = new Uint8Array(8);
+    crypto.getRandomValues(arr);
+    const token = Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `sess-${role}-${now.toString(36)}-${token}`;
   };
 
   const recordSecurityEvent = (event: Omit<SecurityAuditEvent, "id" | "timestamp">) => {
     const nextEvent: SecurityAuditEvent = {
       ...event,
-      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       timestamp: new Date().toISOString()
     };
     setSecurityAuditEvents((prev) => [nextEvent, ...prev]);

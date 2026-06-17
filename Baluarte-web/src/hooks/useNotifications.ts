@@ -14,7 +14,7 @@ export function useNotifications() {
     type: "success" | "error" | "info" | "warning" = "info",
     duration: number = 5000
   ) => {
-    const id = `notif-${Date.now()}-${Math.random()}`;
+    const id = `notif-${Date.now()}-${crypto.randomUUID()}`;
     const notification: Notification = {
       id,
       title,

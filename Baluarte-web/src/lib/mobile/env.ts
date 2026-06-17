@@ -19,7 +19,10 @@ function toRuntimeEnvironment(value: string | undefined): RuntimeEnvironment {
 }
 
 function trimTrailingSlash(url: string): string {
-  return url.replace(/\/+$/, "");
+  if (!url.endsWith("/")) return url;
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") end--;
+  return url.slice(0, end);
 }
 
 export function resolveApiBaseUrl(): string {

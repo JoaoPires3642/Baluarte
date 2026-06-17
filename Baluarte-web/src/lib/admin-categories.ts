@@ -1,18 +1,12 @@
 import { AdminCategory, Category } from "./types";
 import { SHARED_MOCK_CATEGORIES } from "@/shared/catalog/mock-categories";
+import { slugify } from "./slugify";
 
 export const CATEGORY_STORAGE_KEY = "admin_categories_v1";
 
 export const defaultCategories: AdminCategory[] = SHARED_MOCK_CATEGORIES;
 
-export const slugifyCategory = (value: string): Category => {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
+export const slugifyCategory = (value: string): Category => slugify(value);
 
 export const normalizeCategories = (input: unknown): AdminCategory[] => {
   if (!Array.isArray(input)) {
