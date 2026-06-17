@@ -17,7 +17,7 @@ function Dialog({ open, onClose, children }: { open: boolean; onClose: () => voi
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClose(); }} />
       <div className="relative z-[100] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border bg-white p-6 shadow-2xl">
         <button onClick={onClose} className="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
           <X className="h-5 w-5" />
@@ -34,7 +34,7 @@ function ConfirmDialog({ open, title, message, onConfirm, onCancel }: {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
+      <div className="fixed inset-0 bg-black/50" onClick={onCancel} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCancel(); }} />
       <div className="relative z-[60] w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl">
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="mt-2 text-sm text-slate-600">{message}</p>

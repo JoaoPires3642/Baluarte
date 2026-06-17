@@ -14,7 +14,8 @@ function getServerApiBaseUrl() {
 function buildWhatsappUrl(whatsapp: string, message: string): string {
   const digits = whatsapp.replace(/\D/g, "")
   if (!digits) return ""
-  const base = `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  const countryCode = digits.startsWith("55") ? digits : `55${digits}`
+  const base = `https://wa.me/${countryCode}`
   return `${base}?text=${encodeURIComponent(message)}`
 }
 

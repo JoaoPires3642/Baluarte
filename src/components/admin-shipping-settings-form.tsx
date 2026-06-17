@@ -160,7 +160,7 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {settings.packageOptions.map((option, index) => (
-            <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div key={option.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <p className="text-sm font-bold text-slate-900">Pacote {index + 1}</p>
                 {settings.packageOptions.length > 1 && (

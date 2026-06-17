@@ -129,8 +129,8 @@ export default async function OrderDetailPage({ params }: Props) {
             <CardTitle className="inline-flex items-center gap-2"><PackageSearch className="h-5 w-5 text-[#0f274d]" />Itens do Pedido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {order.items?.map((item, idx) => (
-              <div key={idx} className="flex justify-between">
+            {order.items?.map((item) => (
+              <div key={`${item.name}-${item.size}`} className="flex justify-between">
                 <div>
                   <p className="font-medium">{item.name}</p>
                   <p className="text-sm text-muted-foreground">

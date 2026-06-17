@@ -117,7 +117,8 @@ function buildWhatsappHref(value?: string | null, message?: string | null) {
   if (value.startsWith("http://") || value.startsWith("https://")) return value
   const digits = value.replace(/\D/g, "")
   if (!digits) return null
-  const base = `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  const countryCode = digits.startsWith("55") ? digits : `55${digits}`
+  const base = `https://wa.me/${countryCode}`
   if (message) return `${base}?text=${encodeURIComponent(message)}`
   return base
 }

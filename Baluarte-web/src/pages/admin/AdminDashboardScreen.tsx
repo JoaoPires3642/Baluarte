@@ -74,7 +74,7 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
           <Text style={styles.screenTitle}>Receita (últimos 7 dias)</Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12, height: 120, alignItems: "flex-end" }}>
             {revenueData.map((value, index) => (
-              <View key={index} style={{ flex: 1, alignItems: "center" }}>
+              <View key={`rev-${index}`} style={{ flex: 1, alignItems: "center" }}>
                 <View
                   style={{
                     width: "100%",
@@ -88,8 +88,8 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
             ))}
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 8 }}>
-            {days.map((day, index) => (
-              <Text key={index} style={styles.screenDescription}>{day}</Text>
+            {days.map((day) => (
+              <Text key={day} style={styles.screenDescription}>{day}</Text>
             ))}
           </View>
         </View>
@@ -98,7 +98,7 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
           <Text style={styles.screenTitle}>Pedidos (últimos 7 dias)</Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12, height: 80, alignItems: "flex-end" }}>
             {ordersData.map((value, index) => (
-              <View key={index} style={{ flex: 1, alignItems: "center" }}>
+              <View key={`ord-${index}`} style={{ flex: 1, alignItems: "center" }}>
                 <View
                   style={{
                     width: "100%",
@@ -129,7 +129,7 @@ export function AdminDashboardScreen({ onBack, onOpenOrders, onOpenProducts, pro
           <View style={styles.summaryCard}>
             <Text style={styles.screenTitle}>Times com mais produtos</Text>
             {teamSummary.map((entry, index) => (
-              <View key={index} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
+              <View key={entry.teamName} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6 }}>
                 <Text style={styles.screenDescription}>{entry.teamName}</Text>
                 <Text style={{ fontWeight: "600" }}>{entry.count} produtos</Text>
               </View>

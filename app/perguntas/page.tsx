@@ -37,8 +37,8 @@ export default function FaqPage() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-2">
-        {faqs.map((faq, idx) => (
-          <Card key={idx} className="h-full">
+        {faqs.map((faq) => (
+          <Card key={faq.question} className="h-full">
             <CardHeader>
               <CardTitle className="text-lg">{faq.question}</CardTitle>
             </CardHeader>

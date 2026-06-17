@@ -48,56 +48,40 @@ export function LoginScreen({
     setRegisterOtpCode("");
   };
 
-  const handleSubmit = async () => {
-    if (loading) {
-      return;
-    }
-
-    setError("");
-    setInfo("");
-
-    const sanitizedEmail = email.trim().toLowerCase();
-    if (!sanitizedEmail || !sanitizedEmail.includes("@")) {
-      setError("Informe um email valido");
-      return;
-    }
-
-    setLoading(true);
-
-    if (isRegister) {
-      if (!firstName.trim() || !lastName.trim()) {
-        setLoading(false);
-        setError("Informe nome e sobrenome");
-        return;
-      }
-
-      if (!registerOtpSent) {
-        const result = await onStartEmailRegister(firstName, lastName, sanitizedEmail);
-        setLoading(false);
-        if (!result.ok) {
-          setError(result.error);
-          return;
-        }
-
-        setRegisterOtpSent(true);
-        setInfo("Cadastro iniciado. Digite o codigo enviado para finalizar.");
-        return;
-      }
-
-      if (!registerOtpCode.trim()) {
-        setLoading(false);
-        setError("Digite o codigo recebido para concluir o cadastro");
-        return;
-      }
-
-      const verify = await onVerifyRegisterOtp(registerOtpCode.trim());
+  const handleRegisterSubmit = async (sanitizedEmail: string) => {
+    if (!firstName.trim() || !lastName.trim()) {
       setLoading(false);
-      if (!verify.ok) {
-        setError(verify.error);
-      }
+      setError("Informe nome e sobrenome");
       return;
     }
 
+    if (!registerOtpSent) {
+      const result = await onStartEmailRegister(firstName, lastName, sanitizedEmail);
+      setLoading(false);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setRegisterOtpSent(true);
+      setInfo("Cadastro iniciado. Digite o codigo enviado para finalizar.");
+      return;
+    }
+
+    if (!registerOtpCode.trim()) {
+      setLoading(false);
+      setError("Digite o codigo recebido para concluir o cadastro");
+      return;
+    }
+
+    const verify = await onVerifyRegisterOtp(registerOtpCode.trim());
+    setLoading(false);
+    if (!verify.ok) {
+      setError(verify.error);
+    }
+  };
+
+  const handleLoginSubmit = async (sanitizedEmail: string) => {
     if (!otpSent) {
       const start = await onStartEmailLogin(sanitizedEmail);
       setLoading(false);
@@ -121,6 +105,29 @@ export function LoginScreen({
     setLoading(false);
     if (!verify.ok) {
       setError(verify.error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (loading) {
+      return;
+    }
+
+    setError("");
+    setInfo("");
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    if (!sanitizedEmail || !sanitizedEmail.includes("@")) {
+      setError("Informe um email valido");
+      return;
+    }
+
+    setLoading(true);
+
+    if (isRegister) {
+      await handleRegisterSubmit(sanitizedEmail);
+    } else {
+      await handleLoginSubmit(sanitizedEmail);
     }
   };
 

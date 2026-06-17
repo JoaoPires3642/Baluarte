@@ -52,8 +52,6 @@ type AdminProductDto = {
   variants: AdminProductVariantDto[];
 };
 
-export type ListAdminProductsApiOptions = CreateAdminProductApiOptions;
-
 export type CreateAdminProductApiOptions = {
   authorizationContext?: ApiAuthorizationContext;
   bearerToken?: string;
@@ -83,7 +81,7 @@ export async function createAdminProductApi(
   return response.data;
 }
 
-export async function listAdminProductsApi(options: ListAdminProductsApiOptions = {}): Promise<AdminProductDto[]> {
+export async function listAdminProductsApi(options: CreateAdminProductApiOptions = {}): Promise<AdminProductDto[]> {
   const client = options.client ?? defaultClient;
 
   const response = await client.request<AdminProductDto[]>("/admin/products", {

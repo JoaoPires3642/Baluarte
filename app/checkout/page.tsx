@@ -198,27 +198,6 @@ export default function CheckoutPage() {
     triggerShippingQuote()
   }
 
-  const handleCepBlur = async () => {
-    const digits = cep.replace(/\D/g, "")
-    if (digits.length !== 8) return
-
-    setCepLoading(true)
-    try {
-      const result = await lookupCep(digits)
-      setAddress(prev => ({
-        ...prev,
-        street: result.street || prev.street,
-        neighborhood: result.neighborhood || prev.neighborhood,
-        city: result.city || prev.city,
-        state: result.state || prev.state,
-      }))
-    } catch {
-      // ignore
-    } finally {
-      setCepLoading(false)
-    }
-  }
-
   const triggerShippingQuote = useCallback(async () => {
     const digits = cep.replace(/\D/g, "")
     if (digits.length < 8 || !address.street || !address.state || items.length === 0) return
@@ -322,35 +301,6 @@ export default function CheckoutPage() {
     }
   }
 
-  const handleCepSearch = async () => {
-    const digits = cep.replace(/\D/g, "")
-    if (digits.length < 8) {
-      showToast("Informe um CEP válido", "error")
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await fetchShippingQuotes({
-        cep: digits,
-        street: address.street,
-        number: address.number,
-        neighborhood: address.neighborhood,
-        city: address.city,
-        state: address.state,
-      }, items.length)
-      setShippingOptions(res.data.options || [])
-      if (res.data.options?.length > 0) {
-        setSelectedShipping(res.data.options[0].id)
-        showToast("Frete calculado com sucesso!", "success")
-      } else {
-        showToast("CEP não encontrado", "error")
-      }
-    } catch {
-      showToast("Erro ao buscar frete", "error")
-    }
-    setLoading(false)
-  }
-
   const handleSubmit = async (cardOverride?: CardTokenResult) => {
     if (!isSignedIn) {
       showToast("Faça login para finalizar o pedido", "error")
@@ -385,12 +335,10 @@ export default function CheckoutPage() {
         showToast("Preencha nome, dia, esta\u00e7\u00e3o e hor\u00e1rio da entrega", "error")
         return
       }
-    } else {
-      if (!(addr as any)?.recipientName || !(addr as any)?.street || !(addr as any)?.neighborhood || !(addr as any)?.city) {
+    } else if (!(addr as any)?.recipientName || !(addr as any)?.street || !(addr as any)?.neighborhood || !(addr as any)?.city) {
         showToast("Preencha o endere\u00e7o completo", "error")
         return
       }
-    }
 
     const shipping = useUberDelivery
       ? { id: "uber", label: "Uber / Retirar no local", price: 0, estimatedDays: "" }
@@ -1018,6 +966,7 @@ function buildUberWhatsappHref(
   const message = `Olá! Fiz a compra do(s) produto(s): ${productList} pelo site (pedido #${orderReference}) e vou pedir um Uber para retirar. Pode me ajudar?`
   const digits = contactSettings.whatsapp.replace(/\D/g, "")
   if (!digits) return null
-  const base = `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`
+  const countryCode = digits.startsWith("55") ? digits : `55${digits}`
+  const base = `https://wa.me/${countryCode}`
   return `${base}?text=${encodeURIComponent(message)}`
 }

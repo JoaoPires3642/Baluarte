@@ -49,6 +49,46 @@ export type ScreenState = {
   product?: Product;
 } | null;
 
+function computeScreenState(
+  route: RouteState,
+  teamList: Team[],
+  productList: Product[],
+  customizableTeamIds: Set<string>
+): ScreenState {
+  if (route.name === "category") {
+    const categoryTeams = route.slug === "personalizado"
+      ? teamList.filter((team) => customizableTeamIds.has(team.id))
+      : teamList.filter((team) => team.category === route.slug);
+
+    const CATEGORY_META: Record<string, { title: string; description: string }> = {
+      nacionais: { title: "Times Nacionais", description: "Os maiores times do futebol brasileiro" },
+      internacionais: { title: "Times Internacionais", description: "Os gigantes do futebol mundial" },
+      selecoes: { title: "Selecoes", description: "As maiores selecoes do planeta" }
+    };
+
+    const meta = CATEGORY_META[route.slug] ?? {
+      title: "Personalizado",
+      description: "Escolha um time e personalize sua camisa."
+    };
+
+    return { ...meta, teams: categoryTeams };
+  }
+
+  if (route.name === "team") {
+    const team = teamList.find((item) => item.id === route.id);
+    return {
+      team,
+      products: team ? productList.filter((product) => product.teamId === team.id) : []
+    };
+  }
+
+  if (route.name === "product") {
+    return { product: productList.find((item) => item.id === route.id) };
+  }
+
+  return null;
+}
+
 export function useAppState() {
   const [route, setRoute] = useState<RouteState>({ name: "home" });
   const { categories, setCategories, teamList, setTeamList, productList, setProductList, featuredProducts } = useInventoryState();
@@ -144,50 +184,10 @@ export function useAppState() {
     );
   }, [productList]);
 
-  const screen = useMemo<ScreenState>(() => {
-    if (route.name === "category") {
-      const categoryTeams =
-        route.slug === "personalizado"
-          ? teamList.filter((team) => customizableTeamIds.has(team.id))
-          : teamList.filter((team) => team.category === route.slug);
-
-      return {
-        title:
-          route.slug === "nacionais"
-            ? "Times Nacionais"
-            : route.slug === "internacionais"
-              ? "Times Internacionais"
-              : route.slug === "selecoes"
-                ? "Selecoes"
-                : "Personalizado",
-        description:
-          route.slug === "nacionais"
-            ? "Os maiores times do futebol brasileiro"
-            : route.slug === "internacionais"
-              ? "Os gigantes do futebol mundial"
-              : route.slug === "selecoes"
-                ? "As maiores selecoes do planeta"
-                : "Escolha um time e personalize sua camisa.",
-        teams: categoryTeams
-      };
-    }
-
-    if (route.name === "team") {
-      const team = teamList.find((item) => item.id === route.id);
-      return {
-        team,
-        products: team ? productList.filter((product) => product.teamId === team.id) : []
-      };
-    }
-
-    if (route.name === "product") {
-      return {
-        product: productList.find((item) => item.id === route.id)
-      };
-    }
-
-    return null;
-  }, [route, teamList, productList, customizableTeamIds]);
+  const screen = useMemo<ScreenState>(
+    () => computeScreenState(route, teamList, productList, customizableTeamIds),
+    [route, teamList, productList, customizableTeamIds]
+  );
 
   const inAdminArea =
     route.name === "admin" ||

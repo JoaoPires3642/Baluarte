@@ -20,6 +20,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
+  const removeToastById = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    delete timeoutRefs.current[id];
+  };
+
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success", duration = 3000) => {
     const id = `toast-${Date.now()}`;
     const newToast: ToastMessage = { id, message, type, duration };
@@ -30,10 +35,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeoutRefs.current[id]);
     }
 
-    timeoutRefs.current[id] = setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-      delete timeoutRefs.current[id];
-    }, duration);
+    timeoutRefs.current[id] = setTimeout(() => removeToastById(id), duration);
   }, []);
 
   useEffect(() => {

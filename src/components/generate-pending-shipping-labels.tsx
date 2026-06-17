@@ -26,7 +26,8 @@ export function GeneratePendingShippingLabels() {
     try {
       const response = await authedFetch("/orders/shipping-labels/generate-pending", { method: "POST" }) as { data: BulkShippingLabelResponse }
       const failures = response.data.failures?.length || 0
-      setMessage(`${response.data.generated} etiqueta(s) gerada(s) de ${response.data.candidates} pendente(s).${failures ? ` ${failures} falharam.` : ""}`)
+      const failureMsg = failures ? ` ${failures} falharam.` : ""
+      setMessage(`${response.data.generated} etiqueta(s) gerada(s) de ${response.data.candidates} pendente(s).${failureMsg}`)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao gerar etiquetas pendentes")

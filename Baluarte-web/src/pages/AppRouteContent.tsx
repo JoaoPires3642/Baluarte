@@ -286,6 +286,53 @@ export function mergeHierarchyModelsWithLocalProducts(
   return [...mappedProducts, ...localOnlyProducts];
 }
 
+function redirectAfterLogin(
+  route: RouteState & { blockedAdminRoute?: AdminRouteState; redirectAfterLogin?: string },
+  setRoute: (route: RouteState) => void,
+  internalRole?: string
+): void {
+  const isAdmin = internalRole === "admin";
+  if (isAdmin && route.blockedAdminRoute) {
+    setRoute(route.blockedAdminRoute);
+    return;
+  }
+  if (isAdmin) {
+    setRoute({ name: "admin" });
+    return;
+  }
+  if (route.redirectAfterLogin === "checkout") {
+    setRoute({ name: "checkout" });
+    return;
+  }
+  if (route.redirectAfterLogin === "profile") {
+    setRoute({ name: "profile" });
+    return;
+  }
+  if (route.redirectAfterLogin === "orders") {
+    setRoute({ name: "orders" });
+    return;
+  }
+  setRoute({ name: "profile" });
+}
+
+function routeToAdminTeamUpdateFn(
+  setTeamList: (teams: import("../hooks/useAppState").AppState["teamList"]) => void,
+  setProductList: (update: import("../hooks/useAppState").AppState["productList"] | ((prev: import("../hooks/useAppState").AppState["productList"]) => import("../hooks/useAppState").AppState["productList"])) => void
+) {
+  return (nextTeams: import("../hooks/useAppState").AppState["teamList"]) => {
+    setTeamList(nextTeams);
+    setProductList((prev) =>
+      prev.map((product) => {
+        const nextTeam = nextTeams.find((team) => team.id === product.teamId);
+        if (!nextTeam) {
+          return product;
+        }
+        return { ...product, teamId: nextTeam.id, team: nextTeam };
+      })
+    );
+  };
+}
+
 export function AppRouteContent({ state }: AppRouteContentProps) {
   const {
     route,
@@ -362,6 +409,27 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
     return colorMap[categorySlug] ?? "#333";
   };
 
+  const mapApiTeamToHierarchyTeam = (team: { slug: string; name: string; logo?: string; categorySlug: string; league?: string }) => {
+    const fallbackTeam = teamList.find((item) => item.id === team.slug);
+    return {
+      id: team.slug,
+      name: team.name,
+      logo: team.logo ?? fallbackTeam?.logo ?? "",
+      category: team.categorySlug,
+      league: team.league
+    };
+  };
+
+  const mergeProductDetailIntoModelList = (prev: Product[], merged: Product) => {
+    const index = prev.findIndex((item) => item.id === merged.id);
+    if (index === -1) {
+      return [...prev, merged];
+    }
+    const next = [...prev];
+    next[index] = merged;
+    return next;
+  };
+
   const isLoading = route.name === "category" ? isCategoryLoading : route.name === "team" ? isTeamLoading : false;
   const isAdminAreaRoute = isAdminRoute(route);
   const hasAdminAccess = hasAdminRouteAccess(user, authSession);
@@ -409,19 +477,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           return;
         }
 
-        setHierarchyTeams(
-          teamsFromApi.map((team) => {
-            const fallbackTeam = teamList.find((item) => item.id === team.slug);
-
-            return {
-              id: team.slug,
-              name: team.name,
-              logo: team.logo ?? fallbackTeam?.logo ?? "",
-              category: team.categorySlug,
-              league: team.league
-            };
-          })
-        );
+        setHierarchyTeams(teamsFromApi.map(mapApiTeamToHierarchyTeam));
       })
       .catch(() => {
         if (!active) {
@@ -563,16 +619,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           [selectedRouteProduct]
         );
 
-        setHierarchyModels((prev) => {
-          const index = prev.findIndex((item) => item.id === merged.id);
-          if (index === -1) {
-            return [...prev, merged];
-          }
-
-          const next = [...prev];
-          next[index] = merged;
-          return next;
-        });
+        setHierarchyModels((prev) => mergeProductDetailIntoModelList(prev, merged));
       })
       .catch(() => {
         if (!active) {
@@ -923,21 +970,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
               return { ok: false, error: result.error ?? "Codigo OTP invalido." };
             }
 
-            const isAdmin = result.internalRole === "admin";
-            if (isAdmin && route.blockedAdminRoute) {
-              setRoute(route.blockedAdminRoute);
-            } else if (isAdmin) {
-              setRoute({ name: "admin" });
-            } else if (route.redirectAfterLogin === "checkout") {
-              setRoute({ name: "checkout" });
-            } else if (route.redirectAfterLogin === "profile") {
-              setRoute({ name: "profile" });
-            } else if (route.redirectAfterLogin === "orders") {
-              setRoute({ name: "orders" });
-            } else {
-              setRoute({ name: "profile" });
-            }
-
+            redirectAfterLogin(route, setRoute, result.internalRole);
             return { ok: true };
           }}
           onStartEmailRegister={async (firstName: string, lastName: string, email: string) => {
@@ -949,21 +982,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
               return { ok: false, error: result.error ?? "Codigo OTP invalido." };
             }
 
-            const isAdmin = result.internalRole === "admin";
-            if (isAdmin && route.blockedAdminRoute) {
-              setRoute(route.blockedAdminRoute);
-            } else if (isAdmin) {
-              setRoute({ name: "admin" });
-            } else if (route.redirectAfterLogin === "checkout") {
-              setRoute({ name: "checkout" });
-            } else if (route.redirectAfterLogin === "profile") {
-              setRoute({ name: "profile" });
-            } else if (route.redirectAfterLogin === "orders") {
-              setRoute({ name: "orders" });
-            } else {
-              setRoute({ name: "profile" });
-            }
-
+            redirectAfterLogin(route, setRoute, result.internalRole);
             return { ok: true };
           }}
           onLoginWithSocial={async (provider: "google" | "apple") => {
@@ -982,16 +1001,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
               return result;
             }
 
-            if (route.redirectAfterLogin === "checkout") {
-              setRoute({ name: "checkout" });
-            } else if (route.redirectAfterLogin === "profile") {
-              setRoute({ name: "profile" });
-            } else if (route.redirectAfterLogin === "orders") {
-              setRoute({ name: "orders" });
-            } else {
-              setRoute({ name: "profile" });
-            }
-
+            redirectAfterLogin(route, setRoute);
             return { ok: true as const };
           }}
         />
@@ -1060,22 +1070,7 @@ export function AppRouteContent({ state }: AppRouteContentProps) {
           teams={teamList}
           products={productList}
           onBack={() => setRoute({ name: "admin" })}
-          onUpdateTeams={(nextTeams) => {
-            setTeamList(nextTeams);
-            setProductList((prev) =>
-              prev.map((product) => {
-                const nextTeam = nextTeams.find((team) => team.id === product.teamId);
-                if (!nextTeam) {
-                  return product;
-                }
-                return {
-                  ...product,
-                  teamId: nextTeam.id,
-                  team: nextTeam
-                };
-              })
-            );
-          }}
+          onUpdateTeams={routeToAdminTeamUpdateFn(setTeamList, setProductList)}
         />
       ) : null}
 

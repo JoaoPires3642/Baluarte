@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
 export type CartItem = {
   id: string
@@ -90,8 +90,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 
+  const value = useMemo(() => ({ items, addItem, removeItem, updateQuantity, clear, total }), [items, addItem, removeItem, updateQuantity, clear, total])
+
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clear, total }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   )

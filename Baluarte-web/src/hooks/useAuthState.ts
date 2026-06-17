@@ -169,7 +169,7 @@ export function useAuthState() {
 
     setUsers((prev) =>
       prev.map((item) =>
-        user && item.id === user.id
+        item.id === user?.id
           ? {
               ...item,
               addresses: normalizedAddresses,

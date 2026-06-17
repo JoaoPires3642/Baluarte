@@ -114,7 +114,7 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
               <div className="space-y-2">
                 {(stations[day] || ["", ""]).map((station, index) => (
                   <Input
-                    key={index}
+                    key={`${day}-${index}`}
                     value={station}
                     onChange={e => updateStation(day, index, e.target.value)}
                     placeholder={`Estacao ${index + 1}`}
@@ -135,7 +135,7 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {timeSlots.map((slot, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={`slot-${index}`} className="flex items-center gap-2">
               <Input
                 value={slot}
                 onChange={e => updateTimeSlot(index, e.target.value)}

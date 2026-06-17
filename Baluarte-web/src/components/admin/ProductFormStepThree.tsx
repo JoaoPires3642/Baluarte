@@ -27,6 +27,10 @@ export function ProductFormStepThree({
   onTakePhoto,
   onPickFromFiles
 }: ProductFormStepThreeProps) {
+  const handleRemoveImage = (uri: string) => {
+    setDraft((prev) => ({ ...prev, images: prev.images.filter((item) => item !== uri) }));
+  };
+
   return (
     <>
       <Text style={styles.summaryKey}>Personalizacao</Text>
@@ -130,7 +134,7 @@ export function ProductFormStepThree({
         {draft.images.map((uri, index) => (
           <View key={`${uri}-${index}`} style={styles.adminImageItem}>
             <Image source={{ uri }} style={styles.adminImageThumb as StyleProp<ImageStyle>} resizeMode="cover" />
-            <Pressable onPress={() => setDraft((prev) => ({ ...prev, images: prev.images.filter((item) => item !== uri) }))}>
+            <Pressable onPress={() => handleRemoveImage(uri)}>
               <Text style={styles.dangerLink}>Remover</Text>
             </Pressable>
           </View>

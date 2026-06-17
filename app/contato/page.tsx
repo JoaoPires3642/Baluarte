@@ -29,8 +29,9 @@ export default function ContactPage() {
 
   const whatsappDigits = settings?.whatsapp?.replace(/\D/g, "") || ""
   const whatsappNumber = whatsappDigits.startsWith("55") ? whatsappDigits : `55${whatsappDigits}`
+  const whatsappQuery = settings?.whatsappMessage ? `?text=${encodeURIComponent(settings.whatsappMessage)}` : ""
   const whatsappUrl = whatsappNumber
-    ? `https://wa.me/${whatsappNumber}${settings?.whatsappMessage ? `?text=${encodeURIComponent(settings.whatsappMessage)}` : ""}`
+    ? `https://wa.me/${whatsappNumber}${whatsappQuery}`
     : null
 
   return (

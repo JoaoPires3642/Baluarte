@@ -43,6 +43,10 @@ export function AdminTeamsScreen({ user, categories, teams, products, onBack, on
     return products.filter((product) => product.teamId === teamId).length;
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTeams = filteredTeams.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredTeams.length / itemsPerPage));
+
   const resetCreateForm = () => {
     setName("");
     setLeague("");
@@ -149,47 +153,40 @@ export function AdminTeamsScreen({ user, categories, teams, products, onBack, on
         </Pressable>
       </View>
 
-      {(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedTeams = filteredTeams.slice(startIndex, startIndex + itemsPerPage);
-        const totalPages = Math.max(1, Math.ceil(filteredTeams.length / itemsPerPage));
+      {paginatedTeams.map((team) => {
+        const linkedProducts = linkedProductsCount(team.id);
 
         return (
-          <>
-            {paginatedTeams.map((team) => {
-              const linkedProducts = linkedProductsCount(team.id);
+          <View key={team.id} style={[styles.summaryCard, styles.adminProductCard]}>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryTitle}>{team.name}</Text>
+              <Text style={styles.summaryValue}>{linkedProducts} produto(s)</Text>
+            </View>
+            <Text style={styles.screenDescription}>ID: {team.id}</Text>
+            <Text style={styles.screenDescription}>Categoria: {team.category}</Text>
+            <Text style={styles.screenDescription}>{team.league ?? "Sem liga"}</Text>
+            <View style={styles.inlineActionRow}>
+              <Pressable style={styles.secondaryActionButton} onPress={() => startEditing(team.id)}>
+                <Text style={styles.secondaryActionButtonText}>Editar</Text>
+              </Pressable>
+              <Pressable
+                style={styles.dangerButton}
+                onPress={() => {
+                  if (linkedProducts > 0) {
+                    Alert.alert("Nao permitido", `Existem ${linkedProducts} produto(s) vinculados ao time.`);
+                    return;
+                  }
+                  onUpdateTeams(teams.filter((item) => item.id !== team.id));
+                }}
+              >
+                <Text style={styles.dangerButtonText}>Remover</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
 
-              return (
-                <View key={team.id} style={[styles.summaryCard, styles.adminProductCard]}>
-                  <View style={styles.summaryLine}>
-                    <Text style={styles.summaryTitle}>{team.name}</Text>
-                    <Text style={styles.summaryValue}>{linkedProducts} produto(s)</Text>
-                  </View>
-                  <Text style={styles.screenDescription}>ID: {team.id}</Text>
-                  <Text style={styles.screenDescription}>Categoria: {team.category}</Text>
-                  <Text style={styles.screenDescription}>{team.league ?? "Sem liga"}</Text>
-                  <View style={styles.inlineActionRow}>
-                    <Pressable style={styles.secondaryActionButton} onPress={() => startEditing(team.id)}>
-                      <Text style={styles.secondaryActionButtonText}>Editar</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.dangerButton}
-                      onPress={() => {
-                        if (linkedProducts > 0) {
-                          Alert.alert("Nao permitido", `Existem ${linkedProducts} produto(s) vinculados ao time.`);
-                          return;
-                        }
-                        onUpdateTeams(teams.filter((item) => item.id !== team.id));
-                      }}
-                    >
-                      <Text style={styles.dangerButtonText}>Remover</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
-
-            {filteredTeams.length === 0 ? (
+      {filteredTeams.length === 0 ? (
               <View style={[styles.summaryCard, styles.adminProductCard]}>
                 <Text style={styles.screenDescription}>Nenhum time encontrado para o filtro informado.</Text>
               </View>
@@ -218,9 +215,6 @@ export function AdminTeamsScreen({ user, categories, teams, products, onBack, on
                 </View>
               </View>
             ) : null}
-          </>
-        );
-      })()}
 
       <SimpleFormModal
         visible={isCreateModalOpen}

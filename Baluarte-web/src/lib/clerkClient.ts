@@ -53,7 +53,7 @@ function resolveClerkErrorMessage(error: unknown, fallback: string): string {
     if (Array.isArray(maybeError.errors) && maybeError.errors.length > 0) {
       const message = maybeError.errors
         .map((entry) => entry.longMessage || entry.message || entry.code)
-        .filter((value): value is string => Boolean(value && value.trim()))
+        .filter((value): value is string => Boolean(value?.trim()))
         .join(" | ");
       if (message) {
         return message;
@@ -349,7 +349,7 @@ export async function beginEmailCodeSignUp(
   if (!normalizedFirstName || !normalizedLastName) {
     return { ok: false, error: "Informe nome e sobrenome." };
   }
-  if (!normalizedEmail || !normalizedEmail.includes("@")) {
+  if (!normalizedEmail?.includes("@")) {
     return { ok: false, error: "Informe um email valido." };
   }
 
@@ -395,7 +395,7 @@ export async function verifyEmailCodeSignUp(
 
   try {
     const currentSignUp = clerk.client.signUp;
-    if (!currentSignUp || !currentSignUp.id) {
+    if (!currentSignUp?.id) {
       return { ok: false, error: "Inicie o cadastro antes de validar o codigo." };
     }
 

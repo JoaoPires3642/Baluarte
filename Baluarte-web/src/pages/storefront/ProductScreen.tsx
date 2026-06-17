@@ -13,6 +13,109 @@ const CUSTOM_NAME_PRICE_BRL = 25;
 const CUSTOM_NUMBER_DIGIT_PRICE_BRL = 20;
 const JERSEY_NUMBER_PATTERN = /^\d{1,2}$/;
 
+function ProductPersonalization({
+  templateUri, isPersonalizationOpen, setIsPersonalizationOpen,
+  customNameInput, setCustomNameInput, customNames, setCustomNames,
+  customNumberInput, setCustomNumberInput, customNumber, setCustomNumber,
+  validationMessage, setValidationMessage, previewFrame, setPreviewFrame, previewName
+}: {
+  templateUri: string; isPersonalizationOpen: boolean; setIsPersonalizationOpen: (v: boolean) => void;
+  customNameInput: string; setCustomNameInput: (v: string) => void; customNames: string[]; setCustomNames: (v: string[] | ((prev: string[]) => string[])) => void;
+  customNumberInput: string; setCustomNumberInput: (v: string) => void; customNumber: string | null; setCustomNumber: (v: string | null) => void;
+  validationMessage: string | null; setValidationMessage: (v: string | null) => void; previewFrame: { width: number; height: number }; setPreviewFrame: (v: { width: number; height: number }) => void; previewName: string
+}) {
+  const handleAddName = () => {
+    const nextName = customNameInput.trim();
+    if (!nextName) { setValidationMessage("Informe um nome valido para personalizacao."); return; }
+    if (nextName.length > MAX_CUSTOM_NAME_LENGTH) { setValidationMessage(`Nome personalizado deve ter no maximo ${MAX_CUSTOM_NAME_LENGTH} caracteres.`); return; }
+    if (customNames.some((name) => name.toLowerCase() === nextName.toLowerCase())) { setValidationMessage("Este nome ja foi adicionado."); return; }
+    setCustomNames((prev) => [...prev, nextName]);
+    setCustomNameInput("");
+    setValidationMessage(null);
+  };
+
+  const handleRemoveName = (nameToRemove: string) => {
+    setCustomNames((prev) => prev.filter((item) => item !== nameToRemove));
+  };
+
+  const handleAddNumber = () => {
+    const nextNumber = customNumberInput.trim();
+    if (!JERSEY_NUMBER_PATTERN.test(nextNumber)) { setValidationMessage("Numero personalizado deve conter apenas digitos (0-9) com 1 ou 2 caracteres."); return; }
+    setCustomNumber(nextNumber);
+    setCustomNumberInput("");
+    setValidationMessage(null);
+  };
+
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>Personalizacao disponivel</Text>
+      <Text style={styles.summaryKey}>Template base configurado para esta camisa.</Text>
+      <Pressable style={styles.secondaryActionButton} onPress={() => setIsPersonalizationOpen(!isPersonalizationOpen)}>
+        <Text style={styles.secondaryActionButtonText}>{isPersonalizationOpen ? "Ocultar personalizacao" : "Personalizar camisa"}</Text>
+      </Pressable>
+
+      {isPersonalizationOpen ? (
+        <View>
+          <Text style={styles.summaryKey}>Adicionar nome personalizado (ate {MAX_CUSTOM_NAME_LENGTH} caracteres)</Text>
+          <View style={styles.inlineActionRow}>
+            <TextInput style={[styles.formInput, { flex: 1 }]} value={customNameInput} onChangeText={setCustomNameInput} placeholder="Ex: JOAO" placeholderTextColor="#9ca3af" autoCapitalize="characters" />
+            <Pressable style={styles.secondaryActionButton} onPress={handleAddName}>
+              <Text style={styles.secondaryActionButtonText}>Adicionar nome</Text>
+            </Pressable>
+          </View>
+
+          {customNames.length > 0 ? (
+            <View style={styles.chipsRowWrap}>
+              {customNames.map((name) => (
+                <Pressable key={name} style={styles.filterChip} onPress={() => handleRemoveName(name)}>
+                  <Text style={styles.filterChipText}>{name} x</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.screenDescription}>Adicione ao menos um nome para aplicar personalizacao.</Text>
+          )}
+
+          <Text style={styles.summaryKey}>Nomes personalizados: {customNames.length} | Acrescimo: {toBrl(customNames.length * CUSTOM_NAME_PRICE_BRL)}</Text>
+
+          <Text style={styles.summaryKey}>Adicionar numero personalizado (1 ou 2 digitos)</Text>
+          <View style={styles.inlineActionRow}>
+            <TextInput style={[styles.formInput, { flex: 1 }]} value={customNumberInput} onChangeText={setCustomNumberInput} placeholder="Ex: 08" placeholderTextColor="#9ca3af" keyboardType="number-pad" maxLength={2} />
+            <Pressable style={styles.secondaryActionButton} onPress={handleAddNumber}>
+              <Text style={styles.secondaryActionButtonText}>Adicionar numero</Text>
+            </Pressable>
+          </View>
+
+          {customNumber ? (
+            <View>
+              <Text style={styles.summaryKey}>Numero personalizado: {customNumber}</Text>
+              <Text style={{ color: "#0f172a", fontSize: 36, fontWeight: "900", letterSpacing: 4, textAlign: "center" }}>{customNumber}</Text>
+              <Text style={styles.summaryKey}>Acrescimo numero: {toBrl(customNumber.length * CUSTOM_NUMBER_DIGIT_PRICE_BRL)}</Text>
+            </View>
+          ) : (
+            <Text style={styles.screenDescription}>Adicione um numero para aplicar a tipografia de camisa.</Text>
+          )}
+
+          <Text style={styles.summaryTitle}>Preview da personalizacao</Text>
+          {previewName || customNumber ? (
+            <View style={styles.personalizationPreviewCard}>
+              <View style={styles.personalizationPreviewContainer} onLayout={(event) => { const { width, height } = event.nativeEvent.layout; setPreviewFrame({ width, height }); }}>
+                {previewFrame.width > 0 && previewFrame.height > 0 && (
+                  <JerseyPreview templateUri={templateUri} name={previewName} number={customNumber} width={previewFrame.width} height={previewFrame.height} />
+                )}
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.screenDescription}>Adicione nome ou numero para gerar o preview.</Text>
+          )}
+
+          {validationMessage ? <Text style={styles.screenDescription}>{validationMessage}</Text> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, onGoCart }: ProductScreenProps) {
   const [selectedSize, setSelectedSize] = useState<Size | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -39,10 +142,6 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
     setSelectedSize(null);
     setValidationMessage(null);
     setIsPersonalizationOpen(false);
-    setCustomNameInput("");
-    setCustomNames([]);
-    setCustomNumberInput("");
-    setCustomNumber(null);
     setSelectedImageIndex(0);
   }, [product?.id]);
 
@@ -58,6 +157,10 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
 
   const goToNextImage = () => {
     setSelectedImageIndex((current) => (current === galleryImages.length - 1 ? 0 : current + 1));
+  };
+
+  const handleSelectGalleryImage = (index: number) => {
+    setSelectedImageIndex(index);
   };
 
   if (!product) {
@@ -98,7 +201,7 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
                 {galleryImages.map((imageUrl, index) => (
                   <Pressable
                     key={`${product.id}-thumb-${index}`}
-                    onPress={() => setSelectedImageIndex(index)}
+                    onPress={() => handleSelectGalleryImage(index)}
                     style={[styles.productGalleryThumb, selectedImageIndex === index && styles.productGalleryThumbSelected]}
                   >
                     <Image source={{ uri: imageUrl }} style={styles.productGalleryThumbImage as StyleProp<ImageStyle>} />
@@ -122,158 +225,24 @@ export function ProductScreen({ product, onBackToTeam, onBackHome, onAddToCart, 
       <Text style={styles.screenDescription}>{product.description}</Text>
 
       {canPersonalize ? (
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Personalizacao disponivel</Text>
-          <Text style={styles.summaryKey}>Template base configurado para esta camisa.</Text>
-          <Pressable
-            style={styles.secondaryActionButton}
-            onPress={() => setIsPersonalizationOpen((prev) => !prev)}
-          >
-            <Text style={styles.secondaryActionButtonText}>
-              {isPersonalizationOpen ? "Ocultar personalizacao" : "Personalizar camisa"}
-            </Text>
-          </Pressable>
-
-          {isPersonalizationOpen ? (
-            <>
-              <Text style={styles.summaryKey}>Adicionar nome personalizado (ate {MAX_CUSTOM_NAME_LENGTH} caracteres)</Text>
-              <View style={styles.inlineActionRow}>
-                <TextInput
-                  style={[styles.formInput, { flex: 1 }]}
-                  value={customNameInput}
-                  onChangeText={setCustomNameInput}
-                  placeholder="Ex: JOAO"
-                  placeholderTextColor="#9ca3af"
-                  autoCapitalize="characters"
-                />
-                <Pressable
-                  style={styles.secondaryActionButton}
-                  onPress={() => {
-                    const nextName = customNameInput.trim();
-
-                    if (!nextName) {
-                      setValidationMessage("Informe um nome valido para personalizacao.");
-                      return;
-                    }
-
-                    if (nextName.length > MAX_CUSTOM_NAME_LENGTH) {
-                      setValidationMessage(`Nome personalizado deve ter no maximo ${MAX_CUSTOM_NAME_LENGTH} caracteres.`);
-                      return;
-                    }
-
-                    if (customNames.some((name) => name.toLowerCase() === nextName.toLowerCase())) {
-                      setValidationMessage("Este nome ja foi adicionado.");
-                      return;
-                    }
-
-                    setCustomNames((prev) => [...prev, nextName]);
-                    setCustomNameInput("");
-                    setValidationMessage(null);
-                  }}
-                >
-                  <Text style={styles.secondaryActionButtonText}>Adicionar nome</Text>
-                </Pressable>
-              </View>
-
-              {customNames.length > 0 ? (
-                <View style={styles.chipsRowWrap}>
-                  {customNames.map((name) => (
-                    <Pressable
-                      key={name}
-                      style={styles.filterChip}
-                      onPress={() => setCustomNames((prev) => prev.filter((item) => item !== name))}
-                    >
-                      <Text style={styles.filterChipText}>{name} x</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.screenDescription}>Adicione ao menos um nome para aplicar personalizacao.</Text>
-              )}
-
-              <Text style={styles.summaryKey}>
-                Nomes personalizados: {customNames.length} | Acrescimo: {toBrl(customNames.length * CUSTOM_NAME_PRICE_BRL)}
-              </Text>
-
-              <Text style={styles.summaryKey}>Adicionar numero personalizado (1 ou 2 digitos)</Text>
-              <View style={styles.inlineActionRow}>
-                <TextInput
-                  style={[styles.formInput, { flex: 1 }]}
-                  value={customNumberInput}
-                  onChangeText={setCustomNumberInput}
-                  placeholder="Ex: 08"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="number-pad"
-                  maxLength={2}
-                />
-                <Pressable
-                  style={styles.secondaryActionButton}
-                  onPress={() => {
-                    const nextNumber = customNumberInput.trim();
-
-                    if (!JERSEY_NUMBER_PATTERN.test(nextNumber)) {
-                      setValidationMessage("Numero personalizado deve conter apenas digitos (0-9) com 1 ou 2 caracteres.");
-                      return;
-                    }
-
-                    setCustomNumber(nextNumber);
-                    setCustomNumberInput("");
-                    setValidationMessage(null);
-                  }}
-                >
-                  <Text style={styles.secondaryActionButtonText}>Adicionar numero</Text>
-                </Pressable>
-              </View>
-
-              {customNumber ? (
-                <>
-                  <Text style={styles.summaryKey}>Numero personalizado: {customNumber}</Text>
-                  <Text
-                    style={{
-                      color: "#0f172a",
-                      fontSize: 36,
-                      fontWeight: "900",
-                      letterSpacing: 4,
-                      textAlign: "center"
-                    }}
-                  >
-                    {customNumber}
-                  </Text>
-                  <Text style={styles.summaryKey}>
-                    Acrescimo numero: {toBrl(customNumber.length * CUSTOM_NUMBER_DIGIT_PRICE_BRL)}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.screenDescription}>Adicione um numero para aplicar a tipografia de camisa.</Text>
-              )}
-
-              <Text style={styles.summaryTitle}>Preview da personalizacao</Text>
-              {previewName || customNumber ? (
-                <View style={styles.personalizationPreviewCard}>
-                  <View
-                    style={styles.personalizationPreviewContainer}
-                    onLayout={(event) => {
-                      const { width, height } = event.nativeEvent.layout;
-                      setPreviewFrame({ width, height });
-                    }}
-                  >
-                    {previewFrame.width > 0 && previewFrame.height > 0 && (
-                      <JerseyPreview
-                        templateUri={product.customizationTemplatePng as string}
-                        name={previewName}
-                        number={customNumber}
-                        width={previewFrame.width}
-                        height={previewFrame.height}
-                      />
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.screenDescription}>Adicione nome ou numero para gerar o preview.</Text>
-              )}
-            </>
-          ) : null}
-        </View>
+        <ProductPersonalization
+          templateUri={product.customizationTemplatePng as string}
+          isPersonalizationOpen={isPersonalizationOpen}
+          setIsPersonalizationOpen={setIsPersonalizationOpen}
+          customNameInput={customNameInput}
+          setCustomNameInput={setCustomNameInput}
+          customNames={customNames}
+          setCustomNames={setCustomNames}
+          customNumberInput={customNumberInput}
+          setCustomNumberInput={setCustomNumberInput}
+          customNumber={customNumber}
+          setCustomNumber={setCustomNumber}
+          validationMessage={validationMessage}
+          setValidationMessage={setValidationMessage}
+          previewFrame={previewFrame}
+          setPreviewFrame={setPreviewFrame}
+          previewName={previewName}
+        />
       ) : null}
 
       <View style={styles.sizesRow}>

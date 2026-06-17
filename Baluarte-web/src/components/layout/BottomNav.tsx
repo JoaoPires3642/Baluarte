@@ -23,6 +23,20 @@ type BottomNavProps = {
   onPressAdminCoupons: () => void;
 };
 
+type NavItem = {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+};
+
+function NavButton({ active, label, onPress }: NavItem) {
+  return (
+    <Pressable style={[styles.bottomNavItem, active ? styles.bottomNavItemActive : null]} onPress={onPress}>
+      <Text style={[styles.bottomNavText, active ? styles.bottomNavTextActive : null]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function BottomNav({
   isDesktop = false,
   isAdminUser,
@@ -44,46 +58,36 @@ export function BottomNav({
   onPressAdminCoupons
 }: BottomNavProps) {
   const navStyle = isDesktop ? styles.bottomNavDesktop : styles.bottomNav;
-  
+
   if (isAdminUser) {
+    const items: NavItem[] = [
+      { active: isAdminActive, label: "Painel", onPress: onPressAccount },
+      { active: isAdminProductsActive, label: "Produtos", onPress: onPressAdminProducts },
+      { active: isAdminOrdersActive, label: "Pedidos", onPress: onPressAdminOrders },
+      { active: isAdminCouponsActive, label: "Cupons", onPress: onPressAdminCoupons }
+    ];
+
     return (
       <View style={navStyle}>
-        <Pressable style={[styles.bottomNavItem, isAdminActive ? styles.bottomNavItemActive : null]} onPress={onPressAccount}>
-          <Text style={[styles.bottomNavText, isAdminActive ? styles.bottomNavTextActive : null]}>Painel</Text>
-        </Pressable>
-
-        <Pressable style={[styles.bottomNavItem, isAdminProductsActive ? styles.bottomNavItemActive : null]} onPress={onPressAdminProducts}>
-          <Text style={[styles.bottomNavText, isAdminProductsActive ? styles.bottomNavTextActive : null]}>Produtos</Text>
-        </Pressable>
-
-        <Pressable style={[styles.bottomNavItem, isAdminOrdersActive ? styles.bottomNavItemActive : null]} onPress={onPressAdminOrders}>
-          <Text style={[styles.bottomNavText, isAdminOrdersActive ? styles.bottomNavTextActive : null]}>Pedidos</Text>
-        </Pressable>
-
-        <Pressable style={[styles.bottomNavItem, isAdminCouponsActive ? styles.bottomNavItemActive : null]} onPress={onPressAdminCoupons}>
-          <Text style={[styles.bottomNavText, isAdminCouponsActive ? styles.bottomNavTextActive : null]}>Cupons</Text>
-        </Pressable>
+        {items.map((item) => (
+          <NavButton key={item.label} active={item.active} label={item.label} onPress={item.onPress} />
+        ))}
       </View>
     );
   }
 
+  const items: NavItem[] = [
+    { active: isHomeActive, label: "Inicio", onPress: onPressHome },
+    { active: isCartActive, label: `Carrinho${cartCount > 0 ? ` (${cartCount})` : ""}`, onPress: onPressCart },
+    { active: isOrdersActive, label: "Pedidos", onPress: onPressOrders },
+    { active: isAdminActive, label: accountLabel, onPress: onPressAccount }
+  ];
+
   return (
     <View style={navStyle}>
-      <Pressable style={[styles.bottomNavItem, isHomeActive ? styles.bottomNavItemActive : null]} onPress={onPressHome}>
-        <Text style={[styles.bottomNavText, isHomeActive ? styles.bottomNavTextActive : null]}>Inicio</Text>
-      </Pressable>
-
-      <Pressable style={[styles.bottomNavItem, isCartActive ? styles.bottomNavItemActive : null]} onPress={onPressCart}>
-        <Text style={[styles.bottomNavText, isCartActive ? styles.bottomNavTextActive : null]}>Carrinho{cartCount > 0 ? ` (${cartCount})` : ""}</Text>
-      </Pressable>
-
-      <Pressable style={[styles.bottomNavItem, isOrdersActive ? styles.bottomNavItemActive : null]} onPress={onPressOrders}>
-        <Text style={[styles.bottomNavText, isOrdersActive ? styles.bottomNavTextActive : null]}>Pedidos</Text>
-      </Pressable>
-
-      <Pressable style={[styles.bottomNavItem, isAdminActive ? styles.bottomNavItemActive : null]} onPress={onPressAccount}>
-        <Text style={[styles.bottomNavText, isAdminActive ? styles.bottomNavTextActive : null]}>{accountLabel}</Text>
-      </Pressable>
+      {items.map((item) => (
+        <NavButton key={item.label} active={item.active} label={item.label} onPress={item.onPress} />
+      ))}
     </View>
   );
 }

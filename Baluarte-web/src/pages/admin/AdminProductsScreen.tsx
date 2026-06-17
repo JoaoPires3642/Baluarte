@@ -245,6 +245,63 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     return [error.message];
   };
 
+  const validateProductForm = (draft: ProductFormDraft): string[] => {
+    const errors: string[] = [];
+    const basePrice = parseMoney(draft.price);
+    const optionalDiscount = draft.discountPrice.trim() ? parseMoney(draft.discountPrice) : null;
+
+    const teamsBySelectedCategory = teams.filter((team) => team.category === draft.category);
+    if (teamsBySelectedCategory.length === 0) {
+      errors.push("Categoria não tem times disponíveis");
+    }
+
+    if (!draft.name.trim()) { errors.push("Nome é obrigatório"); }
+    if (!draft.description.trim()) { errors.push("Descrição é obrigatória"); }
+    if (!basePrice || basePrice <= 0) { errors.push("Preço deve ser um número válido e maior que 0"); }
+
+    const selectedTeam = teams.find((team) => team.id === draft.teamId);
+    if (!selectedTeam) { errors.push("Selecione um time válido"); }
+
+    if (draft.discountPrice.trim() && !optionalDiscount) {
+      errors.push("Desconto deve ser um número válido ou deixe em branco");
+    }
+    if (optionalDiscount && basePrice && optionalDiscount >= basePrice) {
+      errors.push("Desconto deve ser menor que o preço cheio");
+    }
+    if (optionalDiscount && basePrice && optionalDiscount >= basePrice * 0.99) {
+      errors.push("Desconto deve ter no mínimo 1% de diferença");
+    }
+
+    const invalidImageUrls = draft.images.filter((url) => !isValidImageUrl(url));
+    if (invalidImageUrls.length > 0) {
+      errors.push(`${invalidImageUrls.length} imagem(ns) inválida(s) - use .jpg, .png, .gif, etc.`);
+    }
+
+    const template = draft.customizationTemplatePng.trim();
+    const metadata = draft.customizationTemplateMetadata.trim();
+    if (draft.customizationEnabled && !template) {
+      errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
+    }
+    if (draft.customizationEnabled && template && !isValidTemplateImage(template)) {
+      errors.push("Template de personalizacao deve ser uma URL de imagem valida (PNG recomendado)");
+    }
+    if (draft.customizationEnabled && !metadata) {
+      errors.push("Ajuste e salve os 4 pontos da area util antes de cadastrar o produto.");
+    }
+    if (draft.customizationEnabled && metadata) {
+      const parsedMetadata = parseCustomizationTemplateMetadata(metadata);
+      if (!parsedMetadata) {
+        errors.push("Metadata da personalizacao esta invalida. Revise o mapeamento.");
+      } else {
+        const metadataErrors = validateCustomizationTemplateMetadata(parsedMetadata);
+        errors.push(...metadataErrors);
+      }
+    }
+
+    return errors;
+  };
+
+
   const buildAuthorizationContext = async (): Promise<ApiAuthorizationContext | undefined> => {
     if (!user || !authSession || user.role !== "admin" || authSession.internalRole !== "admin") {
       return undefined;
@@ -428,67 +485,10 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
   };
 
   const createProduct = async () => {
-    const errors: string[] = [];
-    const selectedTeam = teams.find((team) => team.id === createDraft.teamId);
-    const basePrice = parseMoney(createDraft.price);
-    const optionalDiscount = createDraft.discountPrice.trim() ? parseMoney(createDraft.discountPrice) : null;
+    const errors = validateProductForm(createDraft);
 
-    // Risk #2: Validar que categorias não estão vazias
-    const teamsBySelectedCategory = teams.filter((team) => team.category === createDraft.category);
-    if (teamsBySelectedCategory.length === 0) {
-      errors.push("Categoria não tem times disponíveis");
-    }
-
-    // Validação por campo
-    if (!createDraft.name.trim()) {
-      errors.push("Nome é obrigatório");
-    }
-    if (!createDraft.description.trim()) {
-      errors.push("Descrição é obrigatória");
-    }
-    if (!basePrice || basePrice <= 0) {
-      errors.push("Preço deve ser um número válido e maior que 0");
-    }
-    if (!selectedTeam) {
-      errors.push("Selecione um time válido");
-    }
-    if (createDraft.discountPrice.trim() && !optionalDiscount) {
-      errors.push("Desconto deve ser um número válido ou deixe em branco");
-    }
-    if (optionalDiscount && basePrice && optionalDiscount >= basePrice) {
-      errors.push("Desconto deve ser menor que o preço cheio");
-    }
-    // Risk #1: Validar mínimo 1% de diferença no desconto
-    if (optionalDiscount && basePrice && optionalDiscount >= basePrice * 0.99) {
-      errors.push("Desconto deve ter no mínimo 1% de diferença");
-    }
-    // Risk #3: Validar URLs de imagem
-    const invalidImageUrls = createDraft.images.filter((url) => !isValidImageUrl(url));
-    if (invalidImageUrls.length > 0) {
-      errors.push(`${invalidImageUrls.length} imagem(ns) inválida(s) - use .jpg, .png, .gif, etc.`);
-    }
     if (createDraft.images.length === 0) {
       errors.push("Adicione pelo menos uma imagem na etapa 2");
-    }
-    const createTemplate = createDraft.customizationTemplatePng.trim();
-    const createMetadata = createDraft.customizationTemplateMetadata.trim();
-    if (createDraft.customizationEnabled && !createTemplate) {
-      errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
-    }
-    if (createDraft.customizationEnabled && createTemplate && !isValidTemplateImage(createTemplate)) {
-      errors.push("Template de personalizacao deve ser uma URL de imagem valida (PNG recomendado)");
-    }
-    if (createDraft.customizationEnabled && !createMetadata) {
-      errors.push("Ajuste e salve os 4 pontos da area util antes de cadastrar o produto.");
-    }
-    if (createDraft.customizationEnabled && createMetadata) {
-      const parsedMetadata = parseCustomizationTemplateMetadata(createMetadata);
-      if (!parsedMetadata) {
-        errors.push("Metadata da personalizacao esta invalida. Revise o mapeamento.");
-      } else {
-        const metadataErrors = validateCustomizationTemplateMetadata(parsedMetadata);
-        errors.push(...metadataErrors);
-      }
     }
 
     if (errors.length > 0) {
@@ -499,9 +499,11 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       return;
     }
 
-    if (!basePrice || !selectedTeam) {
-      return;
-    }
+    const basePrice = parseMoney(createDraft.price);
+    const optionalDiscount = createDraft.discountPrice.trim() ? parseMoney(createDraft.discountPrice) : null;
+    const selectedTeam = teams.find((team) => team.id === createDraft.teamId);
+
+    if (!basePrice || !selectedTeam) { return; }
 
     if (!authSession?.token) {
       setCreateErrors(["Sessao admin expirada. Faca login novamente para criar produtos."]);
@@ -521,10 +523,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       }
 
       const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
-      
-      // Convert local images to data URIs
       const convertedImages = await convertLocalImagesToDataUris(createDraft.images);
-      
+
       const created = await createAdminProductApi(
         {
           categorySlug: createDraft.category,
@@ -535,18 +535,11 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           originalPrice: pricing.originalPrice,
           imageUrl: convertedImages[0],
           customizationEnabled: createDraft.customizationEnabled,
-          customizationTemplatePng: createDraft.customizationEnabled
-            ? createDraft.customizationTemplatePng.trim() || undefined
-            : undefined,
-          customizationTemplateMetadata: createDraft.customizationEnabled
-            ? createDraft.customizationTemplateMetadata.trim() || undefined
-            : undefined,
+          customizationTemplatePng: createDraft.customizationEnabled ? createDraft.customizationTemplatePng.trim() || undefined : undefined,
+          customizationTemplateMetadata: createDraft.customizationEnabled ? createDraft.customizationTemplateMetadata.trim() || undefined : undefined,
           variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: stockBySize[size] }))
         },
-        {
-          authorizationContext,
-          bearerToken
-        }
+        { authorizationContext, bearerToken }
       );
 
       const next = toAdminProductFromApi(created, selectedTeam);
@@ -569,67 +562,10 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       return;
     }
 
-    const errors: string[] = [];
-    const selectedTeam = teams.find((team) => team.id === editDraft.teamId);
-    const basePrice = parseMoney(editDraft.price);
-    const optionalDiscount = editDraft.discountPrice.trim() ? parseMoney(editDraft.discountPrice) : null;
+    const errors = validateProductForm(editDraft);
 
-    // Risk #2: Validar que categorias não estão vazias
-    const teamsBySelectedCategory = teams.filter((team) => team.category === editDraft.category);
-    if (teamsBySelectedCategory.length === 0) {
-      errors.push("Categoria não tem times disponíveis");
-    }
-
-    // Validação por campo
-    if (!editDraft.name.trim()) {
-      errors.push("Nome é obrigatório");
-    }
-    if (!editDraft.description.trim()) {
-      errors.push("Descrição é obrigatória");
-    }
-    if (!basePrice || basePrice <= 0) {
-      errors.push("Preço deve ser um número válido e maior que 0");
-    }
-    if (!selectedTeam) {
-      errors.push("Selecione um time válido");
-    }
-    if (editDraft.discountPrice.trim() && !optionalDiscount) {
-      errors.push("Desconto deve ser um número válido ou deixe em branco");
-    }
-    if (optionalDiscount && basePrice && optionalDiscount >= basePrice) {
-      errors.push("Desconto deve ser menor que o preço cheio");
-    }
-    // Risk #1: Validar mínimo 1% de diferença no desconto
-    if (optionalDiscount && basePrice && optionalDiscount >= basePrice * 0.99) {
-      errors.push("Desconto deve ter no mínimo 1% de diferença");
-    }
-    // Risk #3: Validar URLs de imagem
-    const invalidImageUrls = editDraft.images.filter((url) => !isValidImageUrl(url));
-    if (invalidImageUrls.length > 0) {
-      errors.push(`${invalidImageUrls.length} imagem(ns) inválida(s) - use .jpg, .png, .gif, etc.`);
-    }
     if (editDraft.images.length === 0) {
       errors.push("Mantenha ao menos uma imagem do produto");
-    }
-    const editTemplate = editDraft.customizationTemplatePng.trim();
-    const editMetadata = editDraft.customizationTemplateMetadata.trim();
-    if (editDraft.customizationEnabled && !editTemplate) {
-      errors.push("Template PNG e obrigatorio quando personalizacao estiver habilitada");
-    }
-    if (editDraft.customizationEnabled && editTemplate && !isValidTemplateImage(editTemplate)) {
-      errors.push("Template de personalizacao deve ser uma URL de imagem valida (PNG recomendado)");
-    }
-    if (editDraft.customizationEnabled && !editMetadata) {
-      errors.push("Ajuste e salve os 4 pontos da area util antes de atualizar o produto.");
-    }
-    if (editDraft.customizationEnabled && editMetadata) {
-      const parsedMetadata = parseCustomizationTemplateMetadata(editMetadata);
-      if (!parsedMetadata) {
-        errors.push("Metadata da personalizacao esta invalida. Revise o mapeamento.");
-      } else {
-        const metadataErrors = validateCustomizationTemplateMetadata(parsedMetadata);
-        errors.push(...metadataErrors);
-      }
     }
 
     if (errors.length > 0) {
@@ -640,9 +576,11 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       return;
     }
 
-    if (!basePrice || !selectedTeam) {
-      return;
-    }
+    const basePrice = parseMoney(editDraft.price);
+    const optionalDiscount = editDraft.discountPrice.trim() ? parseMoney(editDraft.discountPrice) : null;
+    const selectedTeam = teams.find((team) => team.id === editDraft.teamId);
+
+    if (!basePrice || !selectedTeam) { return; }
 
     if (!authSession?.token) {
       setEditErrors(["Sessao admin expirada. Faca login novamente para editar produtos."]);
@@ -661,10 +599,8 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
       }
 
       const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
-      
-      // Convert local images to data URIs
       const convertedImages = await convertLocalImagesToDataUris(editDraft.images);
-      
+
       const updated = await updateAdminProductApi(
         editingProductId,
         {
@@ -676,27 +612,15 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
           originalPrice: pricing.originalPrice,
           imageUrl: convertedImages[0],
           customizationEnabled: editDraft.customizationEnabled,
-          customizationTemplatePng: editDraft.customizationEnabled
-            ? editDraft.customizationTemplatePng.trim() || undefined
-            : undefined,
-          customizationTemplateMetadata: editDraft.customizationEnabled
-            ? editDraft.customizationTemplateMetadata.trim() || undefined
-            : undefined,
-          variants: SIZE_ORDER.map((size) => ({
-            size,
-            stockQuantity: nextStockBySize[size]
-          }))
+          customizationTemplatePng: editDraft.customizationEnabled ? editDraft.customizationTemplatePng.trim() || undefined : undefined,
+          customizationTemplateMetadata: editDraft.customizationEnabled ? editDraft.customizationTemplateMetadata.trim() || undefined : undefined,
+          variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: nextStockBySize[size] }))
         },
-        {
-          authorizationContext,
-          bearerToken
-        }
+        { authorizationContext, bearerToken }
       );
 
       onUpdateProducts(
-        products.map((item) =>
-          item.id === editingProductId ? toAdminProductFromApi(updated, selectedTeam) : item
-        )
+        products.map((item) => item.id === editingProductId ? toAdminProductFromApi(updated, selectedTeam) : item)
       );
 
       dispatch({ type: "CLOSE_EDIT" });
@@ -719,6 +643,99 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     setRestockSize("ALL");
   };
 
+  const executeRestock = async (delta: number): Promise<void> => {
+    if (!activeRestockProduct) {
+      return;
+    }
+
+    if (!authSession?.token) {
+      showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+      return;
+    }
+
+    const product = products.find((item) => item.id === activeRestockProduct.id);
+    if (!product) {
+      showToast("Produto nao encontrado para reposicao.", "error", 3000);
+      return;
+    }
+
+    const nextStockBySize = { ...product.stockBySize };
+    if (restockSize === "ALL") {
+      SIZE_ORDER.forEach((size) => {
+        nextStockBySize[size] = Math.max(0, (nextStockBySize[size] ?? 0) + delta);
+      });
+    } else {
+      nextStockBySize[restockSize] = Math.max(0, (nextStockBySize[restockSize] ?? 0) + delta);
+    }
+
+    const updatePayload = {
+      categorySlug: product.team.category,
+      teamSlug: product.teamId,
+      modelName: product.name,
+      description: product.description,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      imageUrl: product.image,
+      customizationEnabled: Boolean(product.customizationEnabled),
+      customizationTemplatePng: product.customizationTemplatePng,
+      customizationTemplateMetadata: product.customizationTemplateMetadata,
+      variants: SIZE_ORDER.map((size) => ({ size, stockQuantity: nextStockBySize[size] ?? 0 }))
+    };
+
+    try {
+      const authorizationContext = await buildAuthorizationContext();
+      if (!authorizationContext) {
+        showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+        return;
+      }
+
+      const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
+      const updated = await updateAdminProductApi(product.id, updatePayload, {
+        authorizationContext,
+        bearerToken
+      });
+
+      const addedUnits = restockSize === "ALL" ? delta * SIZE_ORDER.length : delta;
+      onUpdateProducts(
+        products.map((item) => (item.id === product.id ? toAdminProductFromApi(updated, item.team) : item))
+      );
+      showToast(`✅ Estoque atualizado: +${addedUnits} item(ns)`, "success", 2500);
+      setRestockProductId(null);
+    } catch (error) {
+      if (isNormalizedApiError(error)) {
+        showToast(error.message, "error", 3000);
+      } else {
+        showToast("Nao foi possivel atualizar o estoque no backend.", "error", 3000);
+      }
+    }
+  };
+
+  const executeDeleteProduct = async (productId: string): Promise<void> => {
+    if (!authSession?.token) {
+      showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+      return;
+    }
+
+    try {
+      const authorizationContext = await buildAuthorizationContext();
+      if (!authorizationContext) {
+        showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
+        return;
+      }
+
+      const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
+      await deleteAdminProductApi(productId, { authorizationContext, bearerToken });
+      onUpdateProducts(products.filter((item) => item.id !== productId));
+      showToast("✅ Produto removido com sucesso!", "success", 2500);
+    } catch (error) {
+      if (isNormalizedApiError(error)) {
+        showToast(error.message, "error", 3000);
+      } else {
+        showToast("Nao foi possivel excluir o produto no backend.", "error", 3000);
+      }
+    }
+  };
+
   const confirmRestock = (delta: number) => {
     if (!activeRestockProduct) {
       return;
@@ -726,76 +743,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
     const scopeLabel = restockSize === "ALL" ? "todos os tamanhos" : `tamanho ${restockSize}`;
     Alert.alert("Confirmar reposicao", `Adicionar +${delta} no ${scopeLabel}?`, [
       { text: "Cancelar", style: "cancel" },
-      {
-        text: "Confirmar",
-        onPress: async () => {
-          if (!authSession?.token) {
-            showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
-            return;
-          }
-
-          const product = products.find((item) => item.id === activeRestockProduct.id);
-          if (!product) {
-            showToast("Produto nao encontrado para reposicao.", "error", 3000);
-            return;
-          }
-
-          const nextStockBySize = { ...product.stockBySize };
-          if (restockSize === "ALL") {
-            SIZE_ORDER.forEach((size) => {
-              nextStockBySize[size] = Math.max(0, (nextStockBySize[size] ?? 0) + delta);
-            });
-          } else {
-            nextStockBySize[restockSize] = Math.max(0, (nextStockBySize[restockSize] ?? 0) + delta);
-          }
-
-          const updatePayload = {
-            categorySlug: product.team.category,
-            teamSlug: product.teamId,
-            modelName: product.name,
-            description: product.description,
-            price: product.price,
-            originalPrice: product.originalPrice,
-            imageUrl: product.image,
-            customizationEnabled: Boolean(product.customizationEnabled),
-            customizationTemplatePng: product.customizationTemplatePng,
-            customizationTemplateMetadata: product.customizationTemplateMetadata,
-            variants: SIZE_ORDER.map((size) => ({
-              size,
-              stockQuantity: nextStockBySize[size] ?? 0
-            }))
-          };
-
-          try {
-            const authorizationContext = await buildAuthorizationContext();
-            if (!authorizationContext) {
-              showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
-              return;
-            }
-
-            const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
-            const updated = await updateAdminProductApi(product.id, updatePayload, {
-              authorizationContext,
-              bearerToken
-            });
-
-            const addedUnits = restockSize === "ALL" ? delta * SIZE_ORDER.length : delta;
-            onUpdateProducts(
-              products.map((item) =>
-                item.id === product.id ? toAdminProductFromApi(updated, item.team) : item
-              )
-            );
-            showToast(`✅ Estoque atualizado: +${addedUnits} item(ns)`, "success", 2500);
-            setRestockProductId(null);
-          } catch (error) {
-            if (isNormalizedApiError(error)) {
-              showToast(error.message, "error", 3000);
-            } else {
-              showToast("Nao foi possivel atualizar o estoque no backend.", "error", 3000);
-            }
-          }
-        }
-      }
+      { text: "Confirmar", onPress: () => executeRestock(delta) }
     ]);
   };
 
@@ -934,34 +882,7 @@ function AdminProductsScreenContent({ user, authSession, categories, teams, prod
                     { text: "Cancelar", onPress: () => {}, style: "cancel" },
                     {
                       text: "Excluir",
-                      onPress: async () => {
-                        if (!authSession?.token) {
-                          showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
-                          return;
-                        }
-
-                        try {
-                          const authorizationContext = await buildAuthorizationContext();
-                          if (!authorizationContext) {
-                            showToast("Sessao admin expirada. Faca login novamente.", "error", 3000);
-                            return;
-                          }
-
-                          const bearerToken = (await getActiveClerkIdentity())?.sessionToken ?? authSession.token;
-                          await deleteAdminProductApi(product.id, {
-                            authorizationContext,
-                            bearerToken
-                          });
-                          onUpdateProducts(products.filter((item) => item.id !== product.id));
-                          showToast("✅ Produto removido com sucesso!", "success", 2500);
-                        } catch (error) {
-                          if (isNormalizedApiError(error)) {
-                            showToast(error.message, "error", 3000);
-                          } else {
-                            showToast("Nao foi possivel excluir o produto no backend.", "error", 3000);
-                          }
-                        }
-                      },
+                      onPress: () => executeDeleteProduct(product.id),
                       style: "destructive"
                     }
                   ]

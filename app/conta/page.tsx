@@ -27,7 +27,7 @@ function formatCep(value: string) {
 }
 
 export default function AccountPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const isLoaded = status !== "loading"
   const isSignedIn = status === "authenticated"
   const [activeTab, setActiveTab] = useState("pedidos")

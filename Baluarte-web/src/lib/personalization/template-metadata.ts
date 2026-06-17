@@ -91,7 +91,7 @@ export const parseCustomizationTemplateMetadata = (value?: string): Customizatio
 
   try {
     const parsed = JSON.parse(value) as CustomizationTemplateMetadata;
-    if (!parsed?.faces?.front?.points || parsed.faces.front.points.length !== 4) {
+    if (!parsed?.faces?.front?.points || parsed?.faces?.front?.points?.length !== 4) {
       return null;
     }
     return parsed;
@@ -101,7 +101,7 @@ export const parseCustomizationTemplateMetadata = (value?: string): Customizatio
 };
 
 export const extractFrontPoints = (metadata?: CustomizationTemplateMetadata | null): CustomizationPoint[] => {
-  if (!metadata?.faces?.front?.points || metadata.faces.front.points.length !== 4) {
+  if (!metadata?.faces?.front?.points || metadata?.faces?.front?.points?.length !== 4) {
     return DEFAULT_FRONT_POINTS.map((point) => ({ ...point }));
   }
   return normalizePoints(metadata.faces.front.points).map((point) => ({ ...point }));

@@ -27,21 +27,7 @@ export function isMobileViewport(width: number): boolean {
   return getViewportKind(width) === "mobile";
 }
 
-export function resolveResponsiveColumns(
-  width: number,
-  values: { mobile: number; tablet?: number; desktop?: number }
-): number {
-  const kind = getViewportKind(width);
-  if (kind === "desktop") {
-    return values.desktop ?? values.tablet ?? values.mobile;
-  }
-  if (kind === "tablet") {
-    return values.tablet ?? values.mobile;
-  }
-  return values.mobile;
-}
-
-export function resolveResponsiveValue<T>(
+function resolveResponsiveColumnValue<T>(
   width: number,
   values: { mobile: T; tablet?: T; desktop?: T }
 ): T {
@@ -54,3 +40,6 @@ export function resolveResponsiveValue<T>(
   }
   return values.mobile;
 }
+
+export const resolveResponsiveColumns = resolveResponsiveColumnValue;
+export const resolveResponsiveValue = resolveResponsiveColumnValue;

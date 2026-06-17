@@ -35,7 +35,7 @@ export function ConfirmDialog({ open, title, message, onConfirm, onCancel }: {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onCancel} />
+      <div className="fixed inset-0 bg-black/50" onClick={onCancel} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCancel(); }} />
       <div className="relative z-[60] w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl">
         <h3 className="text-lg font-bold">{title}</h3>
         <p className="mt-2 text-sm text-slate-600">{message}</p>
@@ -52,7 +52,7 @@ function Dialog({ open, onClose, children }: { open: boolean; onClose: () => voi
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClose(); }} />
       <div className="relative z-[100] w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border bg-white p-6 shadow-2xl">
         <button onClick={onClose} className="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
           <X className="h-5 w-5" />
@@ -81,7 +81,7 @@ function ProgressBar({ step }: { step: number }) {
         })}
       </div>
       <div className="mt-3 flex gap-1">
-        {STEPS.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-[#0f274d]" : "bg-slate-200"}`} />)}
+        {STEPS.map((_, i) => <div key={`step-${i}`} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-[#0f274d]" : "bg-slate-200"}`} />)}
       </div>
     </div>
   )
@@ -123,8 +123,8 @@ export function ProductFormDialog(props: ProductFormDialogProps) {
               {SIZE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat === "ADULTO" ? "Adulto" : "Infantil"}</option>)}
             </select>
           </div>
-          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-            <input type="checkbox" checked={form.featured} disabled={!form.featured && featuredCount >= 10} onChange={e => onFormChange(f => ({ ...f, featured: e.target.checked }))} className="mt-1" />
+          <label htmlFor="featured-checkbox" className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+            <input id="featured-checkbox" type="checkbox" checked={form.featured} disabled={!form.featured && featuredCount >= 10} onChange={e => onFormChange(f => ({ ...f, featured: e.target.checked }))} className="mt-1" />
             <span><span className="block font-semibold text-slate-800">Marcar como destaque</span><span className="block text-xs text-slate-500">{featuredCount}/10 produtos em destaque. Esses produtos aparecem na seção Destaque da home.</span></span>
           </label>
         </div>

@@ -234,7 +234,7 @@ export function TemplateMappingTool({ templateUri, metadataValue, onMetadataChan
 
             return (
               <View
-                key={`point-${index}`}
+                key={`point-${point.x}-${point.y}`}
                 {...handlePanResponders[index].panHandlers}
                 style={{
                   position: "absolute",
@@ -259,7 +259,7 @@ export function TemplateMappingTool({ templateUri, metadataValue, onMetadataChan
 
       <View style={{ gap: 4 }}>
         {points.map((point, index) => (
-          <Text key={`coords-${index}`} style={styles.summaryKey}>
+          <Text key={`coords-${point.x}-${point.y}`} style={styles.summaryKey}>
             P{index + 1}: x={round(point.x)} y={round(point.y)}
           </Text>
         ))}

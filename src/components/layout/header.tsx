@@ -20,7 +20,7 @@ export function Header() {
   )
   const { items } = useCart()
   const { items: wishlistItems } = useWishlist()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const isLoaded = status !== "loading"
   const isSignedIn = status === "authenticated"
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0)

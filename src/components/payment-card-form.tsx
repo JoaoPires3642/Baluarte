@@ -269,9 +269,9 @@ function stringValue(value: unknown) {
 
 function detectPaymentMethodId(bin: string) {
   if (!bin && process.env.NODE_ENV !== "production") return "master"
-  if (/^4/.test(bin)) return "visa"
+  if (bin.startsWith("4")) return "visa"
   if (/^(5[1-5]|2[2-7])/.test(bin)) return "master"
-  if (/^3[47]/.test(bin)) return "amex"
+  if (bin.startsWith("34") || bin.startsWith("37")) return "amex"
   if (/^(4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650|6516|6550)/.test(bin)) return "elo"
   return ""
 }

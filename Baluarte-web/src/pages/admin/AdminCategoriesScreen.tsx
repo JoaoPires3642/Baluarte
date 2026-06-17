@@ -38,6 +38,10 @@ export function AdminCategoriesScreen({ user, categories, teams, onBack, onUpdat
     return teams.filter((team) => team.category === categorySlug).length;
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / itemsPerPage));
+
   const resetCreateForm = () => {
     setName("");
     setLogo("");
@@ -131,48 +135,41 @@ export function AdminCategoriesScreen({ user, categories, teams, onBack, onUpdat
         </Pressable>
       </View>
 
-      {(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
-        const totalPages = Math.max(1, Math.ceil(filteredCategories.length / itemsPerPage));
+      {paginatedCategories.map((category) => {
+        const usage = linkedTeamsCount(category.slug);
 
         return (
-          <>
-            {paginatedCategories.map((category) => {
-              const usage = linkedTeamsCount(category.slug);
+          <View key={category.slug} style={[styles.summaryCard, styles.adminProductCard]}>
+            <View style={styles.summaryLine}>
+              <Text style={styles.summaryTitle}>{category.name}</Text>
+              <Text style={styles.summaryValue}>{usage} time(s)</Text>
+            </View>
+            <Text style={styles.screenDescription}>{category.slug}</Text>
+            <Text style={styles.screenDescription} numberOfLines={1}>
+              {category.logo}
+            </Text>
+            <View style={styles.inlineActionRow}>
+              <Pressable style={styles.secondaryActionButton} onPress={() => startEditing(category.slug)}>
+                <Text style={styles.secondaryActionButtonText}>Editar</Text>
+              </Pressable>
+              <Pressable
+                style={styles.dangerButton}
+                onPress={() => {
+                  if (usage > 0) {
+                    Alert.alert("Nao permitido", `Existem ${usage} time(s) nessa categoria.`);
+                    return;
+                  }
+                  onUpdateCategories(categories.filter((item) => item.slug !== category.slug));
+                }}
+              >
+                <Text style={styles.dangerButtonText}>Remover</Text>
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
 
-              return (
-                <View key={category.slug} style={[styles.summaryCard, styles.adminProductCard]}>
-                  <View style={styles.summaryLine}>
-                    <Text style={styles.summaryTitle}>{category.name}</Text>
-                    <Text style={styles.summaryValue}>{usage} time(s)</Text>
-                  </View>
-                  <Text style={styles.screenDescription}>{category.slug}</Text>
-                  <Text style={styles.screenDescription} numberOfLines={1}>
-                    {category.logo}
-                  </Text>
-                  <View style={styles.inlineActionRow}>
-                    <Pressable style={styles.secondaryActionButton} onPress={() => startEditing(category.slug)}>
-                      <Text style={styles.secondaryActionButtonText}>Editar</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.dangerButton}
-                      onPress={() => {
-                        if (usage > 0) {
-                          Alert.alert("Nao permitido", `Existem ${usage} time(s) nessa categoria.`);
-                          return;
-                        }
-                        onUpdateCategories(categories.filter((item) => item.slug !== category.slug));
-                      }}
-                    >
-                      <Text style={styles.dangerButtonText}>Remover</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
-
-            {filteredCategories.length === 0 ? (
+      {filteredCategories.length === 0 ? (
               <View style={[styles.summaryCard, styles.adminProductCard]}>
                 <Text style={styles.screenDescription}>Nenhuma categoria encontrada para o filtro informado.</Text>
               </View>
@@ -201,9 +198,6 @@ export function AdminCategoriesScreen({ user, categories, teams, onBack, onUpdat
                 </View>
               </View>
             ) : null}
-          </>
-        );
-      })()}
 
       <SimpleFormModal
         visible={isCreateModalOpen}
