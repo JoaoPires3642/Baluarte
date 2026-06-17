@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthSessionController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthSessionController.class);
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]++@[^@\\s.]++\\.[^@\\s]++$");
 
     private final InternalRoleResolver internalRoleResolver;
 
