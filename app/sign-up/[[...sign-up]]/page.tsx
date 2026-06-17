@@ -85,7 +85,7 @@ export default function SignUpPage() {
                 type="text"
                 placeholder="João"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={(e) => { setFirstName(e.target.value); }}
                 required
                 autoComplete="given-name"
               />
@@ -97,7 +97,7 @@ export default function SignUpPage() {
                 type="text"
                 placeholder="Silva"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e) => { setLastName(e.target.value); }}
                 required
                 autoComplete="family-name"
               />
@@ -111,7 +111,7 @@ export default function SignUpPage() {
               type="email"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); }}
               required
               autoComplete="email"
               autoFocus
@@ -125,7 +125,7 @@ export default function SignUpPage() {
               type="password"
               placeholder="Mínimo 8 caracteres"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
               required
               autoComplete="new-password"
             />

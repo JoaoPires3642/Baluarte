@@ -64,7 +64,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      loadAddresses()
+      void loadAddresses()
     }
   }, [isLoaded, isSignedIn, loadAddresses])
 
@@ -229,7 +229,7 @@ export default function AccountPage() {
         {TABS.map(tab => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => { setActiveTab(tab.key); }}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key ? "bg-white text-[#0f274d] shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
@@ -258,7 +258,7 @@ export default function AccountPage() {
         {activeTab === "enderecos" && (
           <div className="space-y-4">
             {!showForm && (
-              <Button onClick={() => setShowForm(true)}>
+              <Button onClick={() => { setShowForm(true); }}>
                 <Plus className="mr-2 h-4 w-4" /> Novo Endereço
               </Button>
             )}
@@ -270,18 +270,18 @@ export default function AccountPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <Label>Identificação (ex: Casa, Trabalho)</Label>
-                      <Input value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="Minha Casa" />
+                      <Input value={form.label} onChange={e => { setForm(p => ({ ...p, label: e.target.value })); }} placeholder="Minha Casa" />
                     </div>
                     <div className="sm:col-span-2">
                       <Label>Nome do destinatário</Label>
-                      <Input value={form.recipientName} onChange={e => setForm(p => ({ ...p, recipientName: e.target.value }))} placeholder="Nome de quem vai receber" />
+                      <Input value={form.recipientName} onChange={e => { setForm(p => ({ ...p, recipientName: e.target.value })); }} placeholder="Nome de quem vai receber" />
                     </div>
                     <div>
                       <Label>CEP</Label>
                       <div className="relative">
                         <Input
                           value={form.cep}
-                          onChange={e => setForm(p => ({ ...p, cep: formatCep(e.target.value) }))}
+                          onChange={e => { setForm(p => ({ ...p, cep: formatCep(e.target.value) })); }}
                           onBlur={handleCepBlur}
                           maxLength={9}
                           placeholder="00000-000"
@@ -291,23 +291,23 @@ export default function AccountPage() {
                     </div>
                     <div>
                       <Label>Estado (UF)</Label>
-                      <Input value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))} maxLength={2} placeholder="SP" />
+                      <Input value={form.state} onChange={e => { setForm(p => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) })); }} maxLength={2} placeholder="SP" />
                     </div>
                     <div className="sm:col-span-2">
                       <Label>Rua</Label>
-                      <Input value={form.street} onChange={e => setForm(p => ({ ...p, street: e.target.value }))} placeholder="Rua..." />
+                      <Input value={form.street} onChange={e => { setForm(p => ({ ...p, street: e.target.value })); }} placeholder="Rua..." />
                     </div>
                     <div>
                       <Label>Número</Label>
-                      <Input value={form.number} onChange={e => setForm(p => ({ ...p, number: e.target.value }))} placeholder="123" />
+                      <Input value={form.number} onChange={e => { setForm(p => ({ ...p, number: e.target.value })); }} placeholder="123" />
                     </div>
                     <div>
                       <Label>Complemento</Label>
-                      <Input value={form.complement} onChange={e => setForm(p => ({ ...p, complement: e.target.value }))} placeholder="Apto, Bloco..." />
+                      <Input value={form.complement} onChange={e => { setForm(p => ({ ...p, complement: e.target.value })); }} placeholder="Apto, Bloco..." />
                     </div>
                     <div>
                       <Label>Bairro</Label>
-                      <Input value={form.neighborhood} onChange={e => setForm(p => ({ ...p, neighborhood: e.target.value }))} placeholder="Centro" />
+                      <Input value={form.neighborhood} onChange={e => { setForm(p => ({ ...p, neighborhood: e.target.value })); }} placeholder="Centro" />
                     </div>
                     <div>
                       <Label>Cidade</Label>
@@ -315,7 +315,7 @@ export default function AccountPage() {
                     </div>
                     <div className="sm:col-span-2">
                       <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={form.isDefault} onChange={e => setForm(p => ({ ...p, isDefault: e.target.checked }))} />
+                        <input type="checkbox" checked={form.isDefault} onChange={e => { setForm(p => ({ ...p, isDefault: e.target.checked })); }} />
                         Endereço padrão
                       </label>
                     </div>
@@ -360,7 +360,7 @@ export default function AccountPage() {
                           <p className="text-xs text-slate-400">{addr.cep}</p>
                         </div>
                         <div className="flex shrink-0 gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(addr)}>
+                          <Button variant="ghost" size="sm" onClick={() => { handleEdit(addr); }}>
                             <Home className="h-4 w-4 text-slate-400" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-red-400" onClick={() => handleDelete(addr.addressId)}>

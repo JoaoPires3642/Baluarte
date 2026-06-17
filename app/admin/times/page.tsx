@@ -76,7 +76,7 @@ export default function AdminTeamsPage() {
     }
   }, [authedFetch])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { void loadData() }, [loadData])
 
   const openCreate = () => {
     setEditingId(null)
@@ -162,13 +162,13 @@ export default function AdminTeamsPage() {
           <Input
             placeholder="Buscar times..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); }}
             className="pl-10"
           />
         </div>
         <select
           value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
+          onChange={e => { setCategoryFilter(e.target.value); }}
           className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"
         >
           <option value="">Todas categorias</option>
@@ -199,10 +199,10 @@ export default function AdminTeamsPage() {
               Categoria: {categories.find(c => c.id === team.categoryId)?.name || team.categorySlug || "-"}
             </p>
             <div className="mt-3 flex gap-2">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(team)}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => { openEdit(team); }}>
                 <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-red-500" onClick={() => setDeleteConfirm(team.id)}>
+              <Button variant="outline" size="sm" className="flex-1 text-red-500" onClick={() => { setDeleteConfirm(team.id); }}>
                 <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
               </Button>
             </div>
@@ -250,7 +250,7 @@ export default function AdminTeamsPage() {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); }}>
         <h2 className="text-lg font-bold mb-4">{editingId ? "Editar Time" : "Novo Time"}</h2>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -262,12 +262,12 @@ export default function AdminTeamsPage() {
           </div>
           <div className="space-y-2">
             <Label>Slug</Label>
-            <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="ex: sao-paulo" />
+            <Input value={form.slug} onChange={e => { setForm(f => ({ ...f, slug: e.target.value })); }} placeholder="ex: sao-paulo" />
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>
             <select value={form.categoryId}
-              onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+              onChange={e => { setForm(f => ({ ...f, categoryId: e.target.value })); }}
               className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
               <option value="">Selecione...</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -275,16 +275,16 @@ export default function AdminTeamsPage() {
           </div>
           <div className="space-y-2">
             <Label>Liga (opcional)</Label>
-            <Input value={form.league} onChange={e => setForm(f => ({ ...f, league: e.target.value }))} placeholder="Ex: Serie A" />
+            <Input value={form.league} onChange={e => { setForm(f => ({ ...f, league: e.target.value })); }} placeholder="Ex: Serie A" />
           </div>
           <div className="space-y-2">
             <Label>Ordem de exibição</Label>
             <Input type="number" min="0" value={form.displayOrder}
-              onChange={e => setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 }))} />
+              onChange={e => { setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 })); }} />
           </div>
           <div className="space-y-2">
             <Label>URL do escudo (logo)</Label>
-            <Input value={form.logo} onChange={e => setForm(f => ({ ...f, logo: e.target.value }))} placeholder="https://assets.football-logos.cc/..." />
+            <Input value={form.logo} onChange={e => { setForm(f => ({ ...f, logo: e.target.value })); }} placeholder="https://assets.football-logos.cc/..." />
             {form.logo && (
               <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
                 <img src={form.logo} alt="preview" className="h-8 w-8 rounded-full object-contain bg-[#f4f7fb] p-0.5" />
@@ -294,7 +294,7 @@ export default function AdminTeamsPage() {
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-[#0f274d]">
               {saving ? "Salvando..." : editingId ? "Atualizar" : "Criar"}
             </Button>
@@ -307,7 +307,7 @@ export default function AdminTeamsPage() {
         title="Excluir time?"
         message="Esta ação não pode ser desfeita."
         onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
-        onCancel={() => setDeleteConfirm(null)}
+        onCancel={() => { setDeleteConfirm(null); }}
       />
     </div>
   )

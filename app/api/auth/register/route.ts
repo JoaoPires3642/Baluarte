@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (!body?.email || !body?.password) {
+  if (!body.email || !body?.password) {
     return NextResponse.json(
       { error: "Email e senha são obrigatórios" },
       { status: 400 }

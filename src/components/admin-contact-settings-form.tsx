@@ -50,7 +50,7 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
         <Field label="Mensagem">
           <Textarea
             value={settings.footerMessage || ""}
-            onChange={event => update("footerMessage", event.target.value)}
+            onChange={event => { update("footerMessage", event.target.value); }}
             placeholder="Mensagem curta sobre a loja"
             rows={4}
             className="sm:col-span-2"
@@ -63,10 +63,10 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
           <h2 className="text-lg font-bold">Atendimento</h2>
           <p className="mt-1 text-sm text-slate-500">Campos vazios nao aparecem no site.</p>
         </div>
-        <Field label="Email"><Input value={settings.email || ""} onChange={event => update("email", event.target.value)} /></Field>
-        <Field label="Telefone"><Input value={settings.phone || ""} onChange={event => update("phone", event.target.value)} /></Field>
-        <Field label="WhatsApp"><Input value={settings.whatsapp || ""} onChange={event => update("whatsapp", event.target.value)} /></Field>
-        <Field label="Horario"><Input value={settings.businessHours || ""} onChange={event => update("businessHours", event.target.value)} /></Field>
+        <Field label="Email"><Input value={settings.email || ""} onChange={event => { update("email", event.target.value); }} /></Field>
+        <Field label="Telefone"><Input value={settings.phone || ""} onChange={event => { update("phone", event.target.value); }} /></Field>
+        <Field label="WhatsApp"><Input value={settings.whatsapp || ""} onChange={event => { update("whatsapp", event.target.value); }} /></Field>
+        <Field label="Horario"><Input value={settings.businessHours || ""} onChange={event => { update("businessHours", event.target.value); }} /></Field>
       </section>
 
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
@@ -77,7 +77,7 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
         <Field label="Mensagem">
           <Textarea
             value={settings.whatsappMessage || ""}
-            onChange={event => update("whatsappMessage", event.target.value)}
+            onChange={event => { update("whatsappMessage", event.target.value); }}
             placeholder="Ola! Gostaria de mais informacoes..."
             rows={3}
             className="sm:col-span-2"
@@ -90,9 +90,9 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
           <h2 className="text-lg font-bold">Redes sociais</h2>
           <p className="mt-1 text-sm text-slate-500">Informe a URL completa. Icones sem URL nao aparecem.</p>
         </div>
-        <Field label="Instagram"><Input value={settings.instagramUrl || ""} onChange={event => update("instagramUrl", event.target.value)} /></Field>
-        <Field label="Facebook"><Input value={settings.facebookUrl || ""} onChange={event => update("facebookUrl", event.target.value)} /></Field>
-        <Field label="YouTube"><Input value={settings.youtubeUrl || ""} onChange={event => update("youtubeUrl", event.target.value)} /></Field>
+        <Field label="Instagram"><Input value={settings.instagramUrl || ""} onChange={event => { update("instagramUrl", event.target.value); }} /></Field>
+        <Field label="Facebook"><Input value={settings.facebookUrl || ""} onChange={event => { update("facebookUrl", event.target.value); }} /></Field>
+        <Field label="YouTube"><Input value={settings.youtubeUrl || ""} onChange={event => { update("youtubeUrl", event.target.value); }} /></Field>
       </section>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

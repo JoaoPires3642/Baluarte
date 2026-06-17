@@ -61,7 +61,7 @@ export function Header() {
           <div className="min-w-0 flex-1">
             <SearchBox className="relative w-full" inputClassName="h-10 w-full rounded-full border-[#d9e2ef] bg-white pl-9 pr-2 shadow-sm" />
           </div>
-          <button type="button" onClick={() => setMobileMenuOpen(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#d9e2ef] bg-white text-[#0f274d] shadow-sm">
+          <button type="button" onClick={() => { setMobileMenuOpen(true); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#d9e2ef] bg-white text-[#0f274d] shadow-sm">
             <Menu className="h-5 w-5" />
           </button>
         </div>
@@ -149,7 +149,7 @@ export function Header() {
 
       {isClient ? createPortal(
         <div className={`fixed inset-0 z-[200] transition-all duration-300 sm:hidden ${mobileMenuOpen ? "pointer-events-auto bg-slate-950/55 backdrop-blur-sm" : "pointer-events-none bg-transparent"}`}>
-          <button type="button" aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)} className="absolute inset-0" />
+          <button type="button" aria-label="Fechar menu" onClick={() => { setMobileMenuOpen(false); }} className="absolute inset-0" />
           <div className={`ml-auto flex h-full w-[88%] max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
             <div className="flex items-center justify-between border-b border-[#d9e2ef] px-4 py-4">
               <div className="flex items-center gap-3">
@@ -160,7 +160,7 @@ export function Header() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">artigos esportivos</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setMobileMenuOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
+              <button type="button" onClick={() => { setMobileMenuOpen(false); }} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -169,8 +169,8 @@ export function Header() {
               <div className="space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Navegação</p>
                 <div className="grid gap-2">
-                  <Link href="/categorias" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">Categorias</Link>
-                  <Link href="/times" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">Times</Link>
+                  <Link href="/categorias" onClick={() => { setMobileMenuOpen(false); }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">Categorias</Link>
+                  <Link href="/times" onClick={() => { setMobileMenuOpen(false); }} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">Times</Link>
                   <Link href="/selecoes" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-[#10233f]">Seleções</Link>
                 </div>
               </div>
@@ -178,13 +178,13 @@ export function Header() {
               <div className="space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Atalhos</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Link href="/desejos" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
+                  <Link href="/desejos" onClick={() => { setMobileMenuOpen(false); }} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
                     <Heart className="mx-auto mb-2 h-5 w-5 text-[#c3222a]" /> Favoritos
                   </Link>
-                  <Link href="/carrinho" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
+                  <Link href="/carrinho" onClick={() => { setMobileMenuOpen(false); }} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
                     <ShoppingBag className="mx-auto mb-2 h-5 w-5 text-[#0f274d]" /> Carrinho
                   </Link>
-                  <Link href="/pedidos" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
+                  <Link href="/pedidos" onClick={() => { setMobileMenuOpen(false); }} className="rounded-2xl border border-slate-200 bg-[#f8fbff] p-4 text-center text-sm font-semibold text-[#10233f]">
                     <UserRound className="mx-auto mb-2 h-5 w-5 text-[#0f274d]" /> Pedidos
                   </Link>
                 </div>
@@ -194,16 +194,16 @@ export function Header() {
                 {(!isLoaded || !isSignedIn) ? (
                   <>
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>Entrar</Link>
+                    <Link href="/sign-in" onClick={() => { setMobileMenuOpen(false); }}>Entrar</Link>
                   </Button>
                   <Button variant="destructive" className="w-full" asChild>
-                    <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>Criar conta</Link>
+                    <Link href="/sign-up" onClick={() => { setMobileMenuOpen(false); }}>Criar conta</Link>
                   </Button>
                   </>
                 ) : (
                   <>
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href="/conta" onClick={() => setMobileMenuOpen(false)}>Minha conta</Link>
+                    <Link href="/conta" onClick={() => { setMobileMenuOpen(false); }}>Minha conta</Link>
                   </Button>
                   </>
                 )}

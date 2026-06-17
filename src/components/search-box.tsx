@@ -30,7 +30,7 @@ export function SearchBox({ className, inputClassName }: SearchBoxProps) {
         placeholder="Buscar camisas, coleções e times"
         className={inputClassName || "h-11 w-full rounded-full border-[#d9e2ef] bg-white pl-9 pr-4 shadow-sm"}
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => { setQuery(e.target.value); }}
       />
     </form>
   )

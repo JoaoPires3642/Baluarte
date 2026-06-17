@@ -27,7 +27,7 @@ export function PixOrderBanner({ qrCodeBase64, copyPasteCode, expiresAt }: Props
     }
     tick()
     const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+    return () => { clearInterval(id); }
   }, [expiresAt])
 
   async function handleCopy() {
@@ -35,7 +35,7 @@ export function PixOrderBanner({ qrCodeBase64, copyPasteCode, expiresAt }: Props
     try {
       await navigator.clipboard.writeText(copyPasteCode)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => { setCopied(false); }, 2000)
     } catch {}
   }
 

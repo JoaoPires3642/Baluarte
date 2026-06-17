@@ -57,7 +57,7 @@ export default function WishlistPage() {
               </p>
               <div className="flex gap-2 mt-4">
                 <Button size="sm" className="flex-1">Adicionar ao Carrinho</Button>
-                <Button variant="ghost" size="sm" onClick={() => handleRemove(item.id)}>
+                <Button variant="ghost" size="sm" onClick={() => { handleRemove(item.id); }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>

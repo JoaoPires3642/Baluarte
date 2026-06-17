@@ -145,7 +145,7 @@ export default function CartPage() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handleIncreaseQuantity(item.id, item.size, item.quantity, item.stockQuantity)}
+                        onClick={() => { handleIncreaseQuantity(item.id, item.size, item.quantity, item.stockQuantity); }}
                         disabled={reachedStockLimit}
                       >
                         +
@@ -155,7 +155,7 @@ export default function CartPage() {
                          variant="ghost" 
                          size="sm" 
                          className="text-destructive sm:ml-auto"
-                         onClick={() => handleRemove(item.id, item.size)}
+                         onClick={() => { handleRemove(item.id, item.size); }}
                        >
                         Remover
                       </Button>
@@ -187,7 +187,7 @@ export default function CartPage() {
                   <Input
                     placeholder="CEP"
                     value={shippingCep}
-                    onChange={(e) => setShippingCep(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    onChange={(e) => { setShippingCep(e.target.value.replace(/\D/g, "").slice(0, 8)); }}
                   />
                   <Button onClick={handleShippingSearch} disabled={shippingLoading} className="w-full sm:w-auto">
                     {shippingLoading ? "Calculando..." : "Calcular"}
@@ -200,7 +200,7 @@ export default function CartPage() {
                       <button
                         key={option.id}
                         type="button"
-                        onClick={() => setSelectedShippingId(option.id)}
+                        onClick={() => { setSelectedShippingId(option.id); }}
                         className={`rounded-xl border p-3 text-left ${selectedShippingId === option.id ? "border-[#1e3a8a] bg-white ring-2 ring-[#1e3a8a]/10" : "border-slate-200 bg-white"}`}
                       >
                         <p className="text-sm font-semibold text-slate-900">{option.label}</p>

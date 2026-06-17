@@ -84,7 +84,7 @@ export function ProductPageView({ product }: { product: ModelDetail }) {
                 </div>
                 <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-slate-950/45 px-3 py-2 backdrop-blur sm:hidden">
                   {gallery.map((image, index) => (
-                    <button key={`${image}-dot`} type="button" onClick={() => setSelectedIndex(index)} className={`h-2.5 rounded-full transition-all ${selectedIndex === index ? "w-6 bg-white" : "w-2.5 bg-white/50"}`} aria-label={`Ir para imagem ${index + 1}`} />
+                    <button key={`${image}-dot`} type="button" onClick={() => { setSelectedIndex(index); }} className={`h-2.5 rounded-full transition-all ${selectedIndex === index ? "w-6 bg-white" : "w-2.5 bg-white/50"}`} aria-label={`Ir para imagem ${index + 1}`} />
                   ))}
                 </div>
               </>
@@ -97,7 +97,7 @@ export function ProductPageView({ product }: { product: ModelDetail }) {
                 <button
                   key={`${product.id}-thumb-${index}`}
                   type="button"
-                  onClick={() => setSelectedIndex(index)}
+                  onClick={() => { setSelectedIndex(index); }}
                   className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border bg-slate-100 sm:h-20 sm:w-20 ${selectedIndex === index ? "border-[#1e3a8a] ring-2 ring-[#1e3a8a]/15" : "border-slate-200"}`}
                 >
                   <Image src={image} alt={`${product.modelName} ${index + 1}`} fill unoptimized className="object-cover" />

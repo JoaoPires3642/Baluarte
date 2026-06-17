@@ -86,7 +86,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.map((i) => (i.id === id && i.size === size ? { ...i, quantity: clampQuantity(quantity, i.stockQuantity) } : i)))
   }
 
-  const clear = () => setItems([])
+  const clear = () => { setItems([]); }
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
 

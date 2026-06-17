@@ -17,7 +17,7 @@ export default function ContactPage() {
 
   useEffect(() => {
     fetchSiteContactSettings()
-      .then(res => setSettings(res.data))
+      .then(res => { setSettings(res.data); })
       .catch(() => {})
   }, [])
 
@@ -52,22 +52,22 @@ export default function ContactPage() {
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
                 <Input id="name" placeholder="Seu nome" value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  onChange={(e) => { setForm({ ...form, name: e.target.value }); }} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="seu@email.com" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                  onChange={(e) => { setForm({ ...form, email: e.target.value }); }} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="subject">Assunto</Label>
                 <Input id="subject" placeholder="Sobre o que quer falar?" value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })} required />
+                  onChange={(e) => { setForm({ ...form, subject: e.target.value }); }} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="message">Mensagem</Label>
                 <Textarea id="message" placeholder="Sua mensagem..." rows={5} value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })} required />
+                  onChange={(e) => { setForm({ ...form, message: e.target.value }); }} required />
               </div>
               <Button type="submit" className="w-full">Enviar Mensagem</Button>
             </form>

@@ -83,7 +83,7 @@ export function AdminNavbar() {
             Ver loja
           </Link>
           <button
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => { setMobileOpen(!mobileOpen); }}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 md:hidden"
           >
             <span className="text-xs font-medium">Menu</span>
@@ -101,7 +101,7 @@ export function AdminNavbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => { setMobileOpen(false); }}
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     active
                       ? "bg-[#0f274d] text-white"

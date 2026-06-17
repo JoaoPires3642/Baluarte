@@ -14,7 +14,7 @@ export function Analytics() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const url = pathname + (searchParams?.toString() ? `?${searchParams}` : "")
+    const url = pathname + (searchParams.toString() ? `?${searchParams}` : "")
     console.log("[Analytics] Page view:", url)
     
     window.gtag?.("config", "GA_MEASUREMENT_ID", {

@@ -129,7 +129,7 @@ export default async function OrderDetailPage({ params }: Props) {
             <CardTitle className="inline-flex items-center gap-2"><PackageSearch className="h-5 w-5 text-[#0f274d]" />Itens do Pedido</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {order.items?.map((item) => (
+            {order.items.map((item) => (
               <div key={`${item.name}-${item.size}`} className="flex justify-between">
                 <div>
                   <p className="font-medium">{item.name}</p>
@@ -169,7 +169,7 @@ export default async function OrderDetailPage({ params }: Props) {
                 <p className="font-medium">{order.shipping.address}</p>
               </div>
             ) : null}
-            {order.shipping?.trackingCode && order.shipping?.shippingType !== "station" && (
+            {order.shipping?.trackingCode && order.shipping.shippingType !== "station" && (
               <div>
                 <p className="text-sm text-muted-foreground">Código de Rastreamento</p>
                 <p className="font-medium">{order.shipping.trackingCode}</p>

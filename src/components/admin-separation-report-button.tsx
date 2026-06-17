@@ -32,7 +32,7 @@ export function AdminSeparationReportButton() {
         <p className="mt-1 text-sm text-slate-500">Fretes comuns pela data do pedido; estacoes pela entrega do dia seguinte.</p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input type="date" value={date} onChange={event => setDate(event.target.value)} className="w-full sm:w-44" />
+        <Input type="date" value={date} onChange={event => { setDate(event.target.value); }} className="w-full sm:w-44" />
         <Button type="button" variant="outline" onClick={openReport} disabled={loading || !date}>
           <Download className="h-4 w-4" /> {loading ? "Gerando..." : "Gerar PDF"}
         </Button>

@@ -90,7 +90,7 @@ export default async function OrdersPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {order.items?.map((item) => (
+                  {order.items.map((item) => (
                     <div key={`${item.name}-${item.size}`} className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
                         {item.name} ({item.size}) x{item.quantity}

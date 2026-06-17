@@ -59,7 +59,7 @@ export default function SignInPage() {
               type="email"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); }}
               required
               autoComplete="email"
               autoFocus
@@ -73,7 +73,7 @@ export default function SignInPage() {
               type="password"
               placeholder="Sua senha"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
               required
               autoComplete="current-password"
             />

@@ -92,7 +92,7 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
           <input
             type="checkbox"
             checked={enabled}
-            onChange={e => setEnabled(e.target.checked)}
+            onChange={e => { setEnabled(e.target.checked); }}
           />
           Ativar entrega em estacoes
         </label>
@@ -100,7 +100,7 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
         <div className="max-w-xs">
           <label className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Preco (R$)</span>
-            <Input type="number" step="0.01" min="0" value={price} onChange={e => setPrice(e.target.value)} />
+            <Input type="number" step="0.01" min="0" value={price} onChange={e => { setPrice(e.target.value); }} />
           </label>
         </div>
       </section>
@@ -116,7 +116,7 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
                   <Input
                     key={`${day}-${index}`}
                     value={station}
-                    onChange={e => updateStation(day, index, e.target.value)}
+                    onChange={e => { updateStation(day, index, e.target.value); }}
                     placeholder={`Estacao ${index + 1}`}
                   />
                 ))}
@@ -138,12 +138,12 @@ export function AdminStationDeliveryForm({ initialSettings }: { initialSettings:
             <div key={`slot-${index}`} className="flex items-center gap-2">
               <Input
                 value={slot}
-                onChange={e => updateTimeSlot(index, e.target.value)}
+                onChange={e => { updateTimeSlot(index, e.target.value); }}
                 placeholder="HH:MM-HH:MM"
               />
               {timeSlots.length > 1 && (
                 <button
-                  onClick={() => removeTimeSlot(index)}
+                  onClick={() => { removeTimeSlot(index); }}
                   className="shrink-0 text-sm text-red-500 hover:text-red-700"
                   aria-label="Remover horario"
                 >

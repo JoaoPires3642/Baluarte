@@ -54,21 +54,21 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
       return
     }
     if (window.MercadoPago) {
-      queueMicrotask(() => setReady(true))
+      queueMicrotask(() => { setReady(true); })
       return
     }
 
     const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://sdk.mercadopago.com/js/v2"]')
     if (existingScript) {
-      existingScript.addEventListener("load", () => setReady(true), { once: true })
-      existingScript.addEventListener("error", () => setSdkError("Não foi possível carregar o Mercado Pago"), { once: true })
+      existingScript.addEventListener("load", () => { setReady(true); }, { once: true })
+      existingScript.addEventListener("error", () => { setSdkError("Não foi possível carregar o Mercado Pago"); }, { once: true })
       return
     }
 
     const script = document.createElement("script")
     script.src = "https://sdk.mercadopago.com/js/v2"
-    script.onload = () => setReady(true)
-    script.onerror = () => setSdkError("Não foi possível carregar o Mercado Pago")
+    script.onload = () => { setReady(true); }
+    script.onerror = () => { setSdkError("Não foi possível carregar o Mercado Pago"); }
     document.head.appendChild(script)
   }, [publicKey])
 
@@ -181,7 +181,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         <Input
           placeholder="Nome impresso no cartão"
           value={cardholderName}
-          onChange={e => setCardholderName(e.target.value)}
+          onChange={e => { setCardholderName(e.target.value); }}
         />
       </div>
 
@@ -209,7 +209,7 @@ export const PaymentCardForm = forwardRef<PaymentCardFormRef, Props>(function Pa
         <Label>Parcelamento</Label>
         <select
           value={selectedInstallments}
-          onChange={(event) => setSelectedInstallments(Number(event.target.value))}
+          onChange={(event) => { setSelectedInstallments(Number(event.target.value)); }}
           disabled={!installmentOptions.length || installmentsLoading}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
         >

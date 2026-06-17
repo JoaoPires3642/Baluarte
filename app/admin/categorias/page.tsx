@@ -71,7 +71,7 @@ export default function AdminCategoriesPage() {
     }
   }, [authedFetch])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { void loadData() }, [loadData])
 
   const openCreate = () => {
     setEditingId(null)
@@ -148,7 +148,7 @@ export default function AdminCategoriesPage() {
         <Input
           placeholder="Buscar categorias..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); }}
           className="pl-10"
         />
       </div>
@@ -185,10 +185,10 @@ export default function AdminCategoriesPage() {
                         <Button variant="ghost" size="sm" onClick={() => openTeams(cat)}>
                           <Users className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
+                        <Button variant="ghost" size="sm" onClick={() => { openEdit(cat); }}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(cat.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirm(cat.id); }}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
@@ -220,10 +220,10 @@ export default function AdminCategoriesPage() {
               <Button variant="outline" size="sm" className="flex-1" onClick={() => openTeams(cat)}>
                 <Users className="h-3.5 w-3.5 mr-1" /> Times
               </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(cat)}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => { openEdit(cat); }}>
                 <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
               </Button>
-              <Button variant="outline" size="sm" className="flex-1 text-red-500" onClick={() => setDeleteConfirm(cat.id)}>
+              <Button variant="outline" size="sm" className="flex-1 text-red-500" onClick={() => { setDeleteConfirm(cat.id); }}>
                 <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
               </Button>
             </div>
@@ -234,7 +234,7 @@ export default function AdminCategoriesPage() {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+      <Dialog open={dialogOpen} onClose={() => { setDialogOpen(false); }}>
         <h2 className="text-lg font-bold mb-4">{editingId ? "Editar Categoria" : "Nova Categoria"}</h2>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -246,16 +246,16 @@ export default function AdminCategoriesPage() {
           </div>
           <div className="space-y-2">
             <Label>Slug</Label>
-            <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="ex: lancamentos" />
+            <Input value={form.slug} onChange={e => { setForm(f => ({ ...f, slug: e.target.value })); }} placeholder="ex: lancamentos" />
           </div>
           <div className="space-y-2">
             <Label>Ordem de exibição</Label>
             <Input type="number" min="0" value={form.displayOrder}
-              onChange={e => setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 }))} />
+              onChange={e => { setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 })); }} />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-[#0f274d]">
               {saving ? "Salvando..." : editingId ? "Atualizar" : "Criar"}
             </Button>
@@ -263,7 +263,7 @@ export default function AdminCategoriesPage() {
         </div>
       </Dialog>
 
-      <Dialog open={!!teamsModal} onClose={() => setTeamsModal(null)}>
+      <Dialog open={!!teamsModal} onClose={() => { setTeamsModal(null); }}>
         <h2 className="text-lg font-bold mb-4">Times - {teamsModal?.category.name}</h2>
         {teamsModal?.teams.length === 0 && <p className="text-sm text-slate-500">Nenhum time encontrado</p>}
         <div className="space-y-2">
@@ -281,7 +281,7 @@ export default function AdminCategoriesPage() {
         title="Excluir categoria?"
         message="Esta ação não pode ser desfeita."
         onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
-        onCancel={() => setDeleteConfirm(null)}
+        onCancel={() => { setDeleteConfirm(null); }}
       />
     </div>
   )

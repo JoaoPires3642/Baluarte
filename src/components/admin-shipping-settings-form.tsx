@@ -118,12 +118,12 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
     <div className="space-y-6">
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="sm:col-span-2 text-lg font-bold">SuperFrete</h2>
-        <Field label="Provider"><Input value={settings.provider} onChange={(e) => update("provider", e.target.value)} /></Field>
+        <Field label="Provider"><Input value={settings.provider} onChange={(e) => { update("provider", e.target.value); }} /></Field>
         <Field label="CEP de origem">
           <div className="relative">
             <Input
               value={settings.originCep}
-              onChange={(e) => update("originCep", formatCep(e.target.value))}
+              onChange={(e) => { update("originCep", formatCep(e.target.value)); }}
               onBlur={lookupSenderCep}
               maxLength={9}
               placeholder="00000-000"
@@ -132,15 +132,15 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
           </div>
           {cepError && <p className="text-xs normal-case tracking-normal text-red-600">{cepError}</p>}
         </Field>
-        <Field label="URL base"><Input value={settings.superfreteBaseUrl} onChange={(e) => update("superfreteBaseUrl", e.target.value)} /></Field>
+        <Field label="URL base"><Input value={settings.superfreteBaseUrl} onChange={(e) => { update("superfreteBaseUrl", e.target.value); }} /></Field>
         <Field label="Token sandbox/producao">
-          <Input value={settings.superfreteToken || ""} onChange={(e) => update("superfreteToken", e.target.value)} placeholder={settings.superfreteTokenConfigured ? "Token configurado. Preencha apenas para trocar." : "Cole o token aqui"} />
+          <Input value={settings.superfreteToken || ""} onChange={(e) => { update("superfreteToken", e.target.value); }} placeholder={settings.superfreteTokenConfigured ? "Token configurado. Preencha apenas para trocar." : "Cole o token aqui"} />
         </Field>
-        <Field label="Servicos"><Input value={settings.superfreteServices} onChange={(e) => update("superfreteServices", e.target.value)} /></Field>
-        <Field label="User-Agent"><Input value={settings.superfreteUserAgent} onChange={(e) => update("superfreteUserAgent", e.target.value)} /></Field>
-        <Field label="Cart path"><Input value={settings.superfreteCartPath} onChange={(e) => update("superfreteCartPath", e.target.value)} /></Field>
-        <Field label="Checkout path"><Input value={settings.superfreteCheckoutPath} onChange={(e) => update("superfreteCheckoutPath", e.target.value)} /></Field>
-        <Field label="Label link path"><Input value={settings.superfreteLabelLinkPath} onChange={(e) => update("superfreteLabelLinkPath", e.target.value)} /></Field>
+        <Field label="Servicos"><Input value={settings.superfreteServices} onChange={(e) => { update("superfreteServices", e.target.value); }} /></Field>
+        <Field label="User-Agent"><Input value={settings.superfreteUserAgent} onChange={(e) => { update("superfreteUserAgent", e.target.value); }} /></Field>
+        <Field label="Cart path"><Input value={settings.superfreteCartPath} onChange={(e) => { update("superfreteCartPath", e.target.value); }} /></Field>
+        <Field label="Checkout path"><Input value={settings.superfreteCheckoutPath} onChange={(e) => { update("superfreteCheckoutPath", e.target.value); }} /></Field>
+        <Field label="Label link path"><Input value={settings.superfreteLabelLinkPath} onChange={(e) => { update("superfreteLabelLinkPath", e.target.value); }} /></Field>
       </section>
 
       <section className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -155,7 +155,7 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
         </div>
         <div className="max-w-xs">
           <Field label="Peso de uma camisa (kg)">
-            <Input type="number" step="0.001" min="0.001" value={settings.packageWeightKg} onChange={(e) => updateNumber("packageWeightKg", e.target.value)} />
+            <Input type="number" step="0.001" min="0.001" value={settings.packageWeightKg} onChange={(e) => { updateNumber("packageWeightKg", e.target.value); }} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -164,17 +164,17 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
               <div className="mb-4 flex items-center justify-between gap-2">
                 <p className="text-sm font-bold text-slate-900">Pacote {index + 1}</p>
                 {settings.packageOptions.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removePackage(index)} aria-label="Remover pacote">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => { removePackage(index); }} aria-label="Remover pacote">
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Field label="Nome"><Input value={option.name} onChange={(e) => updatePackage(index, "name", e.target.value)} /></Field></div>
-                <Field label="Ate quantas camisas"><Input type="number" min="1" value={option.maxQuantity} onChange={(e) => updatePackage(index, "maxQuantity", e.target.value)} /></Field>
-                <Field label="Altura cm"><Input type="number" min="1" value={option.heightCm} onChange={(e) => updatePackage(index, "heightCm", e.target.value)} /></Field>
-                <Field label="Largura cm"><Input type="number" min="1" value={option.widthCm} onChange={(e) => updatePackage(index, "widthCm", e.target.value)} /></Field>
-                <Field label="Comprimento cm"><Input type="number" min="1" value={option.lengthCm} onChange={(e) => updatePackage(index, "lengthCm", e.target.value)} /></Field>
+                <div className="sm:col-span-2"><Field label="Nome"><Input value={option.name} onChange={(e) => { updatePackage(index, "name", e.target.value); }} /></Field></div>
+                <Field label="Ate quantas camisas"><Input type="number" min="1" value={option.maxQuantity} onChange={(e) => { updatePackage(index, "maxQuantity", e.target.value); }} /></Field>
+                <Field label="Altura cm"><Input type="number" min="1" value={option.heightCm} onChange={(e) => { updatePackage(index, "heightCm", e.target.value); }} /></Field>
+                <Field label="Largura cm"><Input type="number" min="1" value={option.widthCm} onChange={(e) => { updatePackage(index, "widthCm", e.target.value); }} /></Field>
+                <Field label="Comprimento cm"><Input type="number" min="1" value={option.lengthCm} onChange={(e) => { updatePackage(index, "lengthCm", e.target.value); }} /></Field>
               </div>
             </div>
           ))}
@@ -190,27 +190,27 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
           <input
             type="checkbox"
             checked={!!settings.automaticLabelEnabled}
-            onChange={(e) => setSettings((current) => ({ ...current, automaticLabelEnabled: e.target.checked }))}
+            onChange={(e) => { setSettings((current) => ({ ...current, automaticLabelEnabled: e.target.checked })); }}
           />
           Gerar etiquetas automaticamente
         </label>
-        <Field label="Horario para gerar"><Input type="time" value={settings.automaticLabelRunTime || "17:00"} onChange={(e) => update("automaticLabelRunTime", e.target.value)} /></Field>
-        <Field label="Horario de corte"><Input type="time" value={settings.automaticLabelCutoffTime || "15:00"} onChange={(e) => update("automaticLabelCutoffTime", e.target.value)} /></Field>
+        <Field label="Horario para gerar"><Input type="time" value={settings.automaticLabelRunTime || "17:00"} onChange={(e) => { update("automaticLabelRunTime", e.target.value); }} /></Field>
+        <Field label="Horario de corte"><Input type="time" value={settings.automaticLabelCutoffTime || "15:00"} onChange={(e) => { update("automaticLabelCutoffTime", e.target.value); }} /></Field>
         <p className="text-xs text-slate-500 sm:col-span-2">Exemplo: corte 15:00 e geração 17:00. Pedidos pagos até 15:00 entram no lote do dia; depois disso ficam para o próximo ciclo.</p>
       </section>
 
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <h2 className="sm:col-span-2 text-lg font-bold">Remetente</h2>
-        <Field label="Nome completo"><Input value={settings.senderName} onChange={(e) => update("senderName", e.target.value)} /></Field>
-        <Field label="Telefone"><Input value={settings.senderPhone} onChange={(e) => update("senderPhone", e.target.value)} /></Field>
-        <Field label="Email"><Input value={settings.senderEmail} onChange={(e) => update("senderEmail", e.target.value)} /></Field>
-        <Field label="CPF/CNPJ"><Input value={settings.senderDocument} onChange={(e) => update("senderDocument", e.target.value)} /></Field>
-        <Field label="Rua"><Input value={settings.senderStreet} onChange={(e) => update("senderStreet", e.target.value)} /></Field>
-        <Field label="Numero"><Input value={settings.senderNumber} onChange={(e) => update("senderNumber", e.target.value)} /></Field>
-        <Field label="Complemento"><Input value={settings.senderComplement || ""} onChange={(e) => update("senderComplement", e.target.value)} /></Field>
-        <Field label="Bairro"><Input value={settings.senderDistrict} onChange={(e) => update("senderDistrict", e.target.value)} /></Field>
-        <Field label="Cidade"><Input value={settings.senderCity} onChange={(e) => update("senderCity", e.target.value)} /></Field>
-        <Field label="UF"><Input value={settings.senderState} maxLength={2} onChange={(e) => update("senderState", e.target.value.toUpperCase())} /></Field>
+        <Field label="Nome completo"><Input value={settings.senderName} onChange={(e) => { update("senderName", e.target.value); }} /></Field>
+        <Field label="Telefone"><Input value={settings.senderPhone} onChange={(e) => { update("senderPhone", e.target.value); }} /></Field>
+        <Field label="Email"><Input value={settings.senderEmail} onChange={(e) => { update("senderEmail", e.target.value); }} /></Field>
+        <Field label="CPF/CNPJ"><Input value={settings.senderDocument} onChange={(e) => { update("senderDocument", e.target.value); }} /></Field>
+        <Field label="Rua"><Input value={settings.senderStreet} onChange={(e) => { update("senderStreet", e.target.value); }} /></Field>
+        <Field label="Numero"><Input value={settings.senderNumber} onChange={(e) => { update("senderNumber", e.target.value); }} /></Field>
+        <Field label="Complemento"><Input value={settings.senderComplement || ""} onChange={(e) => { update("senderComplement", e.target.value); }} /></Field>
+        <Field label="Bairro"><Input value={settings.senderDistrict} onChange={(e) => { update("senderDistrict", e.target.value); }} /></Field>
+        <Field label="Cidade"><Input value={settings.senderCity} onChange={(e) => { update("senderCity", e.target.value); }} /></Field>
+        <Field label="UF"><Input value={settings.senderState} maxLength={2} onChange={(e) => { update("senderState", e.target.value.toUpperCase()); }} /></Field>
       </section>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
