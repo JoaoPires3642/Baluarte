@@ -48,11 +48,12 @@ jobs:
           -Dspring.datasource.driver-class-name=org.postgresql.Driver
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v5
+        uses: sonarsource/sonarqube-scan-action@v6
         with:
           projectBaseDir: .
           args: >
             -Dsonar.projectKey=baluarte-backend
+            -Dsonar.organization=joaopires3642
             -Dsonar.sources=Baluarte-core/src/main/java
             -Dsonar.java.binaries=Baluarte-core/target/classes
             -Dsonar.java.test.binaries=Baluarte-core/target/test-classes
@@ -86,11 +87,12 @@ jobs:
         run: npm run build
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v5
+        uses: sonarsource/sonarqube-scan-action@v6
         with:
           projectBaseDir: .
           args: >
             -Dsonar.projectKey=baluarte-frontend
+            -Dsonar.organization=joaopires3642
             -Dsonar.sources=app/,src/
             -Dsonar.exclusions=**/node_modules/**,**/.next/**,**/__tests__/**,**/*.test.*,**/*.spec.*,public/**
         env:
