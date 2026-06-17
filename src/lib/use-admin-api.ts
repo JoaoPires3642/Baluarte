@@ -6,10 +6,12 @@ export function useAdminApi() {
   const { data: session } = useSession()
   const userId = session?.user?.id
   const email = session?.user?.email
+  const accessToken = (session as Record<string, unknown> | null)?.accessToken as string | undefined
 
   const authedFetch = useCallback(async (path: string, options?: RequestInit) => {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(userId ? { "X-User-Id": userId } : {}),
       ...(email ? { "X-User-Email": email } : {}),
       ...(options?.headers as Record<string, string>),
@@ -28,7 +30,7 @@ export function useAdminApi() {
     }
 
     return response.json()
-  }, [userId, email])
+  }, [userId, email, accessToken])
 
   return { authedFetch }
 }

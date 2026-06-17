@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth-config"
+import { getAuthHeaders } from "@/lib/auth-headers"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
@@ -11,24 +12,16 @@ type BackendAuthSession = {
 }
 
 export async function resolveServerAuthSession() {
-  const session = await getServerSession(authOptions)
+  const { headers, userId } = await getAuthHeaders()
 
-  if (!session?.user?.id || !session?.user?.email) {
+  if (!userId) {
     return { isAuthenticated: false as const, isAdmin: false as const, session: null }
   }
-
-  const userId = session.user.id
-  const email = session.user.email
 
   try {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
       method: "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-User-Id": userId,
-        "X-User-Email": email,
-      },
+      headers: { ...headers, Accept: "application/json" },
       cache: "no-store",
     })
 

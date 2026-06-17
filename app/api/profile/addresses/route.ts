@@ -1,29 +1,16 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth-config"
+import { getAuthHeaders } from "@/lib/auth-headers"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
-async function getAuthHeaders() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || !session?.user?.email) return null
-
-  return {
-    "Content-Type": "application/json",
-    "X-User-Id": session.user.id,
-    "X-User-Email": session.user.email,
-  }
-}
-
 export async function GET() {
   try {
-    const headers = await getAuthHeaders()
-    if (!headers) {
+    const { headers, userId } = await getAuthHeaders()
+    if (!userId) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
     }
-
     return proxyProfileAddresses("GET", headers)
   } catch (err) {
     console.error("Profile addresses auth error:", err)
@@ -36,11 +23,10 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const headers = await getAuthHeaders()
-    if (!headers) {
+    const { headers, userId } = await getAuthHeaders()
+    if (!userId) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
     }
-
     return proxyProfileAddresses("PUT", headers, await request.text())
   } catch (err) {
     console.error("Profile addresses auth error:", err)

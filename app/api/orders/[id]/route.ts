@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth-config"
+import { getAuthHeaders } from "@/lib/auth-headers"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -12,18 +11,14 @@ type Context = {
 
 export async function GET(_request: NextRequest, context: Context) {
   const { id } = await context.params
-  const session = await getServerSession(authOptions)
+  const { headers, userId } = await getAuthHeaders()
 
-  if (!session?.user?.id) {
+  if (!userId) {
     return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Não autenticado" } }, { status: 401 })
   }
 
   const response = await fetch(`${API_BASE_URL}/orders/my/${id}`, {
-    headers: {
-      Accept: "application/json",
-      "X-User-Id": session.user.id,
-      "X-User-Email": session.user.email ?? "",
-    },
+    headers: { ...headers, Accept: "application/json" },
     cache: "no-store",
   })
   const body = await response.text()

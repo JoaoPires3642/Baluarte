@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth-config"
+import { getAuthHeaders } from "@/lib/auth-headers"
 import { NextRequest, NextResponse } from "next/server"
 
 export const runtime = "nodejs"
@@ -32,18 +31,7 @@ async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] 
   const pathStr = path && path.length > 0 ? `/${path.join("/")}` : ""
   const url = `${API_BASE}${pathStr}${req.nextUrl.search}`
 
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.id
-  const email = session?.user?.email
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  }
-
-  if (userId) {
-    headers["X-User-Id"] = userId
-    if (email) headers["X-User-Email"] = email
-  }
+  const { headers } = await getAuthHeaders()
 
   let body: BodyInit | undefined
   if (method !== "GET" && method !== "DELETE") {
