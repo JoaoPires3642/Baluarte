@@ -32,7 +32,7 @@ public class AdminAuthFilter extends OncePerRequestFilter {
     public static final String DEV_BYPASS_KEY_HEADER = "X-Admin-Bypass-Key";
 
     private static final Logger logger = LoggerFactory.getLogger(AdminAuthFilter.class);
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]++@[^@\\s.]++\\.[^@\\s]++$");
 
     private final ObjectMapper objectMapper;
     private final InternalRoleResolver internalRoleResolver;

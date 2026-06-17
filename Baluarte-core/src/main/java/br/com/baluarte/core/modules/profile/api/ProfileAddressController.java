@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileAddressController {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileAddressController.class);
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]++@[^@\\s.]++\\.[^@\\s]++$");
 
     private final InternalRoleResolver internalRoleResolver;
     private final ProfileAddressService profileAddressService;
