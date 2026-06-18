@@ -205,6 +205,9 @@ export function Header() {
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/conta" onClick={() => { setMobileMenuOpen(false); }}>Minha conta</Link>
                   </Button>
+                  <Button variant="outline" className="w-full text-red-500" onClick={() => { signOut(); }}>
+                    Sair
+                  </Button>
                   </>
                 )}
               </div>
