@@ -47,7 +47,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          queries: security-and-quality
+          queries: security-and-quality,security-extended
           build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
 
       - if: matrix.language == 'java-kotlin'
