@@ -75,9 +75,9 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         if (isBlank(userId) || isBlank(userEmail) || !EMAIL_PATTERN.matcher(userEmail).matches()) {
             logger.warn(
                 "security.audit event=ADMIN_ROUTE_UNAUTHORIZED reason=invalid-identity path={} userId={} email={}",
-                request.getRequestURI().replaceAll("[\\r\\n]", "_"),
-                userId.replaceAll("[\\r\\n]", "_"),
-                userEmail.replaceAll("[\\r\\n]", "_")
+                sanitizeForLog(request.getRequestURI()),
+                sanitizeForLog(userId),
+                sanitizeForLog(userEmail)
             );
             writeUnauthorized(response, request, "Missing or malformed identity headers");
             return;
@@ -144,6 +144,13 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         }
 
         return value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String sanitizeForLog(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("[\\r\\n]", "_");
     }
 
     private void writeUnauthorized(HttpServletResponse response, HttpServletRequest request, String detail) throws IOException {
