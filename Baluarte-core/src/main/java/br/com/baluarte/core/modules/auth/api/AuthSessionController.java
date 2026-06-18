@@ -42,9 +42,9 @@ public class AuthSessionController {
         if (isBlank(userId) || isBlank(userEmail) || !EMAIL_PATTERN.matcher(userEmail).matches()) {
             logger.warn(
                 "security.audit event=AUTH_ROUTE_UNAUTHORIZED reason=invalid-identity path={} userId={} email={}",
-                request.getRequestURI(),
-                userId,
-                userEmail
+                request.getRequestURI().replaceAll("[\\r\\n]", "_"),
+                userId.replaceAll("[\\r\\n]", "_"),
+                userEmail.replaceAll("[\\r\\n]", "_")
             );
             return error(
                 request,

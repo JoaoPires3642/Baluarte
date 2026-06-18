@@ -53,7 +53,7 @@ public class InternalRoleResolver {
         } else {
             user = AuthUserJpaEntity.createDefaultCustomer(normalizedUserId, normalizedEmail);
             authUserRepository.saveAndFlush(user);
-            log.info("Created auth_user: userId={}, email={}", normalizedUserId, normalizedEmail);
+            log.info("Created auth_user: userId={}, email={}", normalizedUserId.replaceAll("[\\r\\n]", "_"), normalizedEmail.replaceAll("[\\r\\n]", "_"));
         }
 
         boolean adminFromAllowlist = adminUserIds.contains(normalizedUserId) || adminEmails.contains(normalizedEmail);

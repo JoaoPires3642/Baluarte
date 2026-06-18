@@ -79,7 +79,7 @@ public class ProfileAddressController {
         if (isBlank(userId)) {
             logger.warn(
                 "security.audit event=PROFILE_ADDRESS_UNAUTHORIZED reason=missing-user-id path={}",
-                request.getRequestURI()
+                request.getRequestURI().replaceAll("[\\r\\n]", "_")
             );
             return null;
         }

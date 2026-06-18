@@ -323,7 +323,7 @@ export default function CheckoutPage() {
       return
     }
 
-    const addr = showNewAddress && newAddr.street ? newAddr : address
+    const addr = (showNewAddress && newAddr.street ? newAddr : address) as Partial<Address>
 
     if (useUberDelivery) {
       if (!uberRecipientName) {
@@ -335,7 +335,7 @@ export default function CheckoutPage() {
         showToast("Preencha nome, dia, esta\u00e7\u00e3o e hor\u00e1rio da entrega", "error")
         return
       }
-    } else if (!(addr as any)?.recipientName || !(addr as any)?.street || !(addr as any)?.neighborhood || !(addr as any)?.city) {
+    } else if (!addr?.recipientName || !addr?.street || !addr?.neighborhood || !addr?.city) {
         showToast("Preencha o endere\u00e7o completo", "error")
         return
       }
@@ -348,7 +348,7 @@ export default function CheckoutPage() {
     const cardData = cardOverride || (paymentMethod === "card" ? await cardFormRef.current?.createToken() : null)
 
     if (paymentMethod === "card" && !cardData) {
-      showToast("Preencha os dados do cartão corretamente", "error")
+      showToast("Preencha os dados do cart\u00e3o corretamente", "error")
       return
     }
 
@@ -356,7 +356,7 @@ export default function CheckoutPage() {
     setPaymentError("")
     try {
       // Save new address to profile if user is signed in and it's a new one
-      if (!useStationDelivery && !useUberDelivery && isSignedIn && !selectedAddressId && cep && (addr as any)?.street) {
+      if (!useStationDelivery && !useUberDelivery && isSignedIn && !selectedAddressId && cep && addr?.street) {
         try {
           const existing = addresses.map(a => ({
             addressId: a.addressId,
@@ -401,14 +401,14 @@ export default function CheckoutPage() {
           identification: { type: "CPF" as const, number: payer.cpf },
         },
             shippingAddress: {
-              cep: useUberDelivery ? "" : ((addr as any)?.cep ?? ""),
-              street: useUberDelivery ? "" : ((addr as any)?.street ?? ""),
-              number: useUberDelivery ? "" : ((addr as any)?.number ?? ""),
-              complement: useUberDelivery ? "" : ((addr as any)?.complement ?? ""),
-              neighborhood: useUberDelivery ? "" : ((addr as any)?.neighborhood ?? ""),
-              city: useUberDelivery ? "" : ((addr as any)?.city ?? ""),
-              state: useUberDelivery ? "" : ((addr as any)?.state ?? ""),
-              recipientName: useUberDelivery ? uberRecipientName : ((addr as any)?.recipientName ?? ""),
+              cep: useUberDelivery ? "" : (addr?.cep ?? ""),
+              street: useUberDelivery ? "" : (addr?.street ?? ""),
+              number: useUberDelivery ? "" : (addr?.number ?? ""),
+              complement: useUberDelivery ? "" : (addr?.complement ?? ""),
+              neighborhood: useUberDelivery ? "" : (addr?.neighborhood ?? ""),
+              city: useUberDelivery ? "" : (addr?.city ?? ""),
+              state: useUberDelivery ? "" : (addr?.state ?? ""),
+              recipientName: useUberDelivery ? uberRecipientName : (addr?.recipientName ?? ""),
               additionalInfo: useStationDelivery ? stationRecipientName : (useUberDelivery ? "Uber / Retirar no local" : ""),
             },
         shipping: {

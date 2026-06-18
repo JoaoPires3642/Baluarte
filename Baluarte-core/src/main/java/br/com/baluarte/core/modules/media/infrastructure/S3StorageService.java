@@ -70,7 +70,7 @@ public class S3StorageService implements StorageService {
                 .build(),
             software.amazon.awssdk.core.sync.RequestBody.fromInputStream(data, contentLength));
 
-        log.info("Uploaded {} to bucket {}", filename, bucket);
+        log.info("Uploaded {} to bucket {}", filename.replaceAll("[\\r\\n]", "_"), bucket);
         return filename;
     }
 
@@ -88,7 +88,7 @@ public class S3StorageService implements StorageService {
             .bucket(bucket)
             .key(key)
             .build());
-        log.info("Deleted {} from bucket {}", key, bucket);
+        log.info("Deleted {} from bucket {}", key.replaceAll("[\\r\\n]", "_"), bucket);
     }
 
     @Override

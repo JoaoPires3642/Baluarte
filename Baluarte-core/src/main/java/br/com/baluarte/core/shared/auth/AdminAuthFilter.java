@@ -75,9 +75,9 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         if (isBlank(userId) || isBlank(userEmail) || !EMAIL_PATTERN.matcher(userEmail).matches()) {
             logger.warn(
                 "security.audit event=ADMIN_ROUTE_UNAUTHORIZED reason=invalid-identity path={} userId={} email={}",
-                request.getRequestURI(),
-                userId,
-                userEmail
+                request.getRequestURI().replaceAll("[\\r\\n]", "_"),
+                userId.replaceAll("[\\r\\n]", "_"),
+                userEmail.replaceAll("[\\r\\n]", "_")
             );
             writeUnauthorized(response, request, "Missing or malformed identity headers");
             return;
@@ -90,9 +90,9 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         if (role != InternalRole.ADMIN) {
             logger.warn(
                 "security.audit event=ADMIN_ROUTE_DENIED path={} userId={} email={}",
-                request.getRequestURI(),
-                normalizedUserId,
-                normalizedEmail
+                request.getRequestURI().replaceAll("[\\r\\n]", "_"),
+                normalizedUserId.replaceAll("[\\r\\n]", "_"),
+                normalizedEmail.replaceAll("[\\r\\n]", "_")
             );
             writeForbidden(response, request, "Admin privileges required");
             return;
@@ -126,9 +126,9 @@ public class AdminAuthFilter extends OncePerRequestFilter {
 
         logger.warn(
             "security.audit event=ADMIN_DEV_BYPASS_GRANTED path={} userId={} email={}",
-            request.getRequestURI(),
-            normalizedUserId,
-            normalizedEmail
+            request.getRequestURI().replaceAll("[\\r\\n]", "_"),
+            normalizedUserId.replaceAll("[\\r\\n]", "_"),
+            normalizedEmail.replaceAll("[\\r\\n]", "_")
         );
         request.setAttribute(AUTH_CONTEXT_REQUEST_ATTRIBUTE, new AuthContext(normalizedUserId, normalizedEmail, role));
         return true;
