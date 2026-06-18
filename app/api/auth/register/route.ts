@@ -18,6 +18,7 @@ async function searchUserByEmail(email: string) {
     `${FUSIONAUTH_ISSUER}/api/user/search?queryString=${encodeURIComponent(email)}`,
     {
       headers: { Authorization: FUSIONAUTH_API_KEY },
+      signal: AbortSignal.timeout(10000),
     }
   )
 
@@ -44,8 +45,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const email = body.email.trim().toLowerCase()
+
   try {
-    const existingUser = await searchUserByEmail(body.email)
+    const existingUser = await searchUserByEmail(email)
 
     if (existingUser) {
       const hasBaluarteRegistration = existingUser.registrations?.some(
@@ -55,11 +58,7 @@ export async function POST(request: NextRequest) {
 
       if (hasBaluarteRegistration) {
         return NextResponse.json(
-          {
-            error:
-              "Este email já possui uma conta. Faça login.",
-            alreadyExists: true,
-          },
+          { error: "Este email já possui uma conta. Faça login.", alreadyExists: true },
           { status: 409 }
         )
       }
@@ -72,12 +71,10 @@ export async function POST(request: NextRequest) {
             Authorization: FUSIONAUTH_API_KEY,
             "Content-Type": "application/json",
           },
+          signal: AbortSignal.timeout(10000),
           body: JSON.stringify({
             userId: existingUser.id,
-            registration: {
-              applicationId: FUSIONAUTH_APP_ID,
-              preferredLanguages: ["pt-BR"],
-            },
+            registration: { applicationId: FUSIONAUTH_APP_ID },
           }),
         }
       )
@@ -89,11 +86,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      return NextResponse.json({
-        ok: true,
-        linked: true,
-        userId: existingUser.id,
-      })
+      return NextResponse.json({ ok: true, linked: true, userId: existingUser.id })
     }
 
     const res = await fetch(`${FUSIONAUTH_ISSUER}/api/user/registration`, {
@@ -102,17 +95,15 @@ export async function POST(request: NextRequest) {
         Authorization: FUSIONAUTH_API_KEY,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(10000),
       body: JSON.stringify({
         user: {
-          email: body.email,
+          email,
           firstName: body.firstName || "",
           lastName: body.lastName || "",
           password: body.password,
         },
-        registration: {
-          applicationId: FUSIONAUTH_APP_ID,
-          preferredLanguages: ["pt-BR"],
-        },
+        registration: { applicationId: FUSIONAUTH_APP_ID },
       }),
     })
 
@@ -127,14 +118,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: res.status })
     }
 
-    return NextResponse.json({
-      ok: true,
-      userId: data?.user?.id,
-    })
-  } catch {
-    return NextResponse.json(
-      { error: "Erro ao conectar com o serviço de autenticação" },
-      { status: 502 }
-    )
+    return NextResponse.json({ ok: true, userId: data?.user?.id })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erro ao conectar com o serviço de autenticação"
+    return NextResponse.json({ error: message }, { status: 502 })
   }
 }
