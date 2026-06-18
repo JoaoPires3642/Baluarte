@@ -9,7 +9,7 @@ COPY src src
 RUN mvn -B -Pnative -DskipTests native:compile
 
 FROM debian:bookworm-slim
-RUN apt-get update -qq && apt-get install -y -qq ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/target/baluarte-core /usr/local/bin/baluarte-core
 RUN chmod +x /usr/local/bin/baluarte-core && \
     groupadd -r baluarte && \
