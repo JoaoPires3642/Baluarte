@@ -11,6 +11,23 @@ type BackendAuthSession = {
   internalRole?: string
 }
 
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal })
+      clearTimeout(timeoutId)
+      return response
+    } catch {
+      clearTimeout(timeoutId)
+      if (attempt === retries) throw new Error("fetch failed after retries")
+      await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
+    }
+  }
+  throw new Error("unreachable")
+}
+
 export async function resolveServerAuthSession() {
   const { headers, userId } = await getAuthHeaders()
 
@@ -19,7 +36,7 @@ export async function resolveServerAuthSession() {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/session`, {
+    const response = await fetchWithRetry(`${API_BASE_URL}/auth/session`, {
       method: "GET",
       headers: { ...headers, Accept: "application/json" },
       cache: "no-store",
