@@ -66,7 +66,7 @@ jobs:
       - name: actionlint
         uses: reviewdog/action-actionlint@v1
         with:
-          fail_on_error: true
+          fail_level: error
       - name: Trivy (Dockerfile + deps)
         uses: aquasecurity/trivy-action@master
         with:
