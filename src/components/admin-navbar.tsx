@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown, Truck, Train, Phone } from "lucide-react"
+import { signOut } from "next-auth/react"
+import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown, Truck, Train, Phone, LogOut } from "lucide-react"
 import { useState } from "react"
 
 const PRIMARY_NAV_ITEMS = [
@@ -83,6 +84,14 @@ export function AdminNavbar() {
             Ver loja
           </Link>
           <button
+            onClick={() => { signOut({ callbackUrl: "/" }); }}
+            className="hidden items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 sm:flex"
+            title="Sair"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sair
+          </button>
+          <button
             onClick={() => { setMobileOpen(!mobileOpen); }}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100 md:hidden"
           >
@@ -139,6 +148,13 @@ export function AdminNavbar() {
             >
               Ver loja
             </Link>
+            <button
+              onClick={() => { signOut({ callbackUrl: "/" }); }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-500 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
           </nav>
         </div>
       )}
