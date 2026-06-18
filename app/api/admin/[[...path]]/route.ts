@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
 async function proxy(req: NextRequest, paramsPromise: Promise<{ path?: string[] }>, method: string) {
   const { path } = await paramsPromise
   const pathStr = path && path.length > 0 ? `/${path.join("/")}` : ""
-  const url = `${API_BASE}/admin${pathStr}${req.nextUrl.search}`
+  const url = `${API_BASE}${pathStr}${req.nextUrl.search}`
 
   const { headers } = await getAuthHeaders()
 

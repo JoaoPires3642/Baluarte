@@ -212,7 +212,7 @@ export async function fetchAuthSession() {
 }
 
 async function fetchAdminApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
-  const response = await fetch(`/api/admin${endpoint}`, {
+  const response = await fetch(`/api/admin/admin${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -324,7 +324,7 @@ export async function createShippingLabel(orderId: string) {
 }
 
 export async function fetchAdminShippingSettings() {
-  const url = typeof window === "undefined" ? `${getBrowserSafeApiBaseUrl()}/admin/shipping-settings` : "/api/admin/shipping-settings"
+  const url = typeof window === "undefined" ? `${getBrowserSafeApiBaseUrl()}/admin/shipping-settings` : "/api/admin/admin/shipping-settings"
   const response = await fetch(url, { cache: "no-store" })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
@@ -334,7 +334,7 @@ export async function fetchAdminShippingSettings() {
 }
 
 export async function updateAdminShippingSettings(settings: AdminShippingSettingsUpdate) {
-  const response = await fetch("/api/admin/shipping-settings", {
+  const response = await fetch("/api/admin/admin/shipping-settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
