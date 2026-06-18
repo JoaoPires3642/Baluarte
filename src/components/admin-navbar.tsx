@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown, Truck, Train, Phone, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, FolderTree, Users, ChevronDown, Truck, Train, Phone, FileText, LogOut } from "lucide-react"
 import { useState } from "react"
 
 const PRIMARY_NAV_ITEMS = [
@@ -18,6 +18,7 @@ const SETTINGS_NAV_ITEMS = [
   { href: "/admin/frete", label: "Frete", icon: Truck },
   { href: "/admin/estacoes", label: "Estacoes", icon: Train },
   { href: "/admin/contato", label: "Contato", icon: Phone },
+  { href: "/admin/paginas", label: "Paginas", icon: FileText },
 ]
 
 export function AdminNavbar() {
