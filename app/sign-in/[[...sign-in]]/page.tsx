@@ -67,7 +67,15 @@ export default function SignInPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Senha</Label>
+              <Link
+                href="/esqueci-minha-senha"
+                className="text-xs text-slate-500 hover:text-[#0f274d] underline"
+              >
+                Esqueci minha senha
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"

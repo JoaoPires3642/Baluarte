@@ -13,6 +13,20 @@ type RegisterBody = {
   password?: string
 }
 
+async function searchUserByEmail(email: string) {
+  const res = await fetch(
+    `${FUSIONAUTH_ISSUER}/api/user/search?queryString=${encodeURIComponent(email)}`,
+    {
+      headers: { Authorization: FUSIONAUTH_API_KEY },
+    }
+  )
+
+  if (!res.ok) return null
+
+  const data = await res.json()
+  return data?.users?.[0] || null
+}
+
 export async function POST(request: NextRequest) {
   let body: RegisterBody | null = null
 
@@ -20,10 +34,7 @@ export async function POST(request: NextRequest) {
     const raw = await request.text()
     body = JSON.parse(raw) as RegisterBody
   } catch {
-    return NextResponse.json(
-      { error: "Dados inválidos" },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
   }
 
   if (!body.email || !body?.password) {
@@ -34,6 +45,57 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const existingUser = await searchUserByEmail(body.email)
+
+    if (existingUser) {
+      const hasBaluarteRegistration = existingUser.registrations?.some(
+        (r: { applicationId: string }) =>
+          r.applicationId === FUSIONAUTH_APP_ID
+      )
+
+      if (hasBaluarteRegistration) {
+        return NextResponse.json(
+          {
+            error:
+              "Este email já possui uma conta. Faça login.",
+            alreadyExists: true,
+          },
+          { status: 409 }
+        )
+      }
+
+      const regRes = await fetch(
+        `${FUSIONAUTH_ISSUER}/api/user/registration`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: FUSIONAUTH_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: existingUser.id,
+            registration: {
+              applicationId: FUSIONAUTH_APP_ID,
+              preferredLanguages: ["pt-BR"],
+            },
+          }),
+        }
+      )
+
+      if (!regRes.ok) {
+        return NextResponse.json(
+          { error: "Não foi possível vincular a conta" },
+          { status: 502 }
+        )
+      }
+
+      return NextResponse.json({
+        ok: true,
+        linked: true,
+        userId: existingUser.id,
+      })
+    }
+
     const res = await fetch(`${FUSIONAUTH_ISSUER}/api/user/registration`, {
       method: "POST",
       headers: {
@@ -49,6 +111,7 @@ export async function POST(request: NextRequest) {
         },
         registration: {
           applicationId: FUSIONAUTH_APP_ID,
+          preferredLanguages: ["pt-BR"],
         },
       }),
     })

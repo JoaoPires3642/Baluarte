@@ -44,6 +44,14 @@ export default function SignUpPage() {
         return
       }
 
+      if (data.linked) {
+        setLoading(false)
+        setError(
+          "Email já cadastrado! Faça login com sua senha existente."
+        )
+        return
+      }
+
       const result = await signIn("credentials", {
         email,
         password,
