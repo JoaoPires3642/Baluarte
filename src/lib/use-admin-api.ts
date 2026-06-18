@@ -1,25 +1,14 @@
-import { useSession } from "next-auth/react"
 import { useCallback } from "react"
-import { getBrowserSafeApiBaseUrl } from "@/lib/api-base"
 
 export function useAdminApi() {
-  const { data: session } = useSession()
-  const userId = session?.user?.id
-  const email = session?.user?.email
-  const accessToken = (session as Record<string, unknown> | null)?.accessToken as string | undefined
-
   const authedFetch = useCallback(async (path: string, options?: RequestInit) => {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...(userId ? { "X-User-Id": userId } : {}),
-      ...(email ? { "X-User-Email": email } : {}),
-      ...(options?.headers as Record<string, string>),
-    }
-
-    const response = await fetch(`${getBrowserSafeApiBaseUrl()}${path}`, {
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path
+    const response = await fetch(`/api/admin/${cleanPath}`, {
       ...options,
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers as Record<string, string>),
+      },
     })
 
     if (!response.ok) {
@@ -30,7 +19,7 @@ export function useAdminApi() {
     }
 
     return response.json()
-  }, [userId, email, accessToken])
+  }, [])
 
   return { authedFetch }
 }

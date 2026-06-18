@@ -211,65 +211,84 @@ export async function fetchAuthSession() {
   return fetchApi<{ data: AuthSession }>("/auth/session")
 }
 
+async function fetchAdminApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
+  const response = await fetch(`/api/admin${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const errPayload = body?.error
+    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    throw new Error((errPayload?.message || "Erro na requisição") + details)
+  }
+
+  return response.json()
+}
+
 // Admin Products - GET /admin/products
 export async function fetchAdminProducts() {
-  return fetchApi<{ data: AdminProduct[] }>("/admin/products")
+  return fetchAdminApi<{ data: AdminProduct[] }>("/products")
 }
 
 export async function createAdminProduct(product: CreateProductRequest) {
-  return fetchApi<{ data: AdminProduct }>("/admin/products", {
+  return fetchAdminApi<{ data: AdminProduct }>("/products", {
     method: "POST",
     body: JSON.stringify(product),
   })
 }
 
 export async function updateAdminProduct(productId: string, product: UpdateProductRequest) {
-  return fetchApi<{ data: AdminProduct }>(`/admin/products/${productId}`, {
+  return fetchAdminApi<{ data: AdminProduct }>(`/products/${productId}`, {
     method: "PUT",
     body: JSON.stringify(product),
   })
 }
 
 export async function deleteAdminProduct(productId: string) {
-  return fetchApi<{ data: AdminProduct }>(`/admin/products/${productId}`, {
+  return fetchAdminApi<{ data: AdminProduct }>(`/products/${productId}`, {
     method: "DELETE",
   })
 }
 
 // Admin Categories
 export async function fetchAdminCategories() {
-  return fetchApi<{ data: Category[] }>("/admin/categories")
+  return fetchAdminApi<{ data: Category[] }>("/categories")
 }
 
 export async function createAdminCategory(category: { name: string; slug: string; displayOrder?: number }) {
-  return fetchApi<{ data: Category }>("/admin/categories", {
+  return fetchAdminApi<{ data: Category }>("/categories", {
     method: "POST",
     body: JSON.stringify(category),
   })
 }
 
 export async function updateAdminCategory(id: string, category: { name: string; slug: string; displayOrder?: number }) {
-  return fetchApi<{ data: Category }>(`/admin/categories/${id}`, {
+  return fetchAdminApi<{ data: Category }>(`/categories/${id}`, {
     method: "PUT",
     body: JSON.stringify(category),
   })
 }
 
 export async function deleteAdminCategory(id: string) {
-  return fetchApi<{ data: void }>(`/admin/categories/${id}`, {
+  return fetchAdminApi<{ data: void }>(`/categories/${id}`, {
     method: "DELETE",
   })
 }
 
 // Admin Teams
 export async function fetchAdminTeams() {
-  return fetchApi<{ data: Team[] }>("/admin/teams")
+  return fetchAdminApi<{ data: Team[] }>("/teams")
 }
 
 export async function createAdminTeam(team: {
   name: string; slug: string; categoryId: string; league?: string; displayOrder?: number
 }) {
-  return fetchApi<{ data: Team }>("/admin/teams", {
+  return fetchAdminApi<{ data: Team }>("/teams", {
     method: "POST",
     body: JSON.stringify(team),
   })
@@ -278,14 +297,14 @@ export async function createAdminTeam(team: {
 export async function updateAdminTeam(id: string, team: {
   name: string; slug: string; categoryId: string; league?: string; displayOrder?: number
 }) {
-  return fetchApi<{ data: Team }>(`/admin/teams/${id}`, {
+  return fetchAdminApi<{ data: Team }>(`/teams/${id}`, {
     method: "PUT",
     body: JSON.stringify(team),
   })
 }
 
 export async function deleteAdminTeam(id: string) {
-  return fetchApi<{ data: void }>(`/admin/teams/${id}`, {
+  return fetchAdminApi<{ data: void }>(`/teams/${id}`, {
     method: "DELETE",
   })
 }

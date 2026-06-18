@@ -1,16 +1,11 @@
 "use client"
 
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
-
 export function CancelOrderButton({ orderId }: { orderId: string }) {
   const router = useRouter()
-  const { data: session } = useSession()
-  const userId = session?.user?.id
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
@@ -20,12 +15,9 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/my/${orderId}/cancel`, {
+      const response = await fetch(`/api/orders/my/${orderId}/cancel`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(userId ? { "X-User-Id": userId } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
       })
 
       if (!response.ok) {
