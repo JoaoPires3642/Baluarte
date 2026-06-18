@@ -48,7 +48,7 @@ public class SitePageController {
         @PathVariable String slug,
         @Valid @RequestBody SitePageUpdateRequest request
     ) {
-        SitePageValues values = service.save(new SitePageValues(slug, request.title(), request.content()));
+        SitePageValues values = service.save(new SitePageValues(slug, request.title(), request.content(), null));
         return ApiSuccessResponse.of(toAdminResponse(values));
     }
 
