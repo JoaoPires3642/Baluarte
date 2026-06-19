@@ -38,28 +38,19 @@ export async function PUT(request: NextRequest) {
 }
 
 async function proxyProfileAddresses(method: "GET" | "PUT", headers: Record<string, string>, body?: string) {
-  for (let attempt = 0; attempt <= 1; attempt++) {
-    try {
-      const res = await fetch(`${API_BASE}/profile/addresses`, { method, headers, body })
-      if (res.status === 401 && attempt === 0) {
-        const freshHeaders = await getAuthHeaders(true)
-        Object.assign(headers, freshHeaders.headers)
-        continue
-      }
-      const data = await res.text()
-      return new NextResponse(data, {
-        status: res.status,
-        headers: { "Content-Type": "application/json" },
-      })
-    } catch (err) {
-      if (attempt === 1) {
-        const message = err instanceof Error ? err.message : String(err)
-        console.error("Profile addresses API proxy error:", message)
-        return NextResponse.json(
-          { error: { code: "PROXY_ERROR", message: `Erro ao conectar com o backend: ${message}` } },
-          { status: 502 }
-        )
-      }
-    }
+  try {
+    const res = await fetch(`${API_BASE}/profile/addresses`, { method, headers, body })
+    const data = await res.text()
+    return new NextResponse(data, {
+      status: res.status,
+      headers: { "Content-Type": "application/json" },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("Profile addresses API proxy error:", message)
+    return NextResponse.json(
+      { error: { code: "PROXY_ERROR", message: `Erro ao conectar com o backend: ${message}` } },
+      { status: 502 }
+    )
   }
 }

@@ -48,6 +48,7 @@ class JwtAuthenticationFilterTest {
     private PrintWriter writer;
 
     private FusionAuthProperties properties;
+    private SecurityProperties securityProperties;
 
     private JwtAuthenticationFilter filter;
 
@@ -57,7 +58,11 @@ class JwtAuthenticationFilterTest {
         properties.setJwksUri("https://example.com/.well-known/jwks.json");
         properties.setIssuer("https://example.com");
         properties.setApiKey("sk-test");
-        filter = new JwtAuthenticationFilter(objectMapper, properties, authUserRepository);
+
+        securityProperties = new SecurityProperties();
+        securityProperties.setProxySecret("test-proxy-secret");
+
+        filter = new JwtAuthenticationFilter(objectMapper, properties, securityProperties, authUserRepository);
         Field decoderField = JwtAuthenticationFilter.class.getDeclaredField("jwtDecoder");
         decoderField.setAccessible(true);
         decoderField.set(filter, jwtDecoder);
@@ -71,24 +76,73 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void shouldNotFilterReturnsTrueWhenNoAuthHeader() {
+    void shouldNotFilterReturnsTrueForPublicCatalogPath() {
         when(request.getMethod()).thenReturn("GET");
-        when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getRequestURI()).thenReturn("/api/v1/catalog/products");
         assertThat(filter.shouldNotFilter(request)).isTrue();
     }
 
     @Test
-    void shouldNotFilterReturnsTrueWhenNotBearer() {
+    void shouldNotFilterReturnsTrueForPublicSitePath() {
         when(request.getMethod()).thenReturn("GET");
-        when(request.getHeader("Authorization")).thenReturn("Basic dGVzdDp0ZXN0");
+        when(request.getRequestURI()).thenReturn("/api/v1/site/pages/privacidade");
         assertThat(filter.shouldNotFilter(request)).isTrue();
     }
 
     @Test
-    void shouldNotFilterReturnsFalseWhenBearerPresent() {
+    void shouldNotFilterReturnsTrueForWebhookPath() {
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getRequestURI()).thenReturn("/api/v1/payment/webhooks/mercadopago");
+        assertThat(filter.shouldNotFilter(request)).isTrue();
+    }
+
+    @Test
+    void shouldNotFilterReturnsFalseForAuthenticatedPath() {
         when(request.getMethod()).thenReturn("GET");
-        when(request.getHeader("Authorization")).thenReturn("Bearer token123");
+        when(request.getRequestURI()).thenReturn("/api/v1/profile/addresses");
         assertThat(filter.shouldNotFilter(request)).isFalse();
+    }
+
+    @Test
+    void shouldNotFilterReturnsFalseForAdminPath() {
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/api/v1/admin/products");
+        assertThat(filter.shouldNotFilter(request)).isFalse();
+    }
+
+    @Test
+    void doFilterRejectsWhenNoBearerAndNoProxySecret() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getHeader(JwtAuthenticationFilter.PROXY_SECRET_HEADER)).thenReturn(null);
+        when(request.getRequestURI()).thenReturn("/api/v1/profile/addresses");
+        when(request.getMethod()).thenReturn("GET");
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).setStatus(401);
+        verify(objectMapper).writeValue(any(PrintWriter.class), any());
+    }
+
+    @Test
+    void doFilterRejectsWhenProxySecretMismatch() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getHeader(JwtAuthenticationFilter.PROXY_SECRET_HEADER)).thenReturn("wrong-secret");
+        when(request.getRequestURI()).thenReturn("/api/v1/profile/addresses");
+        when(request.getMethod()).thenReturn("GET");
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(response).setStatus(401);
+    }
+
+    @Test
+    void doFilterProceedsWhenProxySecretValid() throws Exception {
+        when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getHeader(JwtAuthenticationFilter.PROXY_SECRET_HEADER)).thenReturn("test-proxy-secret");
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
     }
 
     @Test

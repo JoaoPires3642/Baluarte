@@ -40,10 +40,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTHORIZATION_HEADER = "Authorization";
+    public static final String PROXY_SECRET_HEADER = "X-Proxy-Secret";
     private static final String UNAUTHORIZED_CODE = "UNAUTHORIZED";
+
+    private static final List<String> PUBLIC_PATH_PREFIXES = List.of(
+        "/api/v1/catalog",
+        "/api/v1/site/pages/",
+        "/api/v1/site/contact-settings",
+        "/api/v1/checkout/shipping/quotes",
+        "/api/v1/checkout/shipping/station-settings",
+        "/api/v1/media/files/",
+        "/api/v1/payment/webhooks/",
+        "/api/v1/shipping/webhooks/"
+    );
 
     private final ObjectMapper objectMapper;
     private final FusionAuthProperties properties;
+    private final SecurityProperties securityProperties;
     private final SpringDataAuthUserJpaRepository authUserRepository;
 
     private final JwtDecoder jwtDecoder;
@@ -52,10 +65,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public JwtAuthenticationFilter(
         ObjectMapper objectMapper,
         FusionAuthProperties properties,
+        SecurityProperties securityProperties,
         SpringDataAuthUserJpaRepository authUserRepository
     ) {
         this.objectMapper = objectMapper;
         this.properties = properties;
+        this.securityProperties = securityProperties;
         this.authUserRepository = authUserRepository;
         this.jwtDecoder = buildDecoder(properties);
     }
@@ -71,8 +86,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
-        String auth = request.getHeader(AUTHORIZATION_HEADER);
-        return auth == null || !auth.startsWith(BEARER_PREFIX);
+
+        String path = request.getRequestURI();
+        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     @Override
@@ -82,6 +98,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         FilterChain filterChain
     ) throws ServletException, IOException {
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
+
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            handleBearerToken(request, response, filterChain, authHeader);
+            return;
+        }
+
+        String proxySecret = request.getHeader(PROXY_SECRET_HEADER);
+        String expectedSecret = securityProperties.getProxySecret();
+
+        if (expectedSecret != null && !expectedSecret.isBlank()
+            && proxySecret != null && proxySecret.equals(expectedSecret)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        logger.warn(
+            "security.audit event=AUTH_REJECTED reason=no-valid-credentials path={} method={}",
+            request.getRequestURI().replaceAll("[\\r\\n]", "_"),
+            request.getMethod()
+        );
+        writeError(response, request, HttpStatus.UNAUTHORIZED, UNAUTHORIZED_CODE, "Valid Bearer token or proxy secret required");
+    }
+
+    private void handleBearerToken(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain,
+        String authHeader
+    ) throws ServletException, IOException {
         String token = authHeader.substring(BEARER_PREFIX.length()).trim();
 
         try {
