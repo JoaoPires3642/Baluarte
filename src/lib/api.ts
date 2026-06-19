@@ -1,6 +1,11 @@
 import { getBrowserSafeApiBaseUrl, getBrowserSafeUploadUrl } from "@/lib/api-base"
 
-const PUBLIC_CATALOG_CACHE = { next: { revalidate: 60, tags: ["catalog"] } }
+// Importante: NAO usar next.revalidate nos fetchs publicos.
+// O data cache do Next.js cacheia respostas por ID da URL, e se o backend
+// falhar uma vez (timeout, 502 intermitente entre Vercel e o backend),
+// o 404/erro fica preso no cache e a pagina da notFound() mesmo depois
+// do backend voltar. Preferimos custo de revalidacao por request.
+const NO_CACHE = { cache: "no-store" as const }
 
 type ApiRequestInit = RequestInit & {
   next?: {
@@ -9,66 +14,104 @@ type ApiRequestInit = RequestInit & {
   }
 }
 
+async function fetchWithTimeout(url: string, options?: ApiRequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
   const baseUrl = getBrowserSafeApiBaseUrl()
   const url = `${baseUrl}${endpoint}`
 
-  let response: Response
-  try {
-    response = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    })
-  } catch (err) {
-    if (typeof window === "undefined") {
-      console.error("[fetchApi] network error", { url, endpoint, message: err instanceof Error ? err.message : String(err) })
+  let lastError: unknown = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let response: Response
+    try {
+      response = await fetchWithTimeout(url, {
+        ...options,
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+        },
+      })
+    } catch (err) {
+      lastError = err
+      if (typeof window === "undefined") {
+        console.error("[fetchApi] network error", {
+          url,
+          endpoint,
+          attempt,
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+      continue
     }
-    throw new Error("Erro de conexao com o backend")
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      const errPayload = body?.error
+      const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+      if (typeof window === "undefined") {
+        console.error("[fetchApi] non-ok response", {
+          url,
+          endpoint,
+          status: response.status,
+          message: errPayload?.message,
+        })
+      }
+      // 4xx sao deterministicas - nao adianta retry
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error((errPayload?.message || "Erro na requisição") + details)
+      }
+      lastError = new Error((errPayload?.message || "Erro na requisição") + details)
+      continue
+    }
+
+    return response.json()
   }
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    const errPayload = body?.error
-    const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
-    if (typeof window === "undefined") {
-      console.error("[fetchApi] non-ok response", { url, endpoint, status: response.status, message: errPayload?.message })
-    }
-    throw new Error((errPayload?.message || "Erro na requisição") + details)
-  }
-
-  return response.json()
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Erro de conexao com o backend")
 }
 
 // Categories - GET /catalog/categories
 export async function fetchCategories() {
-  return fetchApi<{ data: Category[] }>("/catalog/categories", PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Category[] }>("/catalog/categories", NO_CACHE)
 }
 
 export async function fetchPublicTeams(limit = 8) {
-  return fetchApi<{ data: Team[] }>(`/catalog/teams?limit=${limit}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Team[] }>(`/catalog/teams?limit=${limit}`, NO_CACHE)
 }
 
 // Teams by Category - GET /catalog/categories/{categorySlug}/teams
 export async function fetchTeamsByCategory(categorySlug: string) {
-  return fetchApi<{ data: Team[] }>(`/catalog/categories/${categorySlug}/teams`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Team[] }>(`/catalog/categories/${categorySlug}/teams`, NO_CACHE)
 }
 
 // Models (Products) by Team - GET /catalog/teams/{teamSlug}/models
 export async function fetchModelsByTeam(teamSlug: string) {
-  return fetchApi<{ data: Model[] }>(`/catalog/teams/${teamSlug}/models`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Model[] }>(`/catalog/teams/${teamSlug}/models`, NO_CACHE)
 }
 
 // Model Detail - GET /catalog/teams/{teamSlug}/models/{modelId}
 export async function fetchModelDetail(teamSlug: string, modelId: string) {
-  return fetchApi<{ data: ModelDetail }>(`/catalog/teams/${teamSlug}/models/${modelId}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: ModelDetail }>(`/catalog/teams/${teamSlug}/models/${modelId}`, NO_CACHE)
 }
 
 // Simple Model Detail by ID - uses featured endpoint
 export async function fetchProductById(modelId: string) {
-  return fetchApi<{ data: ModelDetail }>(`/catalog/products/${modelId}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: ModelDetail }>(`/catalog/products/${modelId}`, NO_CACHE)
 }
 
 // Public Products by Team - GET /catalog/teams/{teamSlug}/products
@@ -78,11 +121,11 @@ export async function fetchProductsByTeam(teamSlug: string) {
 
 // Featured Products - GET /catalog/featured
 export async function fetchFeaturedProducts(limit = 8) {
-  return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`, NO_CACHE)
 }
 
 export async function fetchBestSellers(limit = 8) {
-  return fetchApi<{ data: Model[] }>(`/catalog/best-sellers?limit=${limit}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Model[] }>(`/catalog/best-sellers?limit=${limit}`, NO_CACHE)
 }
 
 export interface PublicModelsPageMeta {
@@ -95,7 +138,7 @@ export interface PublicModelsPageMeta {
 export async function fetchPublicModelsPage(page = 0, size = 10, query = "") {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   if (query.trim()) params.set("q", query.trim())
-  return fetchApi<{ data: Model[]; meta: PublicModelsPageMeta }>(`/catalog/products?${params}`, PUBLIC_CATALOG_CACHE)
+  return fetchApi<{ data: Model[]; meta: PublicModelsPageMeta }>(`/catalog/products?${params}`, NO_CACHE)
 }
 
 export async function fetchPublicModels() {
