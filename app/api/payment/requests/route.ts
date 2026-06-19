@@ -1,7 +1,9 @@
 import { getAuthHeaders } from "@/lib/auth-headers"
 import { NextRequest, NextResponse } from "next/server"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+export const runtime = "nodejs"
+
+const API_BASE_URL = process.env.BACKEND_INTERNAL_URL || (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_API_BASE_URL : "http://localhost:8080/api/v1")
 
 export async function POST(request: NextRequest) {
   try {
