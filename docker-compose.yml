@@ -59,6 +59,30 @@ services:
       APP_STORAGE_S3_BUCKET: ${APP_STORAGE_S3_BUCKET:-}
       APP_STORAGE_S3_ACCESS_KEY_ID: ${APP_STORAGE_S3_ACCESS_KEY_ID:-}
       APP_STORAGE_S3_SECRET_ACCESS_KEY: ${APP_STORAGE_S3_SECRET_ACCESS_KEY:-}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-10}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-2}
+      DB_POOL_MAX_LIFETIME_MS: ${DB_POOL_MAX_LIFETIME_MS:-1800000}
+      SERVER_TOMCAT_THREADS_MAX: ${SERVER_TOMCAT_THREADS_MAX:-200}
+      SERVER_TOMCAT_THREADS_MIN_SPARE: ${SERVER_TOMCAT_THREADS_MIN_SPARE:-20}
+      SERVER_TOMCAT_MAX_CONNECTIONS: ${SERVER_TOMCAT_MAX_CONNECTIONS:-8192}
+      SERVER_TOMCAT_ACCEPT_COUNT: ${SERVER_TOMCAT_ACCEPT_COUNT:-200}
+      SERVER_CONNECTION_TIMEOUT: ${SERVER_CONNECTION_TIMEOUT:-20s}
+      SERVER_KEEP_ALIVE_TIMEOUT: ${SERVER_KEEP_ALIVE_TIMEOUT:-30s}
+      # Nota: native-image ignora -Xmx, mas mantemos para eventual fallback com JVM
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms256m -Xmx768m -XX:MaxRAMPercentage=75}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1024M
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
       db:
         condition: service_healthy

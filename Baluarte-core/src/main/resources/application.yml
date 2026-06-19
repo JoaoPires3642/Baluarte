@@ -7,10 +7,11 @@ spring:
     password: ${DB_PASSWORD:baluarte}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:3}
-      minimum-idle: ${DB_POOL_MIN_IDLE:0}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
       idle-timeout: ${DB_POOL_IDLE_TIMEOUT_MS:30000}
       connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:10000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME_MS:1800000}
   jpa:
     open-in-view: false
     hibernate:
@@ -29,6 +30,17 @@ spring:
 server:
   servlet:
     context-path: /
+  tomcat:
+    threads:
+      max: ${SERVER_TOMCAT_THREADS_MAX:200}
+      min-spare: ${SERVER_TOMCAT_THREADS_MIN_SPARE:20}
+    max-connections: ${SERVER_TOMCAT_MAX_CONNECTIONS:8192}
+    accept-count: ${SERVER_TOMCAT_ACCEPT_COUNT:200}
+    connection-timeout: ${SERVER_CONNECTION_TIMEOUT:20s}
+    keep-alive-timeout: ${SERVER_KEEP_ALIVE_TIMEOUT:30s}
+  connection-timeout: ${SERVER_CONNECTION_TIMEOUT:20s}
+  netty:
+    connection-timeout: ${SERVER_CONNECTION_TIMEOUT:20s}
 management:
   endpoints:
     web:
