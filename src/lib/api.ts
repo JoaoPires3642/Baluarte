@@ -37,16 +37,22 @@ async function fetchWithTimeout(url: string, options?: ApiRequestInit): Promise<
   }
 }
 
-async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
+async function fetchApi<T>(
+  endpoint: string,
+  options?: ApiRequestInit & { maxAttempts?: number }
+): Promise<T> {
   const baseUrl = getBrowserSafeApiBaseUrl()
   const url = `${baseUrl}${endpoint}`
 
   let lastError: unknown = null
-  const maxAttempts = 3
+  const maxAttempts = options?.maxAttempts ?? 3
+  // Backoff maior (600ms, 1800ms) para dar tempo do backend/proxy
+  // completar handshakes TLS pendentes e evitar ECONNRESET em rajada.
+  const backoffMs = [0, 600, 1800]
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 200 * attempt))
+    if (backoffMs[attempt] > 0) {
+      await new Promise((r) => setTimeout(r, backoffMs[attempt]))
     }
 
     let response: Response
@@ -192,7 +198,10 @@ export async function fetchMyOrder(orderId: string) {
 }
 
 export async function fetchSiteContactSettings() {
-  return fetchApi<{ data: SiteContactSettings }>("/site/contact-settings", { cache: "no-store" })
+  return fetchApi<{ data: SiteContactSettings }>("/site/contact-settings", {
+    cache: "no-store",
+    maxAttempts: 1,
+  })
 }
 
 export interface SiteContactSettings {
