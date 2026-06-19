@@ -88,7 +88,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String path = request.getRequestURI();
-        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+        if (PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith)) {
+            return true;
+        }
+
+        String configuredSecret = securityProperties.getProxySecret();
+        if (configuredSecret == null || configuredSecret.isBlank()) {
+            String auth = request.getHeader(AUTHORIZATION_HEADER);
+            return auth == null || !auth.startsWith(BEARER_PREFIX);
+        }
+
+        return false;
     }
 
     @Override

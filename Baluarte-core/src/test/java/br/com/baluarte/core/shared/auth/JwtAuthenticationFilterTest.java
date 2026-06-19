@@ -104,6 +104,24 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void shouldNotFilterSkipsWhenNoBearerAndNoProxySecretConfigured() {
+        securityProperties.setProxySecret("");
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/api/v1/profile/addresses");
+        when(request.getHeader("Authorization")).thenReturn(null);
+        assertThat(filter.shouldNotFilter(request)).isTrue();
+    }
+
+    @Test
+    void shouldNotFilterRunsWhenBearerPresentEvenWithoutProxySecret() {
+        securityProperties.setProxySecret("");
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRequestURI()).thenReturn("/api/v1/profile/addresses");
+        when(request.getHeader("Authorization")).thenReturn("Bearer tok");
+        assertThat(filter.shouldNotFilter(request)).isFalse();
+    }
+
+    @Test
     void shouldNotFilterReturnsFalseForAdminPath() {
         when(request.getMethod()).thenReturn("GET");
         when(request.getRequestURI()).thenReturn("/api/v1/admin/products");
