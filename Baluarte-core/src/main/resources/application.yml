@@ -1,6 +1,32 @@
 spring:
   application:
     name: baluarte-core
+  rabbitmq:
+    # URL completa no formato amqps://user:pass@host/vhost (CloudAMQP/LavinMQ).
+    # Se APP_AMQP_URL estiver vazia, o AMQP fica desativado (sem publisher/listener).
+    addresses: ${APP_AMQP_URL:}
+    connection-timeout: ${APP_AMQP_CONNECT_TIMEOUT:10s}
+    requested-heartbeat: ${APP_AMQP_HEARTBEAT:30s}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+      retry:
+        enabled: true
+        initial-interval: 1000ms
+        multiplier: 2
+        max-interval: 10000ms
+        max-attempts: 3
+    listener:
+      simple:
+        acknowledge-mode: auto
+        prefetch: ${APP_AMQP_PREFETCH:5}
+        retry:
+          enabled: true
+          initial-interval: 1000ms
+          multiplier: 2
+          max-interval: 10000ms
+          max-attempts: 3
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/baluarte}
     username: ${DB_USERNAME:baluarte}
