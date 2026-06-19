@@ -12,7 +12,31 @@ type FusionAuthUser = {
   lastName?: string
 }
 
+const ADMIN_API_BASE = process.env.BACKEND_INTERNAL_URL || (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_API_BASE_URL : "http://localhost:8080/api/v1")
+
+async function resolveAdminStatus(userId: string, email: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${ADMIN_API_BASE}/auth/session`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-User-Id": userId,
+        "X-User-Email": email,
+      },
+      cache: "no-store",
+    })
+    if (!res.ok) return false
+    const payload = await res.json() as { data?: { internalRole?: string; role?: string } } | null
+    const role = String(payload?.data?.internalRole || payload?.data?.role || "").toLowerCase()
+    return role === "admin"
+  } catch {
+    return false
+  }
+}
+
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -65,6 +89,14 @@ export const authOptions: NextAuthOptions = {
         token.email = u.email
         token.accessToken = u.accessToken
         token.tokenExpiration = u.tokenExpiration
+        token.isAdmin = await resolveAdminStatus(u.id, u.email ?? "")
+        token.lastAdminCheck = Date.now()
+      } else if (token.id && token.email) {
+        const lastCheck = (token.lastAdminCheck as number) || 0
+        if (Date.now() - lastCheck > 15 * 60 * 1000) {
+          token.isAdmin = await resolveAdminStatus(token.id as string, token.email as string)
+          token.lastAdminCheck = Date.now()
+        }
       }
 
       if (token.tokenExpiration && Date.now() >= (token.tokenExpiration as number)) {
@@ -96,7 +128,10 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.email = token.email as string
       }
-      ;(session as unknown as Record<string, unknown>).accessToken = token.accessToken
+      const extendedSession = session as unknown as Record<string, unknown>
+      extendedSession.accessToken = token.accessToken
+      extendedSession.tokenExpiration = token.tokenExpiration as number | undefined
+      extendedSession.isAdmin = token.isAdmin as boolean | undefined
       return session
     },
   },

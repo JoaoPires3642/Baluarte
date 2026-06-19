@@ -1,63 +1,17 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth-config"
-import { getAuthHeaders } from "@/lib/auth-headers"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
-
-type BackendAuthSession = {
-  userId: string
-  email: string
-  role?: string
-  internalRole?: string
-}
-
-async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-    try {
-      const response = await fetch(url, { ...options, signal: controller.signal })
-      clearTimeout(timeoutId)
-      return response
-    } catch {
-      clearTimeout(timeoutId)
-      if (attempt === retries) throw new Error("fetch failed after retries")
-      await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
-    }
-  }
-  throw new Error("unreachable")
-}
 
 export async function resolveServerAuthSession() {
-  const { headers, userId } = await getAuthHeaders()
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id ?? null
 
   if (!userId) {
     return { isAuthenticated: false as const, isAdmin: false as const, session: null }
   }
 
-  try {
-    const response = await fetchWithRetry(`${API_BASE_URL}/auth/session`, {
-      method: "GET",
-      headers: { ...headers, Accept: "application/json" },
-      cache: "no-store",
-    })
+  const isAdmin = !!(session as unknown as Record<string, unknown>).isAdmin
 
-    if (!response.ok) {
-      return { isAuthenticated: true as const, isAdmin: false as const, session: null }
-    }
-
-    const payload = await response.json().catch(() => null) as { data?: BackendAuthSession } | null
-    const backendSession = payload?.data ?? null
-    const internalRole = String(backendSession?.internalRole || backendSession?.role || "").toLowerCase()
-
-    return {
-      isAuthenticated: true as const,
-      isAdmin: internalRole === "admin",
-      session: backendSession,
-    }
-  } catch {
-    return { isAuthenticated: true as const, isAdmin: false as const, session: null }
-  }
+  return { isAuthenticated: true as const, isAdmin, session: null }
 }
 
 export async function getServerUserId(): Promise<string | null> {
