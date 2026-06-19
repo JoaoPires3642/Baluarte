@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 import Link from "next/link"
 import { fetchCategories, fetchTeamsByCategory, type Team, type Category } from "@/lib/api"
 import { ChevronRight, ShieldCheck } from "lucide-react"

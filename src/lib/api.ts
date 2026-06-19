@@ -10,18 +10,32 @@ type ApiRequestInit = RequestInit & {
 }
 
 async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
-  const response = await fetch(`${getBrowserSafeApiBaseUrl()}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  })
+  const baseUrl = getBrowserSafeApiBaseUrl()
+  const url = `${baseUrl}${endpoint}`
+
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+    })
+  } catch (err) {
+    if (typeof window === "undefined") {
+      console.error("[fetchApi] network error", { url, endpoint, message: err instanceof Error ? err.message : String(err) })
+    }
+    throw new Error("Erro de conexao com o backend")
+  }
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     const errPayload = body?.error
     const details = errPayload?.details?.length ? ": " + errPayload.details.join("; ") : ""
+    if (typeof window === "undefined") {
+      console.error("[fetchApi] non-ok response", { url, endpoint, status: response.status, message: errPayload?.message })
+    }
     throw new Error((errPayload?.message || "Erro na requisição") + details)
   }
 

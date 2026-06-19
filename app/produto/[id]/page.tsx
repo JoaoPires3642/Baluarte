@@ -1,4 +1,5 @@
-export const revalidate = 60;
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { notFound } from "next/navigation"
 import { fetchModelDetail, fetchProductById, type ModelDetail } from "@/lib/api"
@@ -10,17 +11,26 @@ type ProductPageProps = {
 }
 
 async function getProduct(id: string, teamSlug?: string): Promise<ModelDetail | null> {
-  try {
-    if (teamSlug) {
-      const res = await fetchModelDetail(teamSlug, id)
-      return res.data
-    }
+  const attempts: Array<() => Promise<{ data: ModelDetail | null } | null>> = []
 
-    const res = await fetchProductById(id)
-    return res.data
-  } catch {
-    return null
+  if (teamSlug) {
+    attempts.push(() => fetchModelDetail(teamSlug, id).catch(() => null))
   }
+  attempts.push(() => fetchProductById(id).catch(() => null))
+
+  for (const attempt of attempts) {
+    try {
+      const res = await attempt()
+      if (res?.data) {
+        return res.data
+      }
+    } catch (err) {
+      console.error("[produto] erro ao buscar produto", { id, teamSlug, message: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  console.warn("[produto] produto nao encontrado", { id, teamSlug })
+  return null
 }
 
 export default async function ProductPage({ params, searchParams }: ProductPageProps) {

@@ -149,12 +149,27 @@ export const authOptions: NextAuthOptions = {
         if (refreshed) {
           token.accessToken = refreshed.accessToken
           token.tokenExpiration = refreshed.tokenExpiration
+        } else {
+          // Token expirado e refresh falhou -> marca erro para o callback `session`
+          // invalidar a sessao visivel ao cliente
+          token.error = "RefreshAccessTokenError"
+          ;(token as Record<string, unknown>).id = undefined
+          ;(token as Record<string, unknown>).email = undefined
+          ;(token as Record<string, unknown>).accessToken = undefined
+          ;(token as Record<string, unknown>).tokenExpiration = undefined
+          ;(token as Record<string, unknown>).isAdmin = undefined
         }
       }
 
       return token
     },
     async session({ session, token }) {
+      if (token.error === "RefreshAccessTokenError") {
+        const empty = { ...session } as Record<string, unknown>
+        empty.user = undefined
+        empty.expires = new Date(0).toISOString()
+        return empty as unknown as typeof session
+      }
       if (session.user) {
         session.user.id = token.id as string
         session.user.email = token.email as string

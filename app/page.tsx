@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } from "lucide-react"
 
-export const revalidate = 60
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 import { fetchBestSellers, fetchCategories, fetchFeaturedProducts, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
