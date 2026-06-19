@@ -14,9 +14,18 @@ type ApiRequestInit = RequestInit & {
   }
 }
 
+function describeFetchError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err)
+  const cause = (err as { cause?: { code?: string; message?: string } }).cause
+  if (cause?.code) {
+    return `${cause.code}: ${cause.message ?? err.message}`
+  }
+  return err.message
+}
+
 async function fetchWithTimeout(url: string, options?: ApiRequestInit): Promise<Response> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  const timeoutId = setTimeout(() => controller.abort(), 10000)
 
   try {
     return await fetch(url, {
@@ -33,7 +42,13 @@ async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<
   const url = `${baseUrl}${endpoint}`
 
   let lastError: unknown = null
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const maxAttempts = 3
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, 200 * attempt))
+    }
+
     let response: Response
     try {
       response = await fetchWithTimeout(url, {
@@ -51,7 +66,7 @@ async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<
           url,
           endpoint,
           attempt,
-          message: err instanceof Error ? err.message : String(err),
+          message: describeFetchError(err),
         })
       }
       continue
@@ -65,6 +80,7 @@ async function fetchApi<T>(endpoint: string, options?: ApiRequestInit): Promise<
         console.error("[fetchApi] non-ok response", {
           url,
           endpoint,
+          attempt,
           status: response.status,
           message: errPayload?.message,
         })
