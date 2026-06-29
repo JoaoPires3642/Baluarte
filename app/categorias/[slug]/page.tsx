@@ -3,7 +3,7 @@ export const revalidate = 0
 
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy } from "lucide-react"
-import { fetchModelsByTeam, fetchTeamsByCategory, type Model, type Team } from "@/lib/api"
+import { fetchCategories, fetchModelsByTeam, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Card } from "@/components/ui/card"
 import { ProductCard } from "@/components/product-card"
@@ -14,19 +14,15 @@ type DisplayModel = Model & {
   team?: { name?: string }
 }
 
-const categoryNames: Record<string, string> = {
-  nacionais: "Nacionais",
-  internacionais: "Internacionais",
-  estrangeiros: "Internacionais",
-  selecoes: "Selecoes",
-  personalizado: "Personalizado",
-  treino: "Personalizado",
-}
-
 async function getData(slug: string) {
   try {
-    const teamsRes = await fetchTeamsByCategory(slug)
+    const [categoriesRes, teamsRes] = await Promise.all([
+      fetchCategories().catch(() => null),
+      fetchTeamsByCategory(slug),
+    ])
     const teams = teamsRes.data
+
+    const categoryName = categoriesRes?.data?.find((c: Category) => c.slug === slug)?.name ?? slug
 
     const modelResponses = await Promise.all(
       teams.map((team) => fetchModelsByTeam(team.slug).catch(() => ({ data: [] as Model[] })))
@@ -34,9 +30,9 @@ async function getData(slug: string) {
 
     const models = modelResponses.flatMap((response) => response.data)
 
-    return { teams, models }
+    return { categoryName, teams, models }
   } catch {
-    return { teams: [], models: [] }
+    return { categoryName: slug, teams: [], models: [] }
   }
 }
 
@@ -46,9 +42,7 @@ type Props = {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params
-  const { teams, models } = await getData(slug)
-
-  const categoryName = categoryNames[slug] || slug
+  const { categoryName, teams, models } = await getData(slug)
   const categoryHero = homeCategoryMap[slug] || homeCategoryMap[slug === "estrangeiros" ? "internacionais" : slug === "treino" ? "personalizado" : ""]
   const categoryIcons: Record<string, typeof Trophy> = {
     nacionais: Trophy,
