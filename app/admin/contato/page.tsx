@@ -1,7 +1,6 @@
 import { AdminContactSettingsForm } from "@/components/admin-contact-settings-form"
 import type { SiteContactSettings } from "@/lib/api"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth-config"
+import { getAuthHeaders } from "@/lib/auth-headers"
 
 const API_BASE_URL = process.env.BACKEND_INTERNAL_URL || (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_API_BASE_URL : "http://localhost:8080/api/v1")
 
@@ -38,14 +37,10 @@ export default async function AdminContactSettingsPage() {
 
 async function fetchSettings(): Promise<{ data: SiteContactSettings; error?: string }> {
   try {
-    const session = await getServerSession(authOptions)
+    const { headers } = await getAuthHeaders()
 
     const response = await fetch(`${API_BASE_URL}/admin/contact-settings`, {
-      headers: {
-        Accept: "application/json",
-        "X-User-Id": session?.user?.id || "",
-        "X-User-Email": session?.user?.email || "",
-      },
+      headers: { ...headers, Accept: "application/json" },
       cache: "no-store",
     })
 
