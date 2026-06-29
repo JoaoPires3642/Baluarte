@@ -246,9 +246,7 @@ export default function AdminProductsPage() {
         <div>
           <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">← Voltar</Link>
           <div className="mt-2 rounded-[2rem] border border-[#d9e2ef] bg-white p-6 shadow-sm shadow-slate-900/5 sm:p-8">
-            <p className="eyebrow">Admin produtos</p>
-            <h1 className="mt-4 text-2xl font-bold">Produtos</h1>
-            <p className="text-muted-foreground mt-2">Gerencie seu catálogo</p>
+            <h1 className="text-2xl font-bold">Produtos</h1>
           </div>
         </div>
         <Button className="inline-flex items-center gap-2" onClick={openCreate}><PackagePlus className="h-4 w-4" />Novo Produto</Button>

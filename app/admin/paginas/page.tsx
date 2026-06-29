@@ -60,11 +60,7 @@ export default function AdminPagesPage() {
   return (
     <div className="space-y-6 py-6">
       <div>
-        <p className="eyebrow">Conteudo</p>
-        <h1 className="mt-1 text-2xl font-bold">Paginas do Site</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-500">
-          Edite o conteudo das paginas institucionais: Privacidade, Termos de Uso e Trocas.
-        </p>
+        <h1 className="text-2xl font-bold">Páginas do Site</h1>
       </div>
 
       {pages.length === 0 && !message && (

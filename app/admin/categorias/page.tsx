@@ -10,7 +10,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 function slugify(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
 }
 
 function Dialog({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -246,7 +251,7 @@ export default function AdminCategoriesPage() {
           </div>
           <div className="space-y-2">
             <Label>Slug</Label>
-            <Input value={form.slug} onChange={e => { setForm(f => ({ ...f, slug: e.target.value })); }} placeholder="ex: lancamentos" />
+            <Input value={form.slug} onChange={e => { setForm(f => ({ ...f, slug: slugify(e.target.value) })); }} placeholder="ex: lancamentos" />
           </div>
           <div className="space-y-2">
             <Label>Ordem de exibição</Label>

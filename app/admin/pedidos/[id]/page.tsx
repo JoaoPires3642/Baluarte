@@ -88,8 +88,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="eyebrow">Pedido</p>
-          <h1 className="mt-1 text-xl font-bold sm:text-2xl">Pedido #{order.orderReference}</h1>
+          <h1 className="text-xl font-bold sm:text-2xl">Pedido #{order.orderReference}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={statusColors[order.status] || "bg-gray-500"}>

@@ -480,9 +480,7 @@ export default function CheckoutPage() {
   return (
     <div className="container mx-auto px-4 py-6 md:py-8">
       <div className="mb-6 rounded-[2rem] border border-[#d9e2ef] bg-white p-6 shadow-sm shadow-slate-900/5 sm:p-8">
-        <p className="eyebrow">Checkout</p>
-        <h1 className="mt-4 text-3xl font-extrabold uppercase tracking-[-0.04em] text-slate-900">Pagamento com mais clareza</h1>
-        <p className="mt-2 text-sm text-slate-500">Fluxo segmentado em etapas para reduzir ruído e aumentar confiança.</p>
+        <h1 className="text-3xl font-extrabold uppercase tracking-[-0.04em] text-slate-900">Checkout</h1>
       </div>
       <div className="mb-6 grid grid-cols-3 gap-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-sm">
         <span className={`rounded-full px-2 py-2 ${step === 1 ? "bg-[#0f274d]/10 text-[#0f274d]" : "bg-slate-100 text-slate-400"}`}>1 Endereco</span>
@@ -693,7 +691,7 @@ export default function CheckoutPage() {
                               </option>
                             ))}
                           </select>
-                          <p className="mt-1 text-xs text-slate-500">Entrega no mesmo dia nao fica disponivel. Se for o dia da estacao hoje, aparece a data da semana seguinte.</p>
+                          <p className="mt-1 text-xs text-slate-500">Entregamos em estações apenas com agendamento. A data exibida é sempre o próximo dia de funcionamento disponível. Se o dia escolhido for hoje, o sistema avança automaticamente para a semana seguinte.</p>
                         </div>
 
                         {selectedDeliveryDay && stationDelivery.stations?.[selectedDeliveryDay] && (
@@ -770,7 +768,7 @@ export default function CheckoutPage() {
                           <p className="font-medium">Disponível:</p>
                           <p>Segunda a Sexta: até 19:00</p>
                           <p>Sábado: até 14:00</p>
-                          <p className="mt-1 text-xs text-blue-600">Você paga apenas o valor do produto. Após a confirmação, enviaremos seu pedido no WhatsApp para combinarmos a entrega.</p>
+                          <p className="mt-1 text-xs text-blue-600">No momento, você paga apenas o valor do produto. A entrega (Uber ou retirada no local) combinamos direto pelo WhatsApp após a confirmação.</p>
                         </div>
                       </div>
                     )}

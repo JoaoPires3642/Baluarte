@@ -23,11 +23,7 @@ export default async function AdminStationDeliveryPage() {
   return (
     <div className="space-y-6 py-6">
       <div>
-        <p className="eyebrow">Configuracao</p>
-        <h1 className="mt-1 text-2xl font-bold">Entrega em Estacoes</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-500">
-          Configure a opcao de entrega em estacoes de metro, com dias da semana, estacoes, horarios e preco.
-        </p>
+        <h1 className="text-2xl font-bold">Entrega em Estações</h1>
       </div>
       <AdminStationDeliveryForm initialSettings={payload?.data || null} />
     </div>

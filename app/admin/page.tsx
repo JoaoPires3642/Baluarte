@@ -105,8 +105,7 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-6 py-6">
       <div>
-        <p className="eyebrow">Painel</p>
-        <h1 className="mt-1 text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

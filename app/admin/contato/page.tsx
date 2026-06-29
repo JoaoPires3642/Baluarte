@@ -23,11 +23,7 @@ export default async function AdminContactSettingsPage() {
   return (
     <div className="space-y-6 py-6">
       <div>
-        <p className="eyebrow">Configuracao</p>
-        <h1 className="mt-1 text-2xl font-bold">Contato e Redes</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-500">
-          Configure mensagem, canais de atendimento e redes sociais exibidos no rodape do site.
-        </p>
+        <h1 className="text-2xl font-bold">Contato e Redes</h1>
       </div>
       <AdminContactSettingsForm initialSettings={settings} />
     </div>
