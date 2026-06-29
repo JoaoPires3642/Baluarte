@@ -3,7 +3,7 @@ import { type AdminShippingSettings } from "@/lib/api"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth-config"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+const API_BASE_URL = process.env.BACKEND_INTERNAL_URL || (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http") ? process.env.NEXT_PUBLIC_API_BASE_URL : "http://localhost:8080/api/v1")
 
 export default async function AdminShippingSettingsPage() {
   const result = await fetchSettings()
