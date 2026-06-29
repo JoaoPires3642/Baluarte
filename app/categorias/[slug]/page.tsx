@@ -86,7 +86,7 @@ export default async function CategoryPage({ params }: Props) {
           </span>
           <h1 className="mt-4 text-3xl font-extrabold uppercase tracking-[-0.04em] text-white sm:text-4xl md:text-5xl">{categoryName}</h1>
           <p className="mt-3 max-w-2xl text-sm text-white/80 md:text-base">
-            Explore a mesma linguagem visual do app, com destaque para colecoes, times e produtos desta categoria.
+            Navegue por camisas, colecoes e produtos disponiveis nesta categoria.
           </p>
         </div>
       </section>
