@@ -161,22 +161,8 @@ export function ProductFormDialog(props: ProductFormDialogProps) {
         <div className="space-y-4">
           <label htmlFor="customization-checkbox" className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
             <input id="customization-checkbox" type="checkbox" checked={form.customizationEnabled} onChange={e => onFormChange(f => ({ ...f, customizationEnabled: e.target.checked }))} className="mt-1" />
-            <span><span className="block font-semibold text-slate-800">Permitir personalização</span><span className="block text-xs text-slate-500">Ativa a opção de nome e número na camisa para este produto.</span></span>
+            <span><span className="block font-semibold text-slate-800">Permitir personalização</span><span className="block text-xs text-slate-500">Cliente poderá adicionar nome e número na camisa. O preview usa a própria imagem do produto como fundo.</span></span>
           </label>
-          {form.customizationEnabled && (
-            <>
-              <div className="space-y-2">
-                <Label>URL da imagem template (PNG)</Label>
-                <Input value={form.customizationTemplatePng} onChange={e => onFormChange(f => ({ ...f, customizationTemplatePng: e.target.value }))} placeholder="https://..." />
-                <p className="text-xs text-slate-500">Imagem de fundo para o preview da personalização (sem nome/número).</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Metadata (JSON)</Label>
-                <Textarea value={form.customizationTemplateMetadata} onChange={e => onFormChange(f => ({ ...f, customizationTemplateMetadata: e.target.value }))} placeholder='{"maxNameLength":14,"maxNumberLength":2,"customNamePrice":25,"customNumberPrice":25,"back":{"x":50,"y":26,"width":52,"height":20}}' rows={6} />
-                <p className="text-xs text-slate-500">Configurações de limites, preços e posição do preview. Deixe em branco para usar os defaults.</p>
-              </div>
-            </>
-          )}
         </div>
       )}
 
