@@ -17,6 +17,10 @@ function formatCep(value: string) {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`
 }
 
+function moneyMask(value: number) {
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export function AdminShippingSettingsForm({ initialSettings }: { initialSettings: AdminShippingSettings }) {
   const { authedFetch } = useAdminApi()
   const [settings, setSettings] = useState<AdminShippingSettingsUpdate>({
@@ -175,13 +179,12 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
         </div>
         <Field label="Valor minimo (R$)">
           <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={freeShippingMin ?? ""}
+            value={freeShippingMin != null ? moneyMask(freeShippingMin) : ""}
             onChange={(e) => {
-              const raw = e.target.value
-              setFreeShippingMin(raw === "" ? null : Number(raw))
+              const digits = e.target.value.replace(/\D/g, "")
+              if (digits === "") { setFreeShippingMin(null); return }
+              const cents = parseInt(digits, 10)
+              setFreeShippingMin(cents / 100)
             }}
             placeholder="299,00"
             disabled={freeShippingLoading}
