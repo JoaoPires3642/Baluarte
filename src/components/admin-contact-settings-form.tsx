@@ -8,6 +8,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAdminApi } from "@/lib/use-admin-api"
 import type { SiteContactSettings } from "@/lib/api"
 
+function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "")
+}
+
 const fieldClass = "space-y-1"
 const labelClass = "text-xs font-semibold uppercase tracking-[0.14em] text-slate-500"
 
@@ -64,8 +76,8 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
           <p className="mt-1 text-sm text-slate-500">Campos vazios nao aparecem no site.</p>
         </div>
         <Field label="Email"><Input value={settings.email || ""} onChange={event => { update("email", event.target.value); }} /></Field>
-        <Field label="Telefone"><Input value={settings.phone || ""} onChange={event => { update("phone", event.target.value); }} /></Field>
-        <Field label="WhatsApp"><Input value={settings.whatsapp || ""} onChange={event => { update("whatsapp", event.target.value); }} /></Field>
+        <Field label="Telefone"><Input value={formatPhone(settings.phone || "")} onChange={event => { update("phone", onlyDigits(event.target.value)); }} /></Field>
+        <Field label="WhatsApp"><Input value={formatPhone(settings.whatsapp || "")} onChange={event => { update("whatsapp", onlyDigits(event.target.value)); }} /></Field>
         <Field label="Horario"><Input value={settings.businessHours || ""} onChange={event => { update("businessHours", event.target.value); }} /></Field>
       </section>
 

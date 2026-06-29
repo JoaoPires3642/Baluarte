@@ -68,8 +68,8 @@ export async function Footer() {
               <h4 className="text-sm font-extrabold uppercase tracking-[0.18em] text-red-300">Contato</h4>
               <ul className="space-y-2 text-sm text-slate-300">
                 {settings.email && <li>{settings.email}</li>}
-                {settings.phone && <li>{settings.phone}</li>}
-                {settings.whatsapp && <li>WhatsApp: {settings.whatsapp}</li>}
+                {settings.phone && <li>{formatPhone(settings.phone)}</li>}
+                {settings.whatsapp && <li>WhatsApp: {formatPhone(settings.whatsapp)}</li>}
                 {settings.businessHours && <li>{settings.businessHours}</li>}
               </ul>
             </div>
@@ -138,6 +138,14 @@ function YouTubeIcon() {
       <polygon points="9.75 8.5 9.75 15.5 16 12 9.75 8.5" fill="currentColor" stroke="none" />
     </svg>
   )
+}
+
+export function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11)
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
 function buildWhatsappHref(value?: string | null, message?: string | null) {
