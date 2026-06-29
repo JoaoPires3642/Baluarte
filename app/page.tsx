@@ -4,7 +4,7 @@ import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy, Truck } fro
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-import { fetchBestSellers, fetchCategories, fetchFeaturedProducts, fetchPublicTeams, type Category, type Model, type Team } from "@/lib/api"
+import { fetchBestSellers, fetchCategories, fetchFeaturedProducts, fetchPublicTeams, fetchSiteContactSettings, type Category, type Model, type SiteContactSettings, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,7 +22,7 @@ async function getData() {
   const bestSellersRes = await fetchBestSellers(4).catch(() => null)
 
   if (!categoriesRes && !featuredRes && !bestSellersRes) {
-    return { categories: [], teams: [], featuredProducts: [], bestSellers: [] }
+    return { categories: [], teams: [], featuredProducts: [], bestSellers: [], settings: null }
   }
 
   const categories = categoriesRes?.data ?? []
@@ -30,12 +30,15 @@ async function getData() {
   const bestSellers = bestSellersRes?.data ?? []
 
   const teams = await fetchPublicTeams(8).then((response) => response.data).catch(() => [] as Team[])
+  const settings = await fetchSiteContactSettings().then(r => r.data).catch(() => null as SiteContactSettings | null)
 
-  return { categories, teams, featuredProducts, bestSellers }
+  return { categories, teams, featuredProducts, bestSellers, settings }
 }
 
 export default async function Home() {
-  const { categories, teams, featuredProducts, bestSellers } = await getData()
+  const { categories, teams, featuredProducts, bestSellers, settings } = await getData()
+
+  const freeShippingMin = settings?.freeShippingMinValue ?? null
 
   const displayCategories = categories.map((category: Category) => {
     const normalizedSlug = String(category.slug).toLowerCase()
@@ -80,7 +83,7 @@ export default async function Home() {
                 <span className="block text-[#ffd7d9]">artigos esportivos</span>
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-white/84 sm:text-base sm:leading-7 md:mt-5 md:text-lg">
-                Uma vitrine premium para camisas, coleções e peças esportivas com visual profissional, compra simples e identidade forte em branco, azul escuro e vermelho.
+                Camisetas oficiais dos maiores clubes do Brasil e do mundo. Embalagem segura, entrega rápida e curadoria feita por quem entende de futebol.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
                 <Button size="lg" className="w-full bg-white px-6 text-[#0f274d] hover:bg-slate-100 sm:w-auto sm:px-8" asChild>
@@ -243,12 +246,12 @@ export default async function Home() {
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="border-0 bg-[#0f274d] p-1 text-white lg:col-span-2">
             <CardContent className="rounded-[1.3rem] bg-gradient-to-r from-[#0b1f3f] to-[#15325f] p-8 md:p-12">
-              <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#ffd7d9]"><Truck className="h-4 w-4" /> Benefícios Baluarte</p>
+              <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#ffd7d9]"><Truck className="h-4 w-4" /> Por que comprar conosco</p>
               <h2 className="mb-3 mt-3 text-3xl font-extrabold uppercase tracking-[-0.04em] text-white md:text-4xl">
-                Experiência de compra mais forte, limpa e profissional
+                Camisas oficiais, entrega segura e suporte de verdade
               </h2>
               <p className="mx-auto mb-6 max-w-2xl text-white/80">
-                Fundo branco, contraste em azul escuro e detalhes vermelhos criam uma loja mais confiável, premium e direta para conversão.
+                Trabalhamos com fornecedores oficiais, embalamos cada peça com cuidado e oferecemos suporte direto com a equipe. Sua compra protegida do pedido à entrega.
               </p>
               <Button className="bg-white px-8 text-[#0f274d] hover:bg-slate-100" asChild>
                 <Link href="/contato">Falar com a equipe</Link>
@@ -256,18 +259,20 @@ export default async function Home() {
             </CardContent>
           </Card>
 
+          {freeShippingMin && freeShippingMin > 0 ? (
           <Card className="border-[#f1d4d6] bg-[#fff6f6]">
             <CardContent className="flex h-full flex-col justify-between p-6 sm:p-8">
               <div>
                 <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#c3222a]"><Sparkles className="h-4 w-4" /> Destaque</p>
-                <h3 className="mt-3 text-2xl font-extrabold uppercase tracking-[-0.04em] text-[#10233f]">Frete grátis acima de R$ 299</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-600">Condição ideal para elevar ticket médio sem poluir o layout.</p>
+                <h3 className="mt-3 text-2xl font-extrabold uppercase tracking-[-0.04em] text-[#10233f]">Frete grátis acima de R$ {freeShippingMin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-600">Monte seu pedido e receba sem custo de entrega. Válido para todo o Brasil.</p>
               </div>
               <Button variant="destructive" className="mt-6" asChild>
                 <Link href="/checkout">Aproveitar oferta</Link>
               </Button>
             </CardContent>
           </Card>
+          ) : null}
         </div>
       </section>
 
@@ -278,7 +283,7 @@ export default async function Home() {
             Receba ofertas exclusivas
           </h2>
           <p className="mx-auto mb-6 max-w-xl text-slate-600">
-            Cadastro simples, visual mais premium e comunicação alinhada com a identidade da Baluarte.
+            Seja o primeiro a saber de lançamentos, promoções e coleções limitadas direto no seu email.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
             <input

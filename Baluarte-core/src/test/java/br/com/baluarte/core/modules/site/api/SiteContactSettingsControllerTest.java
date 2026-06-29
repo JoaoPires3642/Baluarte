@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.baluarte.core.modules.site.infrastructure.SiteContactSettingsService;
 import br.com.baluarte.core.modules.site.infrastructure.SiteContactSettingsValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +46,8 @@ class SiteContactSettingsControllerTest {
             "https://instagram.com",
             "https://facebook.com",
             "https://youtube.com",
-            "Ola! Gostaria de mais informacoes."
+            "Ola! Gostaria de mais informacoes.",
+            new BigDecimal("299.00")
         );
     }
 
@@ -56,7 +58,8 @@ class SiteContactSettingsControllerTest {
         mockMvc.perform(get("/api/v1/site/contact-settings"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.email").value("contato@baluarte.com.br"))
-            .andExpect(jsonPath("$.data.footerMessage").value("footer"));
+            .andExpect(jsonPath("$.data.footerMessage").value("footer"))
+            .andExpect(jsonPath("$.data.freeShippingMinValue").value(299.00));
 
         verify(service).get();
     }
@@ -68,7 +71,8 @@ class SiteContactSettingsControllerTest {
         mockMvc.perform(get("/api/v1/admin/contact-settings"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.email").value("contato@baluarte.com.br"))
-            .andExpect(jsonPath("$.data.footerMessage").value("footer"));
+            .andExpect(jsonPath("$.data.footerMessage").value("footer"))
+            .andExpect(jsonPath("$.data.freeShippingMinValue").value(299.00));
 
         verify(service).get();
     }
@@ -84,7 +88,8 @@ class SiteContactSettingsControllerTest {
             "https://instagram.com",
             "https://facebook.com",
             "https://youtube.com",
-            "Ola! Gostaria de mais informacoes."
+            "Ola! Gostaria de mais informacoes.",
+            new BigDecimal("299.00")
         );
 
         when(service.save(any(SiteContactSettingsValues.class))).thenReturn(sampleValues);
@@ -94,7 +99,8 @@ class SiteContactSettingsControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.email").value("contato@baluarte.com.br"))
-            .andExpect(jsonPath("$.data.footerMessage").value("footer"));
+            .andExpect(jsonPath("$.data.footerMessage").value("footer"))
+            .andExpect(jsonPath("$.data.freeShippingMinValue").value(299.00));
 
         verify(service).save(any(SiteContactSettingsValues.class));
     }

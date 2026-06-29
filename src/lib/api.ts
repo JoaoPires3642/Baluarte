@@ -214,6 +214,7 @@ export interface SiteContactSettings {
   facebookUrl?: string | null
   youtubeUrl?: string | null
   whatsappMessage?: string | null
+  freeShippingMinValue?: number | null
 }
 
 // Shipping Quotes - POST /checkout/shipping/quotes

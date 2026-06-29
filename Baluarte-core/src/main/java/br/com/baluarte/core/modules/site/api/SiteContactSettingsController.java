@@ -4,8 +4,10 @@ import br.com.baluarte.core.modules.site.infrastructure.SiteContactSettingsServi
 import br.com.baluarte.core.modules.site.infrastructure.SiteContactSettingsValues;
 import br.com.baluarte.core.shared.api.ApiSuccessResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -45,7 +47,8 @@ public class SiteContactSettingsController {
             request.instagramUrl(),
             request.facebookUrl(),
             request.youtubeUrl(),
-            request.whatsappMessage()
+            request.whatsappMessage(),
+            request.freeShippingMinValue()
         );
     }
 
@@ -59,7 +62,8 @@ public class SiteContactSettingsController {
             values.instagramUrl(),
             values.facebookUrl(),
             values.youtubeUrl(),
-            values.whatsappMessage()
+            values.whatsappMessage(),
+            values.freeShippingMinValue()
         );
     }
 }
@@ -73,7 +77,8 @@ record SiteContactSettingsRequest(
     @Size(max = 300) String instagramUrl,
     @Size(max = 300) String facebookUrl,
     @Size(max = 300) String youtubeUrl,
-    @Size(max = 600) String whatsappMessage
+    @Size(max = 600) String whatsappMessage,
+    @DecimalMin("0") BigDecimal freeShippingMinValue
 ) {
 }
 
@@ -86,6 +91,7 @@ record SiteContactSettingsResponse(
     String instagramUrl,
     String facebookUrl,
     String youtubeUrl,
-    String whatsappMessage
+    String whatsappMessage,
+    BigDecimal freeShippingMinValue
 ) {
 }

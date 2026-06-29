@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +26,18 @@ class SiteContactSettingsServiceTest {
         service = new SiteContactSettingsService(repository);
     }
 
+    private SiteContactSettingsValues sampleValues() {
+        return new SiteContactSettingsValues(
+            "footer", "email@test.com", "11999999999", "11999999999",
+            "9h-18h", "https://insta", "https://fb", "https://yt", "hi",
+            new BigDecimal("299.00")
+        );
+    }
+
     @Test
     void get_returnsValuesFromExistingEntity() {
         SiteContactSettingsJpaEntity entity = new SiteContactSettingsJpaEntity();
-        entity.apply(new SiteContactSettingsValues(
-            "footer", "email@test.com", "11999999999", "11999999999",
-            "9h-18h", "https://insta", "https://fb", "https://yt", "hi"
-        ));
+        entity.apply(sampleValues());
 
         when(repository.findById(SiteContactSettingsJpaEntity.SINGLETON_ID))
             .thenReturn(Optional.of(entity));
@@ -47,6 +53,7 @@ class SiteContactSettingsServiceTest {
         assertThat(result.facebookUrl()).isEqualTo("https://fb");
         assertThat(result.youtubeUrl()).isEqualTo("https://yt");
         assertThat(result.whatsappMessage()).isEqualTo("hi");
+        assertThat(result.freeShippingMinValue()).isEqualByComparingTo(new BigDecimal("299.00"));
 
         verify(repository).findById(SiteContactSettingsJpaEntity.SINGLETON_ID);
     }
@@ -67,10 +74,7 @@ class SiteContactSettingsServiceTest {
     @Test
     void save_updatesExistingEntity() {
         SiteContactSettingsJpaEntity existingEntity = org.mockito.Mockito.mock(SiteContactSettingsJpaEntity.class);
-        SiteContactSettingsValues input = new SiteContactSettingsValues(
-            "footer", "email@test.com", "11999999999", "11999999999",
-            "9h-18h", "https://insta", "https://fb", "https://yt", "hi"
-        );
+        SiteContactSettingsValues input = sampleValues();
 
         when(repository.findById(SiteContactSettingsJpaEntity.SINGLETON_ID))
             .thenReturn(Optional.of(existingEntity));
@@ -86,10 +90,7 @@ class SiteContactSettingsServiceTest {
 
     @Test
     void save_createsDefaultsWhenNoEntityAndSaves() {
-        SiteContactSettingsValues input = new SiteContactSettingsValues(
-            "footer", "email@test.com", "11999999999", "11999999999",
-            "9h-18h", "https://insta", "https://fb", "https://yt", "hi"
-        );
+        SiteContactSettingsValues input = sampleValues();
 
         when(repository.findById(SiteContactSettingsJpaEntity.SINGLETON_ID))
             .thenReturn(Optional.empty());
@@ -107,6 +108,7 @@ class SiteContactSettingsServiceTest {
         assertThat(result.facebookUrl()).isEqualTo("https://fb");
         assertThat(result.youtubeUrl()).isEqualTo("https://yt");
         assertThat(result.whatsappMessage()).isEqualTo("hi");
+        assertThat(result.freeShippingMinValue()).isEqualByComparingTo(new BigDecimal("299.00"));
 
         verify(repository).findById(SiteContactSettingsJpaEntity.SINGLETON_ID);
         verify(repository).save(any(SiteContactSettingsJpaEntity.class));

@@ -30,7 +30,7 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
-  const update = (field: keyof SiteContactSettings, value: string) => {
+  const update = (field: keyof SiteContactSettings, value: string | number | null) => {
     setSettings(current => ({ ...current, [field]: value }))
   }
 
@@ -79,6 +79,26 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
         <Field label="Telefone"><Input value={formatPhone(settings.phone || "")} onChange={event => { update("phone", onlyDigits(event.target.value)); }} /></Field>
         <Field label="WhatsApp"><Input value={formatPhone(settings.whatsapp || "")} onChange={event => { update("whatsapp", onlyDigits(event.target.value)); }} /></Field>
         <Field label="Horario"><Input value={settings.businessHours || ""} onChange={event => { update("businessHours", event.target.value); }} /></Field>
+      </section>
+
+      <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <h2 className="text-lg font-bold">Frete gratis</h2>
+          <p className="mt-1 text-sm text-slate-500">Valor minimo do pedido para oferecer frete gratis. Deixe vazio para desativar.</p>
+        </div>
+        <Field label="Valor minimo (R$)">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={settings.freeShippingMinValue ?? ""}
+            onChange={event => {
+              const raw = event.target.value
+              update("freeShippingMinValue", raw === "" ? null : Number(raw))
+            }}
+            placeholder="299,00"
+          />
+        </Field>
       </section>
 
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">

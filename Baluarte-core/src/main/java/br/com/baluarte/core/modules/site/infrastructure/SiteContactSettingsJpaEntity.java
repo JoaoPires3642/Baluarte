@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,6 +48,9 @@ public class SiteContactSettingsJpaEntity {
     @Column(name = "whatsapp_message", columnDefinition = "TEXT")
     private String whatsappMessage;
 
+    @Column(name = "free_shipping_min_value", precision = 10, scale = 2)
+    private BigDecimal freeShippingMinValue;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -66,7 +70,8 @@ public class SiteContactSettingsJpaEntity {
             "https://instagram.com",
             "https://facebook.com",
             "https://youtube.com",
-            "Ola! Gostaria de mais informacoes sobre os produtos da Baluarte."
+            "Ola! Gostaria de mais informacoes sobre os produtos da Baluarte.",
+            new BigDecimal("299.00")
         ));
         return entity;
     }
@@ -81,6 +86,7 @@ public class SiteContactSettingsJpaEntity {
         this.facebookUrl = clean(values.facebookUrl());
         this.youtubeUrl = clean(values.youtubeUrl());
         this.whatsappMessage = clean(values.whatsappMessage());
+        this.freeShippingMinValue = values.freeShippingMinValue();
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -94,7 +100,8 @@ public class SiteContactSettingsJpaEntity {
             instagramUrl,
             facebookUrl,
             youtubeUrl,
-            whatsappMessage
+            whatsappMessage,
+            freeShippingMinValue
         );
     }
 

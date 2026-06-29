@@ -1,5 +1,7 @@
 package br.com.baluarte.core.modules.site.infrastructure;
 
+import java.math.BigDecimal;
+
 public record SiteContactSettingsValues(
     String footerMessage,
     String email,
@@ -9,6 +11,7 @@ public record SiteContactSettingsValues(
     String instagramUrl,
     String facebookUrl,
     String youtubeUrl,
-    String whatsappMessage
+    String whatsappMessage,
+    BigDecimal freeShippingMinValue
 ) {
 }
