@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import { Loader2, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { lookupCep, type AdminShippingSettings, type AdminShippingSettingsUpdate } from "@/lib/api"
+import { lookupCep, type AdminShippingSettings, type AdminShippingSettingsUpdate, type SiteContactSettings } from "@/lib/api"
 import { useAdminApi } from "@/lib/use-admin-api"
 
 const fieldClass = "space-y-1"
@@ -33,11 +33,23 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
       lengthCm: initialSettings.packageLengthCm,
     }],
   })
+  const [freeShippingMin, setFreeShippingMin] = useState<number | null>(null)
+  const [freeShippingLoading, setFreeShippingLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [cepLoading, setCepLoading] = useState(false)
   const [cepError, setCepError] = useState("")
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    authedFetch("/admin/contact-settings")
+      .then((res) => {
+        const data = (res as { data: SiteContactSettings }).data
+        setFreeShippingMin(data.freeShippingMinValue ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setFreeShippingLoading(false))
+  }, [authedFetch])
 
   const update = (field: keyof AdminShippingSettingsUpdate, value: string) => {
     setSettings((current) => ({ ...current, [field]: value }))
@@ -101,11 +113,24 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
     setMessage("")
     setError("")
     try {
-      const response = await authedFetch("/admin/shipping-settings", {
-        method: "PUT",
-        body: JSON.stringify(settings),
-      }) as { data: AdminShippingSettings }
-      setSettings({ ...response.data, superfreteToken: "" })
+      const [shippingRes] = await Promise.all([
+        authedFetch("/admin/shipping-settings", {
+          method: "PUT",
+          body: JSON.stringify(settings),
+        }) as Promise<{ data: AdminShippingSettings }>,
+        authedFetch("/admin/contact-settings")
+          .then((res) => {
+            const current = (res as { data: SiteContactSettings }).data
+            return authedFetch("/admin/contact-settings", {
+              method: "PUT",
+              body: JSON.stringify({ ...current, freeShippingMinValue: freeShippingMin }),
+            })
+          })
+          .catch(() => {}),
+      ])
+      if (shippingRes) {
+        setSettings({ ...shippingRes.data, superfreteToken: "" })
+      }
       setMessage("Configuracoes de frete salvas.")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao salvar configuracoes")
@@ -141,6 +166,27 @@ export function AdminShippingSettingsForm({ initialSettings }: { initialSettings
         <Field label="Cart path"><Input value={settings.superfreteCartPath} onChange={(e) => { update("superfreteCartPath", e.target.value); }} /></Field>
         <Field label="Checkout path"><Input value={settings.superfreteCheckoutPath} onChange={(e) => { update("superfreteCheckoutPath", e.target.value); }} /></Field>
         <Field label="Label link path"><Input value={settings.superfreteLabelLinkPath} onChange={(e) => { update("superfreteLabelLinkPath", e.target.value); }} /></Field>
+      </section>
+
+      <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <h2 className="text-lg font-bold">Frete gratis</h2>
+          <p className="mt-1 text-sm text-slate-500">Valor minimo do pedido para oferecer frete gratis no checkout. Deixe vazio para desativar.</p>
+        </div>
+        <Field label="Valor minimo (R$)">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={freeShippingMin ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value
+              setFreeShippingMin(raw === "" ? null : Number(raw))
+            }}
+            placeholder="299,00"
+            disabled={freeShippingLoading}
+          />
+        </Field>
       </section>
 
       <section className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">

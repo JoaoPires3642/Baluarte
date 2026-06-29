@@ -83,26 +83,6 @@ export function AdminContactSettingsForm({ initialSettings }: { initialSettings:
 
       <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <h2 className="text-lg font-bold">Frete gratis</h2>
-          <p className="mt-1 text-sm text-slate-500">Valor minimo do pedido para oferecer frete gratis. Deixe vazio para desativar.</p>
-        </div>
-        <Field label="Valor minimo (R$)">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={settings.freeShippingMinValue ?? ""}
-            onChange={event => {
-              const raw = event.target.value
-              update("freeShippingMinValue", raw === "" ? null : Number(raw))
-            }}
-            placeholder="299,00"
-          />
-        </Field>
-      </section>
-
-      <section className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
-        <div className="sm:col-span-2">
           <h2 className="text-lg font-bold">Mensagem padrao do WhatsApp</h2>
           <p className="mt-1 text-sm text-slate-500">Texto pre-preenchido ao clicar no link do WhatsApp. Se ficar vazio, envia sem mensagem.</p>
         </div>
