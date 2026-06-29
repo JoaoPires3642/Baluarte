@@ -432,6 +432,8 @@ export default function CheckoutPage() {
           size: item.size,
           quantity: item.quantity,
           unitPrice: item.price,
+          customNames: item.customNames?.length ? item.customNames : undefined,
+          customNumber: item.customNumber || undefined,
         })),
       })
 

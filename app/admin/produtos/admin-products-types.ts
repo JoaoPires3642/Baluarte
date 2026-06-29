@@ -2,7 +2,7 @@ import { getSizesForCategory } from "@/lib/admin-low-stock"
 import type { AdminLowStockVariant } from "@/lib/admin-low-stock"
 
 export const SIZE_CATEGORIES = ["ADULTO", "INFANTIL"]
-export const STEPS = ["Informações", "Preço & Estoque", "Imagem"]
+export const STEPS = ["Informações", "Preço & Estoque", "Imagem", "Personalização"]
 export const LOW_STOCK_THRESHOLD = 5
 
 export function getSizes(sizeCategory: string): string[] {
@@ -21,6 +21,9 @@ export type ProductFormData = {
   featured: boolean
   sizeCategory: string
   variants: Record<string, string>
+  customizationEnabled: boolean
+  customizationTemplatePng: string
+  customizationTemplateMetadata: string
 }
 
 const defaultSizes = getSizesForCategory("ADULTO")
@@ -37,6 +40,9 @@ export const emptyForm: ProductFormData = {
   featured: false,
   sizeCategory: "ADULTO",
   variants: Object.fromEntries(defaultSizes.map(size => [size, "0"])),
+  customizationEnabled: false,
+  customizationTemplatePng: "",
+  customizationTemplateMetadata: "",
 }
 
 export type LowStockVariant = AdminLowStockVariant

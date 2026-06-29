@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -95,15 +96,20 @@ public class CreatePaymentUseCase {
             request.shippingAddress().state()
         );
         order.setItems(resolvedItems.stream()
-            .map(item -> new CheckoutOrderItem(
-                UUID.randomUUID().toString(),
-                orderId,
-                item.productId(),
-                item.productName(),
-                item.size(),
-                item.quantity(),
-                item.unitPrice()
-            ))
+            .map(item -> {
+                CheckoutOrderItem orderItem = new CheckoutOrderItem(
+                    UUID.randomUUID().toString(),
+                    orderId,
+                    item.productId(),
+                    item.productName(),
+                    item.size(),
+                    item.quantity(),
+                    item.unitPrice()
+                );
+                orderItem.setCustomNamesCount(item.customNames().size());
+                orderItem.setCustomNumberDigits(item.customNumber() != null ? item.customNumber().length() : 0);
+                return orderItem;
+            })
             .toList());
         order.setShippingServiceId(request.shipping().optionId());
         order.setShippingServiceName(request.shipping().label());
@@ -190,7 +196,18 @@ public class CreatePaymentUseCase {
             throw new PaymentValidationException("Estoque insuficiente para " + product.getModelName() + " tamanho " + item.size());
         }
 
-        return new ResolvedItem(product.getId().toString(), product.getModelName(), item.size().toUpperCase(), item.quantity(), product.getPrice());
+        List<String> customNames = item.customNames() != null ? item.customNames() : Collections.emptyList();
+        String customNumber = item.customNumber();
+
+        return new ResolvedItem(
+            product.getId().toString(),
+            product.getModelName(),
+            item.size().toUpperCase(),
+            item.quantity(),
+            product.getPrice(),
+            customNames,
+            customNumber
+        );
     }
 
     private UUID parseProductId(String productId) {
@@ -224,7 +241,7 @@ public class CreatePaymentUseCase {
         return remainder == 10 ? 0 : remainder;
     }
 
-    private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice) {}
+    private record ResolvedItem(String productId, String productName, String size, int quantity, BigDecimal unitPrice, List<String> customNames, String customNumber) {}
 
     private void validateUberDeliveryTime() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"));

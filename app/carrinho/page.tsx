@@ -90,10 +90,12 @@ export default function CartPage() {
             const mediaUrl = resolveMediaUrl(item.image)
             const namesCount = item.customNames?.length || 0
             const numberCount = item.customNumber?.length || 0
+            const namePrice = item.customNamePrice ?? 25
+            const numberPrice = item.customNumberPrice ?? 25
             const basePrice = item.basePrice || item.price
             const baseLineTotal = basePrice * item.quantity
-            const namesLineTotal = namesCount * 25 * item.quantity
-            const numberLineTotal = numberCount * 25 * item.quantity
+            const namesLineTotal = namesCount * namePrice * item.quantity
+            const numberLineTotal = numberCount * numberPrice * item.quantity
             const lineTotal = item.price * item.quantity
             const reachedStockLimit = typeof item.stockQuantity === "number" && item.quantity >= item.stockQuantity
 
@@ -128,8 +130,8 @@ export default function CartPage() {
 
                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600 sm:text-sm">
                       <p>Base ({item.quantity}x): R$ {baseLineTotal.toFixed(2).replace(".", ",")}</p>
-                      {namesLineTotal > 0 ? <p>Ajuste nomes: R$ {namesLineTotal.toFixed(2).replace(".", ",")}</p> : null}
-                      {numberLineTotal > 0 ? <p>Ajuste numero: R$ {numberLineTotal.toFixed(2).replace(".", ",")}</p> : null}
+                      {namesLineTotal > 0 ? <p>Nomes ({namesCount} x R$ {namePrice.toFixed(2).replace(".", ",")}): R$ {namesLineTotal.toFixed(2).replace(".", ",")}</p> : null}
+                      {numberLineTotal > 0 ? <p>Número ({numberCount} x R$ {numberPrice.toFixed(2).replace(".", ",")}): R$ {numberLineTotal.toFixed(2).replace(".", ",")}</p> : null}
                       <p className="mt-1 font-semibold text-[#102a5c]">Total do item: R$ {lineTotal.toFixed(2).replace(".", ",")}</p>
                     </div>
 

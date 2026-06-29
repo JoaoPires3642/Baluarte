@@ -14,6 +14,8 @@ export type CartItem = {
   stockQuantity?: number
   customNames?: string[]
   customNumber?: string
+  customNamePrice?: number
+  customNumberPrice?: number
 }
 
 type CartContextType = {

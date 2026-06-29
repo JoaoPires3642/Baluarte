@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog, ProductFormDialog } from "./product-form-dialog"
 import { ProductFilters, ProductListSection } from "./product-list-section"
 import { ProductStockSection } from "./product-stock-section"
-import { emptyForm, LOW_STOCK_THRESHOLD, getSizes, type ProductFormData } from "./admin-products-types"
+import { emptyForm, LOW_STOCK_THRESHOLD, STEPS, getSizes, type ProductFormData } from "./admin-products-types"
 
 function normalizeImageUrls(values: Array<string | undefined>) {
   return Array.from(new Set(values.map(value => value?.trim()).filter(Boolean) as string[]))
@@ -24,6 +24,10 @@ function parseMoney(value: string) {
 
 function getCsvValue(value: string | number) {
   return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char] || char)
+}
+
+function tryJsonParse(value: string) {
+  try { return JSON.parse(value) } catch { return undefined }
 }
 
 export default function AdminProductsPage() {
@@ -123,6 +127,9 @@ export default function AdminProductsPage() {
       featured: Boolean(product.featured),
       sizeCategory,
       variants: Object.fromEntries(sizes.map(size => [size, String(product.variants.find(v => v.size === size)?.stockQuantity ?? 0)])),
+      customizationEnabled: Boolean(product.customizationEnabled),
+      customizationTemplatePng: product.customizationTemplatePng || "",
+      customizationTemplateMetadata: product.customizationTemplateMetadata ? JSON.stringify(product.customizationTemplateMetadata, null, 2) : "",
     })
     setStep(initialStep)
     setError("")
@@ -185,7 +192,9 @@ export default function AdminProductsPage() {
         originalPrice: originalPrice && originalPrice > 0 ? originalPrice : undefined,
         imageUrl: imageUrls[0],
         images: imageUrls,
-        customizationEnabled: false,
+        customizationEnabled: form.customizationEnabled,
+        customizationTemplatePng: form.customizationTemplatePng.trim() || undefined,
+        customizationTemplateMetadata: form.customizationTemplateMetadata.trim() ? tryJsonParse(form.customizationTemplateMetadata) : undefined,
         featured: form.featured,
         sizeCategory: form.sizeCategory,
         variants: sizes.filter(size => parseInt(form.variants[size] || "0") > 0).map(size => ({ size, stockQuantity: parseInt(form.variants[size] || "0") })),
@@ -256,7 +265,7 @@ export default function AdminProductsPage() {
       {stockOnly && <ProductStockSection products={filtered} lowStockVariants={filteredLowStockVariants} lowStockOnly={lowStockOnly} onEditStock={product => { openEdit(product, 1); }} />}
       <ProductListSection products={filtered} onEdit={openEdit} onToggleActive={async product => { try { await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" }); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao alterar status do produto") } }} onDeleteRequest={setDeleteConfirm} />
 
-      <ProductFormDialog open={dialogOpen} editingId={editingId} form={form} step={step} saving={saving} uploadingImage={uploadingImage} error={error} categories={categories} teams={teams} featuredCount={featuredCount} onClose={() => setDialogOpen(false)} onBack={() => setStep(value => Math.max(value - 1, 0))} onNext={() => { if (validateStep(step)) setStep(value => Math.min(value + 1, 2)) }} onSave={handleSave} onFormChange={setForm} onImageUrlTextChange={value => setForm(current => ({ ...current, imageUrl: value, imageUrls: normalizeImageUrls(value.split(/\r?\n/)) }))} onImageFiles={handleImageFiles} onRemoveImage={imageUrl => setForm(current => { const imageUrls = current.imageUrls.filter(value => value !== imageUrl); return { ...current, imageUrl: imageUrls.join("\n"), imageUrls } })} />
+      <ProductFormDialog open={dialogOpen} editingId={editingId} form={form} step={step} saving={saving} uploadingImage={uploadingImage} error={error} categories={categories} teams={teams} featuredCount={featuredCount} onClose={() => setDialogOpen(false)} onBack={() => setStep(value => Math.max(value - 1, 0))} onNext={() => { if (validateStep(step)) setStep(value => Math.min(value + 1, STEPS.length - 1)) }} onSave={handleSave} onFormChange={setForm} onImageUrlTextChange={value => setForm(current => ({ ...current, imageUrl: value, imageUrls: normalizeImageUrls(value.split(/\r?\n/)) }))} onImageFiles={handleImageFiles} onRemoveImage={imageUrl => setForm(current => { const imageUrls = current.imageUrls.filter(value => value !== imageUrl); return { ...current, imageUrl: imageUrls.join("\n"), imageUrls } })} />
       <ConfirmDialog open={!!deleteConfirm} title="Excluir produto" message="Tem certeza que deseja desativar este produto?" onConfirm={async () => { if (!deleteConfirm) return; try { await authedFetch(`/admin/products/${deleteConfirm}`, { method: "DELETE" }); setDeleteConfirm(null); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao deletar produto") } }} onCancel={() => { setDeleteConfirm(null); }} />
     </div>
   )

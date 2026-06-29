@@ -568,6 +568,8 @@ export interface PaymentRequest {
     size: string
     quantity: number
     unitPrice: number
+    customNames?: string[]
+    customNumber?: string
   }>
   card?: {
     token: string

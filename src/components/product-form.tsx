@@ -116,6 +116,8 @@ export function ProductForm({ product }: ProductFormProps) {
       stockQuantity: selectedStockQuantity,
       customNames: personalizationEnabled && customName.trim() ? customName.trim().split(/\s+/).filter(Boolean) : [],
       customNumber: personalizationEnabled ? customNumber.trim() || undefined : undefined,
+      customNamePrice: personalizationEnabled ? customNamePrice : undefined,
+      customNumberPrice: personalizationEnabled ? customNumberPrice : undefined,
     }
   }
 
