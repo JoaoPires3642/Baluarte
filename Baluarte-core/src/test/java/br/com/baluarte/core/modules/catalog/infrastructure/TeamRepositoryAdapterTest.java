@@ -39,7 +39,7 @@ class TeamRepositoryAdapterTest {
 
     private CategoryJpaEntity createCategoryEntity(String slug) {
         return CategoryJpaEntity.fromDomain(
-            new Category(UUID.randomUUID(), "Cat", slug, 1, true, LocalDateTime.now()));
+            new Category(UUID.randomUUID(), "Cat", slug, 1, true, LocalDateTime.now(), null, null));
     }
 
     private TeamJpaEntity createTeamEntity(String slug, String catSlug, CategoryJpaEntity cat) {
@@ -145,7 +145,7 @@ class TeamRepositoryAdapterTest {
     @Test
     void saveCreatesNewTeamWhenIdIsNull() {
         var catEntity = createCategoryEntity("esports");
-        var catDomain = new Category(catEntity.getId(), "Cat", "esports", 1, true, LocalDateTime.now());
+        var catDomain = new Category(catEntity.getId(), "Cat", "esports", 1, true, LocalDateTime.now(), null, null);
         var team = new Team(null, "New Team", "new-team", catEntity.getId(),
             "esports", "League", 1, true, "logo", LocalDateTime.now());
         when(categoryJpaRepository.findById(team.categoryId())).thenReturn(Optional.of(catEntity));

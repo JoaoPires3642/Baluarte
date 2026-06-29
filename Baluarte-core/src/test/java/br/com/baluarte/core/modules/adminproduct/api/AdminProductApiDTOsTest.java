@@ -26,7 +26,7 @@ class AdminProductApiDTOsTest {
     @Test
     void categoryResponse() {
         UUID id = UUID.randomUUID();
-        var resp = new CategoryResponse(id, "Camisas", "camisas", 2, true);
+        var resp = new CategoryResponse(id, "Camisas", "camisas", 2, true, null, null);
         assertThat(resp.id()).isEqualTo(id);
         assertThat(resp.name()).isEqualTo("Camisas");
         assertThat(resp.slug()).isEqualTo("camisas");
@@ -57,7 +57,7 @@ class AdminProductApiDTOsTest {
 
     @Test
     void createCategoryRequest() {
-        var req = new CreateCategoryRequest("Camisas", "camisas", 1);
+        var req = new CreateCategoryRequest("Camisas", "camisas", 1, null, null);
         assertThat(req.name()).isEqualTo("Camisas");
         assertThat(req.slug()).isEqualTo("camisas");
         assertThat(req.displayOrder()).isEqualTo(1);
@@ -65,7 +65,7 @@ class AdminProductApiDTOsTest {
 
     @Test
     void updateCategoryRequest() {
-        var req = new UpdateCategoryRequest("Calcas", "calcas", null);
+        var req = new UpdateCategoryRequest("Calcas", "calcas", null, null, null);
         assertThat(req.name()).isEqualTo("Calcas");
         assertThat(req.displayOrder()).isNull();
     }

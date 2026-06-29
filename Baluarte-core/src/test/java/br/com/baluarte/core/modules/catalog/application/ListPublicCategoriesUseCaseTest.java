@@ -26,10 +26,10 @@ class ListPublicCategoriesUseCaseTest {
         ListPublicCategoriesUseCase useCase = new ListPublicCategoriesUseCase(categoryRepository);
 
         when(categoryRepository.findPublicCategories(1)).thenReturn(List.of(
-            new Category(UUID.randomUUID(), "Destaques", "destaques", 1, true, LocalDateTime.now())
+            new Category(UUID.randomUUID(), "Destaques", "destaques", 1, true, LocalDateTime.now(), null, null)
         ));
         when(categoryRepository.findPublicCategories(100)).thenReturn(List.of(
-            new Category(UUID.randomUUID(), "Times", "times", 2, true, LocalDateTime.now())
+            new Category(UUID.randomUUID(), "Times", "times", 2, true, LocalDateTime.now(), null, null)
         ));
 
         useCase.execute(0);

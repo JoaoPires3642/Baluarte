@@ -16,7 +16,7 @@ class CatalogApplicationMapperTest {
 
     @Test
     void toCategoryView() {
-        var cat = new Category(UUID.randomUUID(), "name", "slug", 1, true, LocalDateTime.now());
+        var cat = new Category(UUID.randomUUID(), "name", "slug", 1, true, LocalDateTime.now(), null, null);
         var view = CatalogApplicationMapper.toCategoryView(cat);
         assertThat(view.name()).isEqualTo("name");
         assertThat(view.slug()).isEqualTo("slug");

@@ -33,7 +33,7 @@ class CategoryRepositoryAdapterTest {
     }
 
     private CategoryJpaEntity createEntity(UUID id, String name, String slug, boolean active) {
-        var category = new Category(id, name, slug, 1, active, LocalDateTime.now());
+        var category = new Category(id, name, slug, 1, active, LocalDateTime.now(), null, null);
         return CategoryJpaEntity.fromDomain(category);
     }
 
@@ -123,7 +123,7 @@ class CategoryRepositoryAdapterTest {
 
     @Test
     void saveCreatesNewCategoryWhenIdIsNull() {
-        var domain = new Category(null, "New", "new-slug", 1, true, null);
+        var domain = new Category(null, "New", "new-slug", 1, true, null, null, null);
         var savedEntity = createEntity(UUID.randomUUID(), "New", "new-slug", true);
         when(jpaRepository.save(any())).thenReturn(savedEntity);
 
@@ -137,7 +137,7 @@ class CategoryRepositoryAdapterTest {
     void saveUpdatesExistingCategoryWhenIdExists() {
         UUID id = UUID.randomUUID();
         var existingEntity = createEntity(id, "Old", "old-slug", true);
-        var domain = new Category(id, "Updated", "updated-slug", 2, true, LocalDateTime.now());
+        var domain = new Category(id, "Updated", "updated-slug", 2, true, LocalDateTime.now(), null, null);
         when(jpaRepository.existsById(id)).thenReturn(true);
         when(jpaRepository.findById(id)).thenReturn(Optional.of(existingEntity));
         when(jpaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

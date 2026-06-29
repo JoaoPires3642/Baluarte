@@ -88,7 +88,7 @@ class CatalogControllerTest {
 
     @Test
     void listCategoriesReturnsCategories() {
-        var categoryView = new CategoryView(UUID.randomUUID(), "Cat", "cat", 1);
+        var categoryView = new CategoryView(UUID.randomUUID(), "Cat", "cat", 1, null, null);
         when(listPublicCategoriesUseCase.execute(50)).thenReturn(List.of(categoryView));
 
         var result = controller.listCategories(50);

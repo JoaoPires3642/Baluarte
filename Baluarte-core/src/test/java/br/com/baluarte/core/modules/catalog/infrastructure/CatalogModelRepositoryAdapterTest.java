@@ -39,7 +39,7 @@ class CatalogModelRepositoryAdapterTest {
 
     private CategoryJpaEntity createCategory() {
         return CategoryJpaEntity.fromDomain(
-            new Category(UUID.randomUUID(), "Cat", "cat", 1, true, LocalDateTime.now()));
+            new Category(UUID.randomUUID(), "Cat", "cat", 1, true, LocalDateTime.now(), null, null));
     }
 
     private TeamJpaEntity createTeam(String slug, CategoryJpaEntity category) {
