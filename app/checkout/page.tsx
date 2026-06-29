@@ -69,7 +69,7 @@ function generateTimeSlots(ranges: string[]) {
   return slots
 }
 
-function nextAvailableDateForDay(dayKey: string) {
+function nextAvailableDateForDay(dayKey: string, hasPersonalization = false) {
   const targetDay = deliveryDayIndexes[dayKey]
   if (targetDay === undefined) return ""
 
@@ -78,6 +78,7 @@ function nextAvailableDateForDay(dayKey: string) {
   let daysToAdd = (targetDay - today.getDay() + 7) % 7
   if (daysToAdd === 0) daysToAdd = 7
   if (daysToAdd === 1 && today.getHours() >= CUTOFF_HOUR) daysToAdd += 7
+  daysToAdd += hasPersonalization ? 7 : 0
   targetDate.setDate(today.getDate() + daysToAdd)
 
   const year = targetDate.getFullYear()
@@ -681,7 +682,7 @@ export default function CheckoutPage() {
                             value={selectedDeliveryDay}
                             onChange={e => {
                               setSelectedDeliveryDay(e.target.value)
-                              setSelectedDeliveryDate(nextAvailableDateForDay(e.target.value))
+                              setSelectedDeliveryDate(nextAvailableDateForDay(e.target.value, items.some((i) => i.personalizationConfirmed)))
                               setSelectedStation("")
                             }}
                             className="mt-1 flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
@@ -689,7 +690,7 @@ export default function CheckoutPage() {
                             <option value="">Selecione o próximo dia disponível</option>
                             {stationDelivery.stations && Object.entries(stationDelivery.stations).map(([dayKey, stations]) => (
                               <option key={dayKey} value={dayKey}>
-                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey} ({formatDateBr(nextAvailableDateForDay(dayKey))}) - {stations.join(", ")}
+                                {deliveryDayLabels[dayKey as keyof typeof deliveryDayLabels] || dayKey} ({formatDateBr(nextAvailableDateForDay(dayKey, items.some((i) => i.personalizationConfirmed)))}) - {stations.join(", ")}
                               </option>
                             ))}
                           </select>
@@ -724,6 +725,11 @@ export default function CheckoutPage() {
                             ))}
                           </select>
                         </div>
+                        {items.some((i) => i.personalizationConfirmed) && (
+                          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            Itens personalizados podem levar até <strong>7 dias úteis</strong> para produção. As datas disponíveis já consideram esse prazo.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -772,6 +778,11 @@ export default function CheckoutPage() {
                           <p>Sábado: até 14:00</p>
                           <p className="mt-1 text-xs text-blue-600">No momento, você paga apenas o valor do produto. A entrega (Uber ou retirada no local) combinamos direto pelo WhatsApp após a confirmação.</p>
                         </div>
+                        {items.some((i) => i.personalizationConfirmed) && (
+                          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            Itens personalizados podem levar até <strong>7 dias úteis</strong> para produção, além do prazo de entrega.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
