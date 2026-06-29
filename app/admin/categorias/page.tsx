@@ -265,12 +265,15 @@ export default function AdminCategoriesPage() {
             <Input value={form.imageUrl} onChange={e => { setForm(f => ({ ...f, imageUrl: e.target.value })); }} placeholder="https://..." />
           </div>
           <div className="space-y-2">
-            <Label>Cor de destaque (hex)</Label>
+            <Label>Cor de destaque</Label>
             <div className="flex gap-3">
-              <Input value={form.color} onChange={e => { setForm(f => ({ ...f, color: e.target.value })); }} placeholder="#0f274d" maxLength={7} />
-              {form.color && /^#[0-9a-fA-F]{6}$/.test(form.color) && (
-                <span className="h-10 w-10 shrink-0 rounded-lg border" style={{ backgroundColor: form.color }} />
-              )}
+              <input
+                type="color"
+                value={form.color || "#0f274d"}
+                onChange={e => { setForm(f => ({ ...f, color: e.target.value })); }}
+                className="h-10 w-16 cursor-pointer rounded-lg border bg-transparent p-1"
+              />
+              <Input value={form.color || ""} onChange={e => { setForm(f => ({ ...f, color: e.target.value })); }} placeholder="#0f274d" maxLength={7} className="font-mono" />
             </div>
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
