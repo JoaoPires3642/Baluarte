@@ -18,22 +18,24 @@ export default async function AdminShippingSettingsPage() {
   )
 }
 
-async function fetchSettings() {
-  const session = await getServerSession(authOptions)
+async function fetchSettings(): Promise<AdminShippingSettings> {
+  try {
+    const session = await getServerSession(authOptions)
 
-  const response = await fetch(`${API_BASE_URL}/admin/shipping-settings`, {
-    headers: {
-      Accept: "application/json",
-      "X-User-Id": session?.user?.id || "",
-      "X-User-Email": session?.user?.email || "",
-    },
-    cache: "no-store",
-  })
+    const response = await fetch(`${API_BASE_URL}/admin/shipping-settings`, {
+      headers: {
+        Accept: "application/json",
+        "X-User-Id": session?.user?.id || "",
+        "X-User-Email": session?.user?.email || "",
+      },
+      cache: "no-store",
+    })
 
-  if (!response.ok) {
-    throw new Error("Erro ao carregar configuracoes de frete")
+    if (!response.ok) return {} as AdminShippingSettings
+
+    const payload = await response.json() as { data: AdminShippingSettings }
+    return payload.data
+  } catch {
+    return {} as AdminShippingSettings
   }
-
-  const payload = await response.json() as { data: AdminShippingSettings }
-  return payload.data
 }

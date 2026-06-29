@@ -30,19 +30,23 @@ export default async function AdminContactSettingsPage() {
   )
 }
 
-async function fetchSettings() {
-  const session = await getServerSession(authOptions)
+async function fetchSettings(): Promise<SiteContactSettings> {
+  try {
+    const session = await getServerSession(authOptions)
 
-  const response = await fetch(`${API_BASE_URL}/admin/contact-settings`, {
-    headers: {
-      Accept: "application/json",
-      "X-User-Id": session?.user?.id || "",
-      "X-User-Email": session?.user?.email || "",
-    },
-    cache: "no-store",
-  })
+    const response = await fetch(`${API_BASE_URL}/admin/contact-settings`, {
+      headers: {
+        Accept: "application/json",
+        "X-User-Id": session?.user?.id || "",
+        "X-User-Email": session?.user?.email || "",
+      },
+      cache: "no-store",
+    })
 
-  if (!response.ok) return fallbackSettings
-  const payload = await response.json() as { data: SiteContactSettings }
-  return payload.data
+    if (!response.ok) return fallbackSettings
+    const payload = await response.json() as { data: SiteContactSettings }
+    return payload.data
+  } catch {
+    return fallbackSettings
+  }
 }
