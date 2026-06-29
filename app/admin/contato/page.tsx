@@ -18,19 +18,25 @@ const fallbackSettings: SiteContactSettings = {
 }
 
 export default async function AdminContactSettingsPage() {
-  const settings = await fetchSettings()
+  const result = await fetchSettings()
 
   return (
     <div className="space-y-6 py-6">
       <div>
         <h1 className="text-2xl font-bold">Contato e Redes</h1>
       </div>
-      <AdminContactSettingsForm initialSettings={settings} />
+      {result.error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-semibold">Erro ao carregar configurações</p>
+          <p className="mt-1 text-red-600">{result.error}</p>
+        </div>
+      )}
+      <AdminContactSettingsForm initialSettings={result.data} />
     </div>
   )
 }
 
-async function fetchSettings(): Promise<SiteContactSettings> {
+async function fetchSettings(): Promise<{ data: SiteContactSettings; error?: string }> {
   try {
     const session = await getServerSession(authOptions)
 
@@ -43,10 +49,20 @@ async function fetchSettings(): Promise<SiteContactSettings> {
       cache: "no-store",
     })
 
-    if (!response.ok) return fallbackSettings
+    if (!response.ok) {
+      const body = await response.text().catch(() => "")
+      return {
+        data: fallbackSettings,
+        error: `HTTP ${response.status} ${response.statusText}${body ? `: ${body.slice(0, 300)}` : ""}`,
+      }
+    }
+
     const payload = await response.json() as { data: SiteContactSettings }
-    return payload.data
-  } catch {
-    return fallbackSettings
+    return { data: payload.data }
+  } catch (err) {
+    return {
+      data: fallbackSettings,
+      error: err instanceof Error ? err.message : "Erro de rede ao carregar",
+    }
   }
 }
