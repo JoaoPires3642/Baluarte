@@ -59,7 +59,7 @@ export default function AdminCategoriesPage() {
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: "", slug: "", displayOrder: 0 })
+  const [form, setForm] = useState({ name: "", slug: "", displayOrder: 0, imageUrl: "", color: "" })
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -80,14 +80,14 @@ export default function AdminCategoriesPage() {
 
   const openCreate = () => {
     setEditingId(null)
-    setForm({ name: "", slug: "", displayOrder: 0 })
+    setForm({ name: "", slug: "", displayOrder: 0, imageUrl: "", color: "" })
     setError("")
     setDialogOpen(true)
   }
 
   const openEdit = (cat: Category) => {
     setEditingId(cat.id)
-    setForm({ name: cat.name, slug: cat.slug, displayOrder: cat.displayOrder || 0 })
+    setForm({ name: cat.name, slug: cat.slug, displayOrder: cat.displayOrder || 0, imageUrl: cat.imageUrl || "", color: cat.color || "" })
     setError("")
     setDialogOpen(true)
   }
@@ -97,7 +97,13 @@ export default function AdminCategoriesPage() {
     if (!form.slug.trim()) { setError("Slug é obrigatório"); return }
     setSaving(true)
     try {
-      const payload = { name: form.name.trim(), slug: form.slug.trim(), displayOrder: form.displayOrder || 0 }
+      const payload = {
+        name: form.name.trim(),
+        slug: form.slug.trim(),
+        displayOrder: form.displayOrder || 0,
+        imageUrl: form.imageUrl.trim() || null,
+        color: form.color.trim() || null,
+      }
       if (editingId) {
         await authedFetch(`/admin/categories/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
       } else {
@@ -257,6 +263,19 @@ export default function AdminCategoriesPage() {
             <Label>Ordem de exibição</Label>
             <Input type="number" min="0" value={form.displayOrder}
               onChange={e => { setForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 0 })); }} />
+          </div>
+          <div className="space-y-2">
+            <Label>URL da imagem de fundo</Label>
+            <Input value={form.imageUrl} onChange={e => { setForm(f => ({ ...f, imageUrl: e.target.value })); }} placeholder="https://..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Cor de destaque (hex)</Label>
+            <div className="flex gap-3">
+              <Input value={form.color} onChange={e => { setForm(f => ({ ...f, color: e.target.value })); }} placeholder="#0f274d" maxLength={7} />
+              {form.color && /^#[0-9a-fA-F]{6}$/.test(form.color) && (
+                <span className="h-10 w-10 shrink-0 rounded-lg border" style={{ backgroundColor: form.color }} />
+              )}
+            </div>
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">

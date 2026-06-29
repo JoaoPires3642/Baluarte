@@ -31,6 +31,12 @@ public class CategoryJpaEntity {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    @Column(name = "color", length = 7)
+    private String color;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -41,6 +47,8 @@ public class CategoryJpaEntity {
         entity.slug = category.slug();
         entity.displayOrder = category.displayOrder();
         entity.active = category.active() != null ? category.active() : true;
+        entity.imageUrl = category.imageUrl();
+        entity.color = category.color();
         entity.createdAt = category.createdAt() != null ? category.createdAt() : LocalDateTime.now();
         return entity;
     }
@@ -50,5 +58,7 @@ public class CategoryJpaEntity {
         this.slug = category.slug();
         this.displayOrder = category.displayOrder();
         this.active = category.active() != null ? category.active() : true;
+        this.imageUrl = category.imageUrl();
+        this.color = category.color();
     }
 }

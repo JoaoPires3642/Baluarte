@@ -22,7 +22,10 @@ async function getData(slug: string) {
     ])
     const teams = teamsRes.data
 
-    const categoryName = categoriesRes?.data?.find((c: Category) => c.slug === slug)?.name ?? slug
+    const currentCategory = categoriesRes?.data?.find((c: Category) => c.slug === slug)
+    const categoryName = currentCategory?.name ?? slug
+    const categoryImageUrl = currentCategory?.imageUrl ?? null
+    const categoryColor = currentCategory?.color ?? null
 
     const modelResponses = await Promise.all(
       teams.map((team) => fetchModelsByTeam(team.slug).catch(() => ({ data: [] as Model[] })))
@@ -30,9 +33,9 @@ async function getData(slug: string) {
 
     const models = modelResponses.flatMap((response) => response.data)
 
-    return { categoryName, teams, models }
+    return { categoryName, categoryImageUrl, categoryColor, teams, models }
   } catch {
-    return { categoryName: slug, teams: [], models: [] }
+    return { categoryName: slug, categoryImageUrl: null, categoryColor: null, teams: [], models: [] }
   }
 }
 
@@ -42,8 +45,10 @@ type Props = {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params
-  const { categoryName, teams, models } = await getData(slug)
-  const categoryHero = homeCategoryMap[slug] || homeCategoryMap[slug === "estrangeiros" ? "internacionais" : slug === "treino" ? "personalizado" : ""]
+  const { categoryName, categoryImageUrl, categoryColor, teams, models } = await getData(slug)
+  const visual = homeCategoryMap[slug] || homeCategoryMap[slug === "estrangeiros" ? "internacionais" : slug === "treino" ? "personalizado" : ""]
+  const categoryHeroImage = categoryImageUrl || visual?.image
+  const categoryHeroColor = categoryColor || visual?.color
   const categoryIcons: Record<string, typeof Trophy> = {
     nacionais: Trophy,
     internacionais: Globe2,
@@ -64,17 +69,17 @@ export default async function CategoryPage({ params }: Props) {
       </Link>
 
       <section className="relative mt-4 overflow-hidden rounded-[2rem] bg-slate-950 shadow-xl shadow-slate-900/10">
-        {categoryHero ? (
+        {categoryHeroImage ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url('${categoryHero.image}')` }}
+            style={{ backgroundImage: `url('${categoryHeroImage}')` }}
           />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/70 to-slate-900/35" />
         <div className="relative px-5 py-8 sm:px-6 sm:py-10 md:px-10 md:py-14">
           <span
             className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white"
-            style={{ backgroundColor: categoryHero?.color || "#1e3a8a" }}
+            style={{ backgroundColor: categoryHeroColor || "#1e3a8a" }}
           >
             <CategoryIcon className="h-4 w-4" /> Categoria
           </span>

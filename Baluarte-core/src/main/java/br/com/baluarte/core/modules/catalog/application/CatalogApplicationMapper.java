@@ -13,7 +13,7 @@ final class CatalogApplicationMapper {
     }
 
     static CategoryView toCategoryView(Category category) {
-        return new CategoryView(category.id(), category.name(), category.slug(), category.displayOrder());
+        return new CategoryView(category.id(), category.name(), category.slug(), category.displayOrder(), category.imageUrl(), category.color());
     }
 
     static TeamView toTeamView(Team team) {

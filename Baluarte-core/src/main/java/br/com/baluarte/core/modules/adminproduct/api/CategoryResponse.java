@@ -7,5 +7,7 @@ public record CategoryResponse(
     String name,
     String slug,
     Integer displayOrder,
-    boolean active
+    boolean active,
+    String imageUrl,
+    String color
 ) {}

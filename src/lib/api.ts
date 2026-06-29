@@ -463,11 +463,8 @@ export interface Category {
   slug: string
   displayOrder?: number
   active?: boolean
-}
-export interface Category {
-  id: string
-  name: string
-  slug: string
+  imageUrl?: string | null
+  color?: string | null
 }
 
 export interface Team {

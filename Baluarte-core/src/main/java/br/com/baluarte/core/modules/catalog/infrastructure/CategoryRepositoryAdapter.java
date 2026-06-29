@@ -64,12 +64,12 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     @Override
     public void deleteById(UUID id) {
         jpaRepository.findById(id).ifPresent(entity -> {
-            entity.updateFromDomain(new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder(), false, entity.getCreatedAt()));
+            entity.updateFromDomain(new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder(), false, entity.getCreatedAt(), entity.getImageUrl(), entity.getColor()));
             jpaRepository.save(entity);
         });
     }
 
     private Category toDomain(CategoryJpaEntity entity) {
-        return new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder(), entity.getActive(), entity.getCreatedAt());
+        return new Category(entity.getId(), entity.getName(), entity.getSlug(), entity.getDisplayOrder(), entity.getActive(), entity.getCreatedAt(), entity.getImageUrl(), entity.getColor());
     }
 }

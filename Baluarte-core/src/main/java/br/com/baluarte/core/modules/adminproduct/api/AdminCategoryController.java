@@ -53,7 +53,9 @@ public class AdminCategoryController {
             request.slug(),
             request.displayOrder() != null ? request.displayOrder() : 0,
             true,
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            request.imageUrl(),
+            request.color()
         ));
         return ApiSuccessResponse.of(toResponse(category));
     }
@@ -71,7 +73,9 @@ public class AdminCategoryController {
             request.slug(),
             request.displayOrder() != null ? request.displayOrder() : existing.displayOrder(),
             existing.active(),
-            existing.createdAt()
+            existing.createdAt(),
+            request.imageUrl(),
+            request.color()
         ));
         return ApiSuccessResponse.of(toResponse(updated));
     }
@@ -85,6 +89,6 @@ public class AdminCategoryController {
     }
 
     private CategoryResponse toResponse(Category category) {
-        return new CategoryResponse(category.id(), category.name(), category.slug(), category.displayOrder(), category.active());
+        return new CategoryResponse(category.id(), category.name(), category.slug(), category.displayOrder(), category.active(), category.imageUrl(), category.color());
     }
 }

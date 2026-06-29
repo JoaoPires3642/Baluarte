@@ -52,8 +52,8 @@ export default async function Home() {
 
     return {
       ...category,
-      image: visual?.image,
-      color: visual?.color,
+      image: category.imageUrl || visual?.image,
+      color: category.color || visual?.color,
     }
   })
 
