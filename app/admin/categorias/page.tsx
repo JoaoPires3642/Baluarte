@@ -252,12 +252,8 @@ export default function AdminCategoriesPage() {
             <Label>Nome</Label>
             <Input value={form.name} onChange={e => {
               const name = e.target.value
-              setForm(f => ({ ...f, name, slug: editingId ? f.slug : slugify(name) }))
+              setForm(f => ({ ...f, name, slug: slugify(name) }))
             }} placeholder="Ex: Lançamentos" />
-          </div>
-          <div className="space-y-2">
-            <Label>Slug</Label>
-            <Input value={form.slug} onChange={e => { setForm(f => ({ ...f, slug: slugify(e.target.value) })); }} placeholder="ex: lancamentos" />
           </div>
           <div className="space-y-2">
             <Label>Ordem de exibição</Label>
