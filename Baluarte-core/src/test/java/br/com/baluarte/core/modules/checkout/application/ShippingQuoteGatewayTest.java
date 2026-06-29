@@ -43,7 +43,7 @@ class ShippingQuoteGatewayTest {
 
     @Test
     void quotesUsingActiveStrategy() {
-        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1);
+        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1, false);
         List<ShippingQuoteOption> expected = List.of(
             new ShippingQuoteOption("standard", "Padrao", new BigDecimal("10.00"), 3)
         );
@@ -58,7 +58,7 @@ class ShippingQuoteGatewayTest {
     void throwsWhenNoStrategyMatchesActiveProvider() {
         ShippingQuoteGateway gw = new ShippingQuoteGateway("unknown", List.of(mockStrategy));
 
-        assertThatThrownBy(() -> gw.quote(new ShippingQuoteCommand("01001000", "SP", 1)))
+        assertThatThrownBy(() -> gw.quote(new ShippingQuoteCommand("01001000", "SP", 1, false)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("No shipping strategy configured for provider: unknown");
     }
@@ -67,7 +67,7 @@ class ShippingQuoteGatewayTest {
     void throwsWhenActiveProviderIsNull() {
         ShippingQuoteGateway gw = new ShippingQuoteGateway(null, List.of(mockStrategy));
 
-        assertThatThrownBy(() -> gw.quote(new ShippingQuoteCommand("01001000", "SP", 1)))
+        assertThatThrownBy(() -> gw.quote(new ShippingQuoteCommand("01001000", "SP", 1, false)))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("No shipping strategy configured for provider: ");
     }

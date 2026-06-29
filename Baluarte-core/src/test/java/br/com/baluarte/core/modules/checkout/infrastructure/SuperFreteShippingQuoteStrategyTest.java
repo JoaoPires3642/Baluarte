@@ -48,7 +48,7 @@ class SuperFreteShippingQuoteStrategyTest {
         AdminShippingSettingsValues settings = createSettings("");
         when(settingsService.get()).thenReturn(settings);
 
-        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1);
+        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1, false);
 
         assertThatThrownBy(() -> strategy.quote(command))
             .isInstanceOf(IllegalStateException.class)
@@ -59,7 +59,7 @@ class SuperFreteShippingQuoteStrategyTest {
     void quote_returnsEmptyListWhenNullResponse() {
         AdminShippingSettingsValues settings = createSettings("sf-token");
         when(settingsService.get()).thenReturn(settings);
-        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1);
+        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1, false);
 
         try (MockedStatic<RestClient> mockedStatic = mockStatic(RestClient.class)) {
             RestClient.Builder builder = mock(RestClient.Builder.class);
@@ -89,7 +89,7 @@ class SuperFreteShippingQuoteStrategyTest {
     void quote_returnsOptionsFromSuperFrete() {
         AdminShippingSettingsValues settings = createSettings("sf-token");
         when(settingsService.get()).thenReturn(settings);
-        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1);
+        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1, false);
 
         try (MockedStatic<RestClient> mockedStatic = mockStatic(RestClient.class)) {
             RestClient.Builder builder = mock(RestClient.Builder.class);
@@ -128,7 +128,7 @@ class SuperFreteShippingQuoteStrategyTest {
     void quote_filtersOptionsWithError() {
         AdminShippingSettingsValues settings = createSettings("sf-token");
         when(settingsService.get()).thenReturn(settings);
-        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1);
+        ShippingQuoteCommand command = new ShippingQuoteCommand("01001000", "SP", 1, false);
 
         try (MockedStatic<RestClient> mockedStatic = mockStatic(RestClient.class)) {
             RestClient.Builder builder = mock(RestClient.Builder.class);

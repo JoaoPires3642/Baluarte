@@ -16,6 +16,7 @@ export type CartItem = {
   customNumber?: string
   customNamePrice?: number
   customNumberPrice?: number
+  personalizationConfirmed?: boolean
 }
 
 type CartContextType = {

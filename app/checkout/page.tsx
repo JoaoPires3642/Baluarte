@@ -210,7 +210,7 @@ export default function CheckoutPage() {
         neighborhood: address.neighborhood,
         city: address.city,
         state: address.state,
-      }, items.length)
+      }, items.length, items.some((i) => i.personalizationConfirmed))
       setShippingOptions(res.data.options || [])
       if (res.data.options?.length > 0) {
         setSelectedShipping(res.data.options[0].id)

@@ -58,6 +58,7 @@ export function ProductForm({ product }: ProductFormProps) {
   const [personalizationMobileOpen, setPersonalizationMobileOpen] = useState(false)
   const [customName, setCustomName] = useState("")
   const [customNumber, setCustomNumber] = useState("")
+  const [personalizationConfirmed, setPersonalizationConfirmed] = useState(false)
   const [showMobileSizeSheet, setShowMobileSizeSheet] = useState(false)
 
   const displayProduct = product as ProductFormModel
@@ -118,6 +119,7 @@ export function ProductForm({ product }: ProductFormProps) {
       customNumber: personalizationEnabled ? customNumber.trim() || undefined : undefined,
       customNamePrice: personalizationEnabled ? customNamePrice : undefined,
       customNumberPrice: personalizationEnabled ? customNumberPrice : undefined,
+      personalizationConfirmed: personalizationEnabled && personalizationConfirmed,
     }
   }
 
@@ -143,6 +145,11 @@ export function ProductForm({ product }: ProductFormProps) {
 
     if (!canAddSelectedSize()) return
 
+    if (personalizationEnabled && !personalizationConfirmed) {
+      showToast("Confirme o prazo de personalização antes de adicionar ao carrinho", "error")
+      return
+    }
+
     const item = buildCartItem()
 
     addItem(item)
@@ -157,6 +164,11 @@ export function ProductForm({ product }: ProductFormProps) {
     }
 
     if (!canAddSelectedSize()) return
+
+    if (personalizationEnabled && !personalizationConfirmed) {
+      showToast("Confirme o prazo de personalização antes de comprar", "error")
+      return
+    }
 
     const item = buildCartItem()
 
@@ -188,7 +200,7 @@ export function ProductForm({ product }: ProductFormProps) {
     setShippingOptions([])
 
     try {
-      const res = await fetchShippingQuotes({ cep: digits, street: "", number: "", neighborhood: "", city: "", state: "" }, 1)
+      const res = await fetchShippingQuotes({ cep: digits, street: "", number: "", neighborhood: "", city: "", state: "" }, 1, personalizationEnabled)
       setShippingOptions(res.data.options)
     } catch (err) {
       setShippingError(err instanceof Error ? err.message : "Erro ao consultar frete")
@@ -263,6 +275,18 @@ export function ProductForm({ product }: ProductFormProps) {
           <p>Números: {customNumberCount} x R$ {customNumberPrice.toFixed(2).replace(".", ",")}</p>
           <p className="mt-2 font-semibold text-[#10233f]">Adicional: R$ {personalizationExtra.toFixed(2).replace(".", ",")}</p>
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={personalizationConfirmed}
+            onChange={(e) => setPersonalizationConfirmed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#c3222a]"
+          />
+          <span className="leading-relaxed text-amber-900">
+            Estou ciente de que a personalização pode levar <strong>até 7 dias úteis</strong> para ser produzida, além do prazo de entrega do frete.
+          </span>
+        </label>
 
         <div className="sm:hidden">
           <Button className="w-full" onClick={() => setPersonalizationMobileOpen(false)}>

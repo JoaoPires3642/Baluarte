@@ -10,7 +10,8 @@ import java.util.List;
 
 public record ShippingQuoteRequest(
     @NotNull @Valid ShippingDestination destination,
-    @NotNull @Min(1) Integer itemsCount
+    @NotNull @Min(1) Integer itemsCount,
+    Boolean hasPersonalization
 ) {
 
     public record ShippingDestination(

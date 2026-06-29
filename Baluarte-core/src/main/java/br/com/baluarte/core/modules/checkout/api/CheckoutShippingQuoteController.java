@@ -22,21 +22,30 @@ public class CheckoutShippingQuoteController {
     public ApiSuccessResponse<ShippingQuoteResponse> quoteShippingOptions(
         @Valid @RequestBody ShippingQuoteRequest request
     ) {
+        boolean hasPersonalization = Boolean.TRUE.equals(request.hasPersonalization());
+
         ShippingQuoteCommand command = new ShippingQuoteCommand(
             request.destination().cep(),
             request.destination().state(),
-            request.itemsCount()
+            request.itemsCount(),
+            hasPersonalization
         );
 
         List<ShippingQuoteOptionResponse> options = shippingQuoteGateway.quote(command)
             .stream()
-            .map(option -> new ShippingQuoteOptionResponse(
-                option.id(),
-                option.label(),
-                option.price(),
-                option.estimatedDays(),
-                option.estimatedDays() + " dia(s)"
-            ))
+            .map(option -> {
+                int days = option.estimatedDays();
+                if (hasPersonalization) {
+                    days += 7;
+                }
+                return new ShippingQuoteOptionResponse(
+                    option.id(),
+                    option.label(),
+                    option.price(),
+                    days,
+                    days + " dia(s)"
+                );
+            })
             .toList();
 
         return ApiSuccessResponse.of(new ShippingQuoteResponse(shippingQuoteGateway.activeProvider(), options));

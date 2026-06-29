@@ -247,7 +247,7 @@ export { DAYS_OF_WEEK as deliveryDayLabels }
 
 export async function fetchShippingQuotes(destination: {
   cep: string; street: string; number: string; neighborhood: string; city: string; state: string
-}, itemsCount: number) {
+}, itemsCount: number, hasPersonalization = false) {
   const response = await fetch("/api/checkout/shipping/quotes", {
     method: "POST",
     headers: {
@@ -256,6 +256,7 @@ export async function fetchShippingQuotes(destination: {
     body: JSON.stringify({
       destination,
       itemsCount,
+      hasPersonalization,
     }),
   })
 
@@ -532,6 +533,7 @@ export interface ShippingQuote {
   price: number
   estimatedDays: string
 }
+
 
 export interface PaymentRequest {
   checkoutSessionId: string

@@ -46,7 +46,7 @@ export default function CartPage() {
     setShippingLoading(true)
     try {
       const digits = shippingCep.replace(/\D/g, "")
-      const res = await fetchShippingQuotes({ cep: digits, street: "", number: "", neighborhood: "", city: "", state: "" }, items.length)
+      const res = await fetchShippingQuotes({ cep: digits, street: "", number: "", neighborhood: "", city: "", state: "" }, items.length, items.some((i) => i.personalizationConfirmed))
       const options = res.data.options || []
       setShippingOptions(options)
       setSelectedShippingId(options[0]?.id || "")
