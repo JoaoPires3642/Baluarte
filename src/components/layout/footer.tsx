@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { Camera, MessageCircle, PlayCircle, ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { fetchSiteContactSettings, type SiteContactSettings } from "@/lib/api"
 
@@ -33,9 +33,9 @@ export async function Footer() {
             {settings.footerMessage && <p className="max-w-xs text-sm text-slate-300">{settings.footerMessage}</p>}
             {hasSocialLinks && (
               <div className="flex items-center gap-3">
-                {settings.instagramUrl && <SocialLink href={settings.instagramUrl} label="Instagram" icon={<Camera className="h-4 w-4" />} />}
-                {whatsappHref && <SocialLink href={whatsappHref} label="WhatsApp" icon={<MessageCircle className="h-4 w-4" />} />}
-                {settings.youtubeUrl && <SocialLink href={settings.youtubeUrl} label="YouTube" icon={<PlayCircle className="h-4 w-4" />} />}
+                {settings.instagramUrl && <SocialLink href={settings.instagramUrl} label="Instagram" icon={<InstagramIcon />} />}
+                {whatsappHref && <SocialLink href={whatsappHref} label="WhatsApp" icon={<WhatsAppIcon />} />}
+                {settings.youtubeUrl && <SocialLink href={settings.youtubeUrl} label="YouTube" icon={<YouTubeIcon />} />}
               </div>
             )}
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-200">
@@ -109,6 +109,34 @@ function SocialLink({ href, label, icon }: { href: string; label: string; icon: 
     >
       {icon}
     </Link>
+  )
+}
+
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+      <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" />
+    </svg>
+  )
+}
+
+function YouTubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.94 2C5.12 20 12 20 12 20s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z" />
+      <polygon points="9.75 8.5 9.75 15.5 16 12 9.75 8.5" fill="currentColor" stroke="none" />
+    </svg>
   )
 }
 
