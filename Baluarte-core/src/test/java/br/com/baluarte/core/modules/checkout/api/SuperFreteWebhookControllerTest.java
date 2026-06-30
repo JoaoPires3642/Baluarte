@@ -28,6 +28,8 @@ import org.springframework.web.server.ResponseStatusException;
 @ExtendWith(MockitoExtension.class)
 class SuperFreteWebhookControllerTest {
 
+    private static final String TEST_SECRET = "test-webhook-secret";
+
     @Mock
     private CheckoutOrderRepository orderRepository;
 
@@ -37,16 +39,30 @@ class SuperFreteWebhookControllerTest {
     private SuperFreteWebhookController controller;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         controller = new SuperFreteWebhookController(orderRepository, objectMapper);
+        setWebhookSecret(TEST_SECRET);
+    }
+
+    @Test
+    void handleWebhook_rejectsWhenSecretNotConfigured() throws Exception {
+        setWebhookSecret("");
+
+        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+            .isInstanceOf(ResponseStatusException.class)
+            .satisfies(e -> {
+                var ex = (ResponseStatusException) e;
+                assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                assertThat(ex.getReason()).isEqualTo("Webhook secret not configured");
+            });
     }
 
     @Test
     void handleWebhook_rejectsMissingEvent() throws Exception {
-        when(objectMapper.readValue(eq("{}"), any(TypeReference.class)))
+        when(objectMapper.readValue(eq(signedBody("{}")), any(TypeReference.class)))
             .thenReturn(Map.of());
 
-        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+        assertThatThrownBy(() -> controller.handleWebhook(signedBody("{}"), validSig("{}")))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -57,10 +73,11 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_rejectsMissingData() throws Exception {
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        String body = "{\"event\":\"order.created\"}";
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.created"));
 
-        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+        assertThatThrownBy(() -> controller.handleWebhook(body, validSig(body)))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -71,10 +88,11 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_rejectsMissingDataId() throws Exception {
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        String body = "{\"event\":\"order.created\",\"data\":{}}";
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.created", "data", Map.of()));
 
-        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+        assertThatThrownBy(() -> controller.handleWebhook(body, validSig(body)))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -85,12 +103,13 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_returnsNotFoundWhenOrderMissing() throws Exception {
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        String body = "{\"event\":\"order.created\",\"data\":{\"id\":\"sf-123\"}}";
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.created", "data", Map.of("id", "sf-123")));
         when(orderRepository.findByShippingLabelId("sf-123"))
             .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+        assertThatThrownBy(() -> controller.handleWebhook(body, validSig(body)))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -100,15 +119,16 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_processesCreatedEvent() throws Exception {
+        String body = "{\"event\":\"order.created\",\"data\":{\"id\":\"sf-123\",\"tracking_code\":\"TRK123\"}}";
         CheckoutOrder order = createOrder("paid");
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.created", "data",
                 Map.of("id", "sf-123", "tracking_code", "TRK123")));
         when(orderRepository.findByShippingLabelId("sf-123"))
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook("{}", null);
+        var result = controller.handleWebhook(body, validSig(body));
 
         assertThat(result.data()).containsEntry("newStatus", "processing");
         assertThat(order.getTrackingCode()).isEqualTo("TRK123");
@@ -116,8 +136,9 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_processesDeliveredEvent() throws Exception {
+        String body = "{\"event\":\"order.delivered\",\"data\":{\"id\":\"sf-123\",\"tracking\":\"TRK456\",\"tracking_url\":\"http://track.me/456\"}}";
         CheckoutOrder order = createOrder("shipped");
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.delivered", "data",
                 Map.of("id", "sf-123", "tracking", "TRK456",
                     "tracking_url", "http://track.me/456")));
@@ -125,7 +146,7 @@ class SuperFreteWebhookControllerTest {
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook("{}", null);
+        var result = controller.handleWebhook(body, validSig(body));
 
         assertThat(result.data()).containsEntry("newStatus", "delivered");
         assertThat(order.getTrackingCode()).isEqualTo("TRK456");
@@ -134,27 +155,29 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_processesCancelledEvent() throws Exception {
+        String body = "{\"event\":\"order.cancelled\",\"data\":{\"id\":\"sf-123\"}}";
         CheckoutOrder order = createOrder("processing");
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "order.cancelled", "data",
                 Map.of("id", "sf-123")));
         when(orderRepository.findByShippingLabelId("sf-123"))
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook("{}", null);
+        var result = controller.handleWebhook(body, validSig(body));
 
         assertThat(result.data()).containsEntry("newStatus", "cancelled");
     }
 
     @Test
     void handleWebhook_ignoresUnknownEvent() throws Exception {
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        String body = "{\"event\":\"unknown.event\",\"data\":{\"id\":\"sf-123\"}}";
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "unknown.event", "data", Map.of("id", "sf-123")));
         when(orderRepository.findByShippingLabelId("sf-123"))
             .thenReturn(Optional.of(createOrder("pending")));
 
-        var result = controller.handleWebhook("{}", null);
+        var result = controller.handleWebhook(body, validSig(body));
 
         assertThat(result.data()).containsEntry("status", "ignored");
         assertThat(result.data()).containsEntry("event", "unknown.event");
@@ -162,10 +185,11 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_rejectsInvalidBody() throws Exception {
-        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+        String body = "invalid-json";
+        when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenThrow(new RuntimeException("parse error"));
 
-        assertThatThrownBy(() -> controller.handleWebhook("{}", null))
+        assertThatThrownBy(() -> controller.handleWebhook(body, validSig(body)))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -176,7 +200,8 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_rejectsEmptyBody() {
-        assertThatThrownBy(() -> controller.handleWebhook("", null))
+        String body = "";
+        assertThatThrownBy(() -> controller.handleWebhook(body, validSig(body)))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
                 var ex = (ResponseStatusException) e;
@@ -186,9 +211,7 @@ class SuperFreteWebhookControllerTest {
     }
 
     @Test
-    void handleWebhook_rejectsMissingSignatureWhenConfigured() throws Exception {
-        setWebhookSecret("my-secret");
-
+    void handleWebhook_rejectsMissingSignatureWhenConfigured() {
         assertThatThrownBy(() -> controller.handleWebhook("{}", null))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
@@ -199,9 +222,7 @@ class SuperFreteWebhookControllerTest {
     }
 
     @Test
-    void handleWebhook_rejectsInvalidSignature() throws Exception {
-        setWebhookSecret("my-secret");
-
+    void handleWebhook_rejectsInvalidSignature() {
         assertThatThrownBy(() -> controller.handleWebhook("test-body", "invalid-sig"))
             .isInstanceOf(ResponseStatusException.class)
             .satisfies(e -> {
@@ -213,9 +234,7 @@ class SuperFreteWebhookControllerTest {
 
     @Test
     void handleWebhook_acceptsValidSignature() throws Exception {
-        setWebhookSecret("my-secret");
         String body = "{\"event\":\"order.created\",\"data\":{\"id\":\"sf-123\"}}";
-        String validSignature = hmacSha256(body, "my-secret");
         CheckoutOrder order = createOrder("paid");
 
         when(objectMapper.readValue(eq(body), any(TypeReference.class)))
@@ -224,9 +243,17 @@ class SuperFreteWebhookControllerTest {
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook(body, validSignature);
+        var result = controller.handleWebhook(body, validSig(body));
 
         assertThat(result.data()).containsEntry("status", "ok");
+    }
+
+    private String signedBody(String inner) {
+        return inner;
+    }
+
+    private String validSig(String body) {
+        return hmacSha256(body, TEST_SECRET);
     }
 
     private void setWebhookSecret(String secret) throws Exception {

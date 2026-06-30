@@ -116,8 +116,8 @@ public class SuperFreteWebhookController {
 
     private void validateSignatureIfConfigured(String rawBody, String signature) {
         if (webhookSecret == null || webhookSecret.isBlank()) {
-            log.warn("Webhook signature disabled: app.shipping.superfrete.webhook-secret not configured");
-            return;
+            log.error("Webhook rejected: app.shipping.superfrete.webhook-secret not configured");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Webhook secret not configured");
         }
         if (signature == null || signature.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "x-me-signature header missing");
