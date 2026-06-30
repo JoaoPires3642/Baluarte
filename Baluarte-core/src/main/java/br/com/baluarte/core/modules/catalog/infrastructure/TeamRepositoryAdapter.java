@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
@@ -18,6 +20,7 @@ public class TeamRepositoryAdapter implements TeamRepository {
     private final SpringDataCategoryJpaRepository categoryJpaRepository;
 
     @Override
+    @Cacheable(value = "catalog", key = "'teams:' + #categorySlug + ':' + #limit")
     public List<Team> findPublicTeamsByCategorySlug(String categorySlug, int limit) {
         var pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "displayOrder"));
 
@@ -28,6 +31,7 @@ public class TeamRepositoryAdapter implements TeamRepository {
     }
 
     @Override
+    @Cacheable(value = "catalog", key = "'teams:all:' + #limit")
     public List<Team> findPublicTeams(int limit) {
         var pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "displayOrder"));
 
@@ -63,6 +67,7 @@ public class TeamRepositoryAdapter implements TeamRepository {
     }
 
     @Override
+    @CacheEvict(value = "catalog", allEntries = true)
     public Team save(Team team) {
         CategoryJpaEntity category = categoryJpaRepository.findById(team.categoryId())
             .orElseThrow(() -> new RuntimeException("Category not found: " + team.categoryId()));

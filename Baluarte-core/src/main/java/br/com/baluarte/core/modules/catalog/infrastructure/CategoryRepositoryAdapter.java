@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
@@ -17,6 +19,7 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     private final SpringDataCategoryJpaRepository jpaRepository;
 
     @Override
+    @Cacheable(value = "catalog", key = "'categories:' + #limit")
     public List<Category> findPublicCategories(int limit) {
         var pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.ASC, "displayOrder"));
 
@@ -50,6 +53,7 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     }
 
     @Override
+    @CacheEvict(value = "catalog", allEntries = true)
     public Category save(Category category) {
         CategoryJpaEntity entity;
         if (category.id() != null && jpaRepository.existsById(category.id())) {

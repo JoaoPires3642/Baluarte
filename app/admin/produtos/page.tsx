@@ -13,6 +13,7 @@ import { ConfirmDialog, ProductFormDialog } from "./product-form-dialog"
 import { ProductFilters, ProductListSection } from "./product-list-section"
 import { ProductStockSection } from "./product-stock-section"
 import { emptyForm, LOW_STOCK_THRESHOLD, STEPS, getSizes, type ProductFormData } from "./admin-products-types"
+import { revalidateCatalog } from "./actions"
 
 function normalizeImageUrls(values: Array<string | undefined>) {
   return Array.from(new Set(values.map(value => value?.trim()).filter(Boolean) as string[]))
@@ -201,6 +202,7 @@ export default function AdminProductsPage() {
       }
       if (editingId) await authedFetch(`/admin/products/${editingId}`, { method: "PUT", body: JSON.stringify(payload) })
       else await authedFetch("/admin/products", { method: "POST", body: JSON.stringify(payload) })
+      await revalidateCatalog()
       setDialogOpen(false)
       await loadData()
     } catch (err: unknown) {
@@ -263,10 +265,10 @@ export default function AdminProductsPage() {
 
       <ProductFilters search={search} categoryFilter={categoryFilter} teamFilter={teamFilter} stockOnly={stockOnly} lowStockOnly={lowStockOnly} categories={categories} teams={teams} lowStockCount={lowStockVariants.length} onSearchChange={setSearch} onCategoryFilterChange={value => { setCategoryFilter(value); setTeamFilter("") }} onTeamFilterChange={setTeamFilter} onStockOnlyChange={() => { setStockOnly(value => lowStockOnly ? true : !value); setLowStockOnly(false) }} onLowStockOnlyChange={() => { setStockOnly(true); setLowStockOnly(true) }} onDownloadReport={openLowStockReport} onClearFilters={() => { setSearch(""); setCategoryFilter(""); setTeamFilter(""); setStockOnly(false); setLowStockOnly(false) }} />
       {stockOnly && <ProductStockSection products={filtered} lowStockVariants={filteredLowStockVariants} lowStockOnly={lowStockOnly} onEditStock={product => { openEdit(product, 1); }} />}
-      <ProductListSection products={filtered} onEdit={openEdit} onToggleActive={async product => { try { await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" }); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao alterar status do produto") } }} onDeleteRequest={setDeleteConfirm} />
+      <ProductListSection products={filtered} onEdit={openEdit} onToggleActive={async product => { try { await authedFetch(`/admin/products/${product.id}/toggle-active`, { method: "PATCH" }); await revalidateCatalog(); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao alterar status do produto") } }} onDeleteRequest={setDeleteConfirm} />
 
       <ProductFormDialog open={dialogOpen} editingId={editingId} form={form} step={step} saving={saving} uploadingImage={uploadingImage} error={error} categories={categories} teams={teams} featuredCount={featuredCount} onClose={() => setDialogOpen(false)} onBack={() => setStep(value => Math.max(value - 1, 0))} onNext={() => { if (validateStep(step)) setStep(value => Math.min(value + 1, STEPS.length - 1)) }} onSave={handleSave} onFormChange={setForm} onImageUrlTextChange={value => setForm(current => ({ ...current, imageUrl: value, imageUrls: normalizeImageUrls(value.split(/\r?\n/)) }))} onImageFiles={handleImageFiles} onRemoveImage={imageUrl => setForm(current => { const imageUrls = current.imageUrls.filter(value => value !== imageUrl); return { ...current, imageUrl: imageUrls.join("\n"), imageUrls } })} />
-      <ConfirmDialog open={!!deleteConfirm} title="Excluir produto" message="Tem certeza que deseja desativar este produto?" onConfirm={async () => { if (!deleteConfirm) return; try { await authedFetch(`/admin/products/${deleteConfirm}`, { method: "DELETE" }); setDeleteConfirm(null); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao deletar produto") } }} onCancel={() => { setDeleteConfirm(null); }} />
+      <ConfirmDialog open={!!deleteConfirm} title="Excluir produto" message="Tem certeza que deseja desativar este produto?" onConfirm={async () => { if (!deleteConfirm) return; try { await authedFetch(`/admin/products/${deleteConfirm}`, { method: "DELETE" }); await revalidateCatalog(); setDeleteConfirm(null); await loadData() } catch (err: unknown) { alert(err instanceof Error ? err.message : "Erro ao deletar produto") } }} onCancel={() => { setDeleteConfirm(null); }} />
     </div>
   )
 }

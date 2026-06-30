@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional
+    @CacheEvict(value = "catalog", allEntries = true)
     public AdminProduct save(AdminProduct product) {
         CategoryJpaEntity category = categoryJpaRepository.findById(product.categoryId())
             .orElseThrow(() -> new IllegalStateException("Categoria nao encontrada para persistencia"));
@@ -68,6 +71,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "catalog", key = "'featured:' + #limit")
     public List<AdminProduct> findFeaturedActiveAvailable(int limit) {
         return productJpaRepository.findByFeaturedTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
             .stream()
@@ -77,6 +81,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "catalog", key = "'personalized:' + #limit")
     public List<AdminProduct> findPersonalizedActiveAvailable(int limit) {
         return productJpaRepository.findByCustomizationEnabledTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
             .stream()
@@ -102,6 +107,7 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "catalog", key = "'team:' + #teamSlug + ':' + #limit")
     public List<AdminProduct> findActiveAvailableByTeamSlug(String teamSlug, int limit) {
         return productJpaRepository.findByTeamSlugIgnoreCaseAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(teamSlug, PageRequest.of(0, limit))
             .stream()
