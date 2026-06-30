@@ -1,6 +1,7 @@
 package br.com.baluarte.core.modules.payment.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
+import br.com.baluarte.core.shared.pii.EncryptedStringConverter;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,16 +34,22 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "user_id", length = 120)
     private String userId;
 
-    @Column(name = "payer_email", length = 160)
+    @Column(name = "payer_email", length = 512)
+    @Convert(converter = EncryptedStringConverter.class)
     private String payerEmail;
 
     @Column(name = "payer_document_type", length = 10)
     private String payerDocumentType;
 
-    @Column(name = "payer_document_number", length = 20)
+    @Column(name = "payer_document_number", length = 255)
+    @Convert(converter = EncryptedStringConverter.class)
     private String payerDocumentNumber;
 
-    @Column(name = "recipient_name", length = 120)
+    @Column(name = "payer_document_number_hmac", length = 64)
+    private String payerDocumentNumberHmac;
+
+    @Column(name = "recipient_name", length = 512)
+    @Convert(converter = EncryptedStringConverter.class)
     private String recipientName;
 
     @Column(name = "status", nullable = false, length = 40)
@@ -57,16 +64,20 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "shipping_cep", nullable = false, length = 9)
     private String shippingCep;
 
-    @Column(name = "shipping_street", nullable = false, length = 120)
+    @Column(name = "shipping_street", nullable = false, length = 512)
+    @Convert(converter = EncryptedStringConverter.class)
     private String shippingStreet;
 
-    @Column(name = "shipping_number", nullable = false, length = 20)
+    @Column(name = "shipping_number", nullable = false, length = 255)
+    @Convert(converter = EncryptedStringConverter.class)
     private String shippingNumber;
 
-    @Column(name = "shipping_complement", length = 120)
+    @Column(name = "shipping_complement", length = 512)
+    @Convert(converter = EncryptedStringConverter.class)
     private String shippingComplement;
 
-    @Column(name = "shipping_neighborhood", nullable = false, length = 120)
+    @Column(name = "shipping_neighborhood", nullable = false, length = 512)
+    @Convert(converter = EncryptedStringConverter.class)
     private String shippingNeighborhood;
 
     @Column(name = "shipping_city", nullable = false, length = 120)
@@ -201,5 +212,9 @@ public class CheckoutOrderJpaEntity {
     public void setPaymentReference(String paymentReference) {
         this.paymentReference = paymentReference;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void setPayerDocumentNumberHmac(String payerDocumentNumberHmac) {
+        this.payerDocumentNumberHmac = payerDocumentNumberHmac;
     }
 }

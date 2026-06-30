@@ -139,3 +139,10 @@ app:
       payer-email: ${APP_PAYMENT_MERCADOPAGO_PAYER_EMAIL:}
       payer-first-name: ${APP_PAYMENT_MERCADOPAGO_PAYER_FIRST_NAME:}
       webhook-secret: ${APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET:}
+  pii:
+    # Base64(32 bytes). Obrigatória em prod/staging. Vazia = passthrough (dev/test).
+    encryption-key: ${APP_PII_ENCRYPTION_KEY:}
+    # Base64(32 bytes). Obrigatória quando encryption-key está setada (busca por CPF).
+    hmac-key: ${APP_PII_HMAC_KEY:}
+    # Roda o backfill de reencripte de rows legadas na inicialização (idempotente).
+    backfill-on-startup: ${APP_PII_BACKFILL_ON_STARTUP:false}

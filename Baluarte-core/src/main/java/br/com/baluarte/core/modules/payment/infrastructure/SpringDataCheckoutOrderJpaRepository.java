@@ -58,4 +58,7 @@ public interface SpringDataCheckoutOrderJpaRepository extends JpaRepository<Chec
     );
 
     List<CheckoutOrderJpaEntity> findByStatusAndCreatedAtBeforeOrderByCreatedAtAsc(String status, LocalDateTime createdAt, Pageable pageable);
+
+    @EntityGraph(attributePaths = "items")
+    List<CheckoutOrderJpaEntity> findByPayerDocumentNumberHmacOrderByCreatedAtDesc(String payerDocumentNumberHmac);
 }

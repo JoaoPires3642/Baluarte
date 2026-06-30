@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.payment.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.shared.pii.PiiCryptoService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,13 +20,16 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
 
     private final SpringDataCheckoutOrderJpaRepository jpaRepository;
     private final SpringDataCheckoutOrderItemJpaRepository itemRepository;
+    private final PiiCryptoService piiCrypto;
 
     public CheckoutOrderRepositoryAdapter(
         SpringDataCheckoutOrderJpaRepository jpaRepository,
-        SpringDataCheckoutOrderItemJpaRepository itemRepository
+        SpringDataCheckoutOrderItemJpaRepository itemRepository,
+        PiiCryptoService piiCrypto
     ) {
         this.jpaRepository = jpaRepository;
         this.itemRepository = itemRepository;
+        this.piiCrypto = piiCrypto;
     }
 
     @Override
@@ -151,6 +155,7 @@ public class CheckoutOrderRepositoryAdapter implements CheckoutOrderRepository {
                 return created;
             });
         entity.apply(order);
+        entity.setPayerDocumentNumberHmac(piiCrypto.blindIndex(order.getPayerDocumentNumber()));
         CheckoutOrder saved = jpaRepository.save(entity).toDomain();
 
         if (!exists && order.getItems() != null) {

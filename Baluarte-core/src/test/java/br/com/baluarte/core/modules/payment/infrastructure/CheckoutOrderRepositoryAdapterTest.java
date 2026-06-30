@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
+import br.com.baluarte.core.shared.pii.PiiCryptoService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,11 +35,14 @@ class CheckoutOrderRepositoryAdapterTest {
     @Mock
     private SpringDataCheckoutOrderItemJpaRepository itemRepository;
 
+    @Mock
+    private PiiCryptoService piiCrypto;
+
     private CheckoutOrderRepositoryAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new CheckoutOrderRepositoryAdapter(jpaRepository, itemRepository);
+        adapter = new CheckoutOrderRepositoryAdapter(jpaRepository, itemRepository, piiCrypto);
     }
 
     @Test
