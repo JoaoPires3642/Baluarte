@@ -14,6 +14,8 @@ public interface AdminProductRepository {
 
     List<AdminProduct> findFeaturedActiveAvailable(int limit);
 
+    List<AdminProduct> findPersonalizedActiveAvailable(int limit);
+
     org.springframework.data.domain.Page<AdminProduct> findPublicProducts(String query, int page, int size);
 
     long countFeaturedExcept(java.util.UUID productId);

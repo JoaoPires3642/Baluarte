@@ -3,7 +3,7 @@ export const revalidate = 0
 
 import Link from "next/link"
 import { ChevronRight, Globe2, ShieldCheck, Shirt, Sparkles, Trophy } from "lucide-react"
-import { fetchCategories, fetchModelsByTeam, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
+import { fetchCategories, fetchModelsByTeam, fetchPersonalizedProducts, fetchTeamsByCategory, type Category, type Model, type Team } from "@/lib/api"
 import { homeCategoryMap } from "@/lib/home-categories"
 import { Card } from "@/components/ui/card"
 import { ProductCard } from "@/components/product-card"
@@ -16,6 +16,24 @@ type DisplayModel = Model & {
 
 async function getData(slug: string) {
   try {
+    if (slug === "personalizado") {
+      const [categoriesRes, personalizedRes] = await Promise.all([
+        fetchCategories().catch(() => null),
+        fetchPersonalizedProducts().catch(() => ({ data: [] as Model[] })),
+      ])
+
+      const currentCategory = categoriesRes?.data?.find((c: Category) => c.slug === slug)
+      const categoryName = currentCategory?.name ?? "Personalizado"
+
+      return {
+        categoryName,
+        categoryImageUrl: currentCategory?.imageUrl ?? null,
+        categoryColor: currentCategory?.color ?? null,
+        teams: [] as Team[],
+        models: personalizedRes.data,
+      }
+    }
+
     const [categoriesRes, teamsRes] = await Promise.all([
       fetchCategories().catch(() => null),
       fetchTeamsByCategory(slug),
@@ -60,7 +78,8 @@ export default async function CategoryPage({ params }: Props) {
   const CategoryIcon = categoryIcons[slug] || ShieldCheck
 
   const displayTeams = teams
-  const displayModels = models.slice(0, 8)
+  const isPersonalized = slug === "personalizado"
+  const displayModels = isPersonalized ? models : models.slice(0, 8)
 
   return (
     <div className="container mx-auto px-4 py-6 md:py-8">
@@ -90,29 +109,33 @@ export default async function CategoryPage({ params }: Props) {
         </div>
       </section>
 
-      <p className="mb-8 mt-6 text-muted-foreground">
-        {displayTeams.length} times disponíveis nesta curadoria.
-      </p>
+      {!isPersonalized && (
+        <>
+          <p className="mb-8 mt-6 text-muted-foreground">
+            {displayTeams.length} times disponíveis nesta curadoria.
+          </p>
 
-      <section className="mb-12">
-          <h2 className="mb-4 text-xl font-semibold">Times</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-          {displayTeams.map((team: Team) => (
-              <Link key={team.id} href={`/times/${team.slug}`}>
-                <Card className="cursor-pointer p-4 text-center transition-shadow hover:shadow-lg sm:p-6">
-                  {team.logo ? (
-                    <img src={team.logo} alt={team.name} className="mx-auto mb-3 h-11 w-11 rounded-full object-contain bg-[#f4f7fb] p-1 sm:h-14 sm:w-14" />
-                  ) : (
-                    <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14"><ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" /></div>
-                  )}
-                  <h3 className="text-sm font-semibold sm:text-base">{team.name}</h3>
-                  <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c3222a]">Ver produtos <ChevronRight className="h-3.5 w-3.5" /></p>
-                </Card>
-              </Link>
-            ))}
-        </div>
-        {displayTeams.length === 0 ? <p className="text-sm text-slate-500">Nenhum time disponivel para esta categoria.</p> : null}
-      </section>
+          <section className="mb-12">
+            <h2 className="mb-4 text-xl font-semibold">Times</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+              {displayTeams.map((team: Team) => (
+                <Link key={team.id} href={`/times/${team.slug}`}>
+                  <Card className="cursor-pointer p-4 text-center transition-shadow hover:shadow-lg sm:p-6">
+                    {team.logo ? (
+                      <img src={team.logo} alt={team.name} className="mx-auto mb-3 h-11 w-11 rounded-full object-contain bg-[#f4f7fb] p-1 sm:h-14 sm:w-14" />
+                    ) : (
+                      <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f7fb] text-[#0f274d] sm:h-14 sm:w-14"><ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+                    )}
+                    <h3 className="text-sm font-semibold sm:text-base">{team.name}</h3>
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-[0.16em] text-[#c3222a]">Ver produtos <ChevronRight className="h-3.5 w-3.5" /></p>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            {displayTeams.length === 0 ? <p className="text-sm text-slate-500">Nenhum time disponivel para esta categoria.</p> : null}
+          </section>
+        </>
+      )}
 
       <section>
           <h2 className="mb-4 text-xl font-semibold">Produtos</h2>

@@ -146,6 +146,11 @@ export async function fetchFeaturedProducts(limit = 8) {
   return fetchApi<{ data: Model[] }>(`/catalog/featured?limit=${limit}`, NO_CACHE)
 }
 
+// Personalized Products - GET /catalog/personalized
+export async function fetchPersonalizedProducts(limit = 50) {
+  return fetchApi<{ data: Model[] }>(`/catalog/personalized?limit=${limit}`, NO_CACHE)
+}
+
 export async function fetchBestSellers(limit = 8) {
   return fetchApi<{ data: Model[] }>(`/catalog/best-sellers?limit=${limit}`, NO_CACHE)
 }

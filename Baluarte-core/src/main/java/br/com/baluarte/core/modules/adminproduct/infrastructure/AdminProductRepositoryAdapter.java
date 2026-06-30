@@ -77,6 +77,15 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AdminProduct> findPersonalizedActiveAvailable(int limit) {
+        return productJpaRepository.findByCustomizationEnabledTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(PageRequest.of(0, limit))
+            .stream()
+            .map(this::toDomain)
+            .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<AdminProduct> findPublicProducts(String query, int page, int size) {
         var pageable = PageRequest.of(page, size);
         var products = query == null || query.isBlank()

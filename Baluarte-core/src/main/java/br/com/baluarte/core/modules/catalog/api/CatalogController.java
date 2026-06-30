@@ -66,6 +66,18 @@ public class CatalogController {
         return ApiSuccessResponse.of(data);
     }
 
+    @GetMapping("/personalized")
+    public ApiSuccessResponse<List<CatalogModelListResponse>> listPersonalizedProducts(
+        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit
+    ) {
+        List<CatalogModelListResponse> data = adminProductRepository.findPersonalizedActiveAvailable(limit)
+            .stream()
+            .map(product -> toCatalogModelListResponse(product, 0))
+            .toList();
+
+        return ApiSuccessResponse.of(data);
+    }
+
     @GetMapping("/products")
     public ApiSuccessResponse<List<CatalogModelListResponse>> listProducts(
         @RequestParam(defaultValue = "0") @Min(0) int page,

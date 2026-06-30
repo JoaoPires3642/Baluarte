@@ -13,6 +13,8 @@ public interface SpringDataAdminProductJpaRepository extends JpaRepository<Admin
 
     List<AdminProductJpaEntity> findByFeaturedTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(Pageable pageable);
 
+    List<AdminProductJpaEntity> findByCustomizationEnabledTrueAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(Pageable pageable);
+
     List<AdminProductJpaEntity> findByTeamSlugIgnoreCaseAndActiveTrueAndAvailableTrueOrderByCreatedAtDesc(String teamSlug, Pageable pageable);
 
     @Query("""
