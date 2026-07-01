@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,6 +49,8 @@ class MercadoPagoWebhookControllerTest {
     @Mock
     private PaymentGateway paymentGateway;
     @Mock
+    private PlatformTransactionManager transactionManager;
+    @Mock
     private RestClient restClient;
     @Mock
     private RestClient.RequestHeadersUriSpec requestGet;
@@ -59,9 +64,10 @@ class MercadoPagoWebhookControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         controller = new MercadoPagoWebhookController(
             orderRepository, transactionRepository, variantRepository,
-            paymentGateway, "https://api.mercadopago.com");
+            paymentGateway, "https://api.mercadopago.com", transactionManager);
         setField("mercadoPagoRestClient", restClient);
         setField("accessToken", "test-access-token");
         setField("webhookSecret", WEBHOOK_SECRET);

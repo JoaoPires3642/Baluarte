@@ -24,7 +24,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -47,6 +49,7 @@ public class MercadoPagoWebhookController {
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final PaymentGateway paymentGateway;
     private final RestClient mercadoPagoRestClient;
+    private final TransactionTemplate transactionTemplate;
 
     @Value("${app.payment.mercadopago.access-token:}")
     private String accessToken;
@@ -59,7 +62,8 @@ public class MercadoPagoWebhookController {
         PaymentTransactionRepository transactionRepository,
         SpringDataAdminProductVariantJpaRepository variantRepository,
         PaymentGateway paymentGateway,
-        @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl
+        @Value("${app.payment.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
+        PlatformTransactionManager transactionManager
     ) {
         this.orderRepository = orderRepository;
         this.transactionRepository = transactionRepository;
@@ -72,10 +76,10 @@ public class MercadoPagoWebhookController {
             .requestFactory(factory)
             .baseUrl(baseUrl)
             .build();
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @PostMapping
-    @Transactional
     public ApiSuccessResponse<Map<String, String>> handleNotification(
         @RequestParam(value = "data.id", required = false) String queryDataId,
         @RequestHeader(value = "x-signature", required = false) String signature,
@@ -95,15 +99,23 @@ public class MercadoPagoWebhookController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mercado Pago external_reference missing");
         }
 
-        CheckoutOrder order = orderRepository.findByCheckoutSessionId(checkoutSessionId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido local nao encontrado"));
-
         Map<String, Object> payment = firstPayment(mercadoPagoOrder);
         String orderStatus = stringValue(mercadoPagoOrder, FIELD_STATUS);
-        String orderStatusDetail = stringValue(mercadoPagoOrder, "status_detail");
         String paymentStatus = payment != null ? stringValue(payment, FIELD_STATUS) : orderStatus;
-        String paymentStatusDetail = payment != null ? stringValue(payment, "status_detail") : orderStatusDetail;
+        String paymentStatusDetail = payment != null ? stringValue(payment, "status_detail") : stringValue(mercadoPagoOrder, "status_detail");
         String nextStatus = resolveLocalOrderStatus(orderStatus, paymentStatus);
+
+        return transactionTemplate.execute(status ->
+            processWebhookOutcome(checkoutSessionId, mercadoPagoOrderId, payment, nextStatus, paymentStatusDetail)
+        );
+    }
+
+    private ApiSuccessResponse<Map<String, String>> processWebhookOutcome(
+        String checkoutSessionId, String mercadoPagoOrderId,
+        Map<String, Object> payment, String nextStatus, String paymentStatusDetail
+    ) {
+        CheckoutOrder order = orderRepository.findByCheckoutSessionId(checkoutSessionId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido local nao encontrado"));
 
         String previousStatus = order.getStatus();
         if (STATUS_CANCELLED.equals(previousStatus) && "paid".equals(nextStatus)) {
