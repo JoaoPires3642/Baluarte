@@ -90,3 +90,6 @@ docker-compose.override.yml
 .vercel
 
 .scannerwork/
+
+# OpenTelemetry Java Agent (backup local)
+opentelemetry-javaagent.jar
