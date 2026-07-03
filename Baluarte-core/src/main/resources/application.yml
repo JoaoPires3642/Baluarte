@@ -91,10 +91,13 @@ management:
         url: ${OTLP_METRICS_URL:https://api.axiom.co/v1/metrics}
         headers:
           Authorization: Bearer ${AXIOM_INGEST_TOKEN:}
+          X-Axiom-Dataset: ${AXIOM_DATASET:baluarte-prod}
+          X-Axiom-Metrics-Dataset: ${AXIOM_DATASET:baluarte-prod}
     tracing:
       endpoint: ${OTLP_TRACES_ENDPOINT:https://api.axiom.co/v1/traces}
       headers:
         Authorization: Bearer ${AXIOM_INGEST_TOKEN:}
+        X-Axiom-Dataset: ${AXIOM_DATASET:baluarte-prod}
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}

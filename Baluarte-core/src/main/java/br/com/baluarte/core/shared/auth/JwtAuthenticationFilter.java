@@ -51,7 +51,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/v1/checkout/shipping/station-settings",
         "/api/v1/media/files/",
         "/api/v1/payment/webhooks/",
-        "/api/v1/shipping/webhooks/"
+        "/api/v1/shipping/webhooks/",
+        "/actuator/health",
+        "/actuator/info"
     );
 
     private final ObjectMapper objectMapper;
@@ -123,7 +125,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        logger.warn(
+        logger.debug(
             "security.audit event=AUTH_REJECTED reason=no-valid-credentials path={} method={}",
             request.getRequestURI().replaceAll("[\\r\\n]", "_"),
             request.getMethod()
