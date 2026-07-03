@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
 export type CartItem = {
   id: string
@@ -49,9 +49,20 @@ function readStoredCart() {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(readStoredCart)
+  // Init empty so the first client render matches the server (avoids React #418 hydration mismatch).
+  // Cart is hydrated from localStorage after mount.
+  const [items, setItems] = useState<CartItem[]>([])
+  const hydratedRef = useRef(false)
 
   useEffect(() => {
+    const stored = readStoredCart()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored.length) setItems(stored)
+    hydratedRef.current = true
+  }, [])
+
+  useEffect(() => {
+    if (!hydratedRef.current) return
     try {
       window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
     } catch {
