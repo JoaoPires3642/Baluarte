@@ -6,7 +6,7 @@ O front-end web fica em `/Baluarte` (raiz do Next.js) e faz deploy automático v
 
 ### Stack
 
-- **Next.js 16** (Turbopack, App Router)
+- **Next.js 16** (Turbopack, App Router), React 19
 - **next-auth** com FusionAuth (autenticação via CredentialsProvider)
 - Proxy roda em Node.js runtime
 
@@ -40,6 +40,14 @@ FUSIONAUTH_ISSUER=https://auth.stackway.xyz
 FUSIONAUTH_CLIENT_ID=<fusionauth-client-id>
 FUSIONAUTH_CLIENT_SECRET=<fusionauth-client-secret>
 FUSIONAUTH_API_KEY=<fusionauth-api-key>
+
+# Proxy de identidade (frontend -> backend). Em migração para JWT direto (auditoria #7).
+PROXY_SECRET=<proxy-secret>
+BACKEND_INTERNAL_URL=https://core.dombaluarte.com.br
+
+# Axiom (frontend — ver docs/axiom-observability.md)
+NEXT_PUBLIC_AXIOM_INGEST_TOKEN=<ingest-token>
+NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
 ```
 
 Não coloque valores reais em `.env` versionado. Use o dashboard da Vercel para secrets.
@@ -64,65 +72,59 @@ npm run build
 - Anteriormente usava Cloudflare Pages com `@cloudflare/next-on-pages`
 - Migrado para Vercel após limite de 3 MiB em Workers free
 - `middleware.ts` renomeado para `proxy.ts` (convenção Next.js 16)
-- Autenticação migrada de Clerk → Keycloak → FusionAuth
+- Autenticação migrada de Clerk → Keycloak → **FusionAuth** (atual)
+- Backend migrado de Railway → **VPS Contabo + Dokploy** (atual)
 
 ## Backend Spring Boot
 
-O backend `Baluarte-core` é Spring Boot com PostgreSQL, JPA e Flyway.
+O backend `Baluarte-core` é Spring Boot 4.1 (Java 25, GraalVM native image) com PostgreSQL, JPA e Flyway.
+
+> **Ambiente de produção atual:** VPS Contabo (`13.140.168.181`) com **Dokploy** gerenciando o proxy reverso e SSL (domínio `core.dombaluarte.com.br`). O Railway continua válido como alternativa hospedada (ver §"Alternativa: Railway" no fim).
 
 ### Stack do backend
 
-- Java 21 (GraalVM native image opcional)
-- Spring Boot + Spring Security + NimbusJwtDecoder (validação JWT RS256 via JWKS)
-- Flyway (migrations)
+- Java 25 (GraalVM native image)
+- Spring Boot 4.1 + Spring Security + NimbusJwtDecoder (validação JWT RS256 via JWKS)
+- Jackson 3.x (`tools.jackson`)
+- Flyway (migrations V1–V39)
 - PostgreSQL (H2 para testes)
 - S3-compatible storage (R2, MinIO)
-- Mercado Pago (pagamentos)
-- SuperFrete (frete)
+- Mercado Pago (pagamentos) — webhook HMAC fail-closed
+- SuperFrete (frete) — webhook fail-closed
+- Observabilidade: Axiom via OTLP/Micrometer (native-image safe)
+- Segurança: CSP/HSTS em 3 camadas + criptografia AES-256-GCM de PII
 
-### Ordem correta
+### Ordem correta (Dokploy / VPS)
 
-1. Criar primeiro o PostgreSQL no Railway.
+1. Subir o PostgreSQL na VPS (ou usar o banco já existente).
 2. Configurar as variáveis do backend apontando para esse banco.
-3. Subir o serviço `baluarte-core-native` usando a imagem nativa.
-4. Rodar smoke test em `/actuator/health`.
-5. Só depois trocar `NEXT_PUBLIC_API_BASE_URL` na Vercel para o domínio público do Railway.
+3. No Dokploy, criar o serviço `baluarte-core` usando a imagem nativa do GHCR.
+4. O Dokploy provisiona proxy reverso + SSL automaticamente em `core.dombaluarte.com.br`.
+5. Rodar smoke test em `/actuator/health`.
+6. Só depois trocar `NEXT_PUBLIC_API_BASE_URL` na Vercel para `https://core.dombaluarte.com.br/api/v1`.
 
-### Serviços no Railway
+### Deploy por imagem Docker (GHCR)
 
-Crie dois serviços no mesmo projeto Railway:
-
-- `Postgres`: banco gerenciado do Railway.
-- `baluarte-core-native`: backend Spring Boot native image.
-
-O host interno `baluarte-core-native.railway.internal` só funciona dentro da rede privada do Railway. Ele **não** pode ser usado pela Vercel nem pelo navegador do cliente.
-
-Para o frontend web, use sempre o domínio público gerado pelo Railway, por exemplo:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=https://baluarte-core-native-production.up.railway.app/api/v1
-```
-
-Use `baluarte-core-native.railway.internal` apenas se outro serviço dentro do Railway precisar chamar o backend.
-
-### Deploy por imagem Docker
-
-O fluxo atual já gera a imagem nativa pelo GitHub Actions em `.github/workflows/backend-native-image.yml`:
+O fluxo atual gera a imagem nativa pelo GitHub Actions em `.github/workflows/backend-native-image.yml`:
 
 ```text
 ghcr.io/joaopires3642/baluarte-core-native:latest
 ghcr.io/joaopires3642/baluarte-core-native:<commit-sha>
 ```
 
-No Railway, configure o serviço `baluarte-core-native` para usar a imagem:
+No Dokploy, crie um serviço do tipo **Image** apontando para:
 
 ```text
 ghcr.io/joaopires3642/baluarte-core-native:latest
 ```
 
-Se a imagem estiver privada no GHCR, configure no Railway as credenciais de registry ou deixe o pacote público. Não coloque token do GitHub em arquivo versionado.
+Se a imagem estiver privada no GHCR, registre as credenciais de registry no Dokploy ou deixe o pacote público. Não coloque token do GitHub em arquivo versionado.
 
-Também é possível conectar o Railway direto ao GitHub e apontar o root para `Baluarte-core` com o `Dockerfile`, mas isso faz o build nativo dentro do Railway e tende a ser mais lento. A imagem pronta do GHCR é o caminho recomendado.
+### Proxy reverso e SSL (Dokploy)
+
+O Dokploy cria automaticamente o proxy reverso com Let's Encrypt para o domínio configurado (ex.: `core.dombaluarte.com.br`). A config de referência em `infra/nginx/baluarte-api.conf` documenta rate limiting e headers de segurança duplicados — não precisa ser aplicada manualmente, o Dokploy já cobre proxy/SSL.
+
+Para rate limiting refinado (login/signup), a opção prática é colocar **Cloudflare** (free) na frente do domínio.
 
 ### Porta e health check
 
@@ -133,7 +135,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/baluarte-core"]
 ```
 
-Configure no Railway:
+Configure no Dokploy (ou Railway):
 
 ```env
 PORT=8080
@@ -147,23 +149,21 @@ Health check recomendado:
 
 ### Variáveis do backend
 
-Configure no serviço `baluarte-core-native` do Railway. Não commite valores reais.
+Configure no serviço do Dokploy. Não commite valores reais — use `.env.example` como template.
 
-Banco usando variáveis do PostgreSQL do Railway:
+Banco (valores diretos na VPS):
 
 ```env
 SPRING_PROFILES_ACTIVE=prod
-DB_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
-DB_USERNAME=${{Postgres.PGUSER}}
-DB_PASSWORD=${{Postgres.PGPASSWORD}}
-DB_POOL_MAX_SIZE=3
+DB_URL=jdbc:postgresql://localhost:5432/baluarte
+DB_USERNAME=<db-user>
+DB_PASSWORD=<db-password>
+DB_POOL_MAX_SIZE=10
 DB_POOL_MIN_IDLE=0
 DB_POOL_IDLE_TIMEOUT_MS=30000
 DB_POOL_CONNECTION_TIMEOUT_MS=10000
 PORT=8080
 ```
-
-Se o nome do serviço de banco no Railway não for `Postgres`, ajuste o prefixo `${{Postgres...}}` para o nome real do serviço.
 
 Auth, CORS, pagamento e frete:
 
@@ -185,6 +185,7 @@ APP_PAYMENT_MERCADOPAGO_WEBHOOK_SECRET=<secret>
 APP_SHIPPING_PROVIDER=superfrete
 APP_SHIPPING_SUPERFRETE_BASE_URL=https://sandbox.superfrete.com
 APP_SHIPPING_SUPERFRETE_TOKEN=<secret>
+APP_SHIPPING_SUPERFRETE_WEBHOOK_SECRET=<secret>
 APP_SHIPPING_SUPERFRETE_SERVICES=1,2,17
 APP_SHIPPING_SUPERFRETE_USER_AGENT=Baluarte/1.0 (contato@baluarte.com)
 
@@ -193,6 +194,23 @@ APP_STORAGE_S3_REGION=auto
 APP_STORAGE_S3_BUCKET=<bucket-name>
 APP_STORAGE_S3_ACCESS_KEY_ID=<access-key>
 APP_STORAGE_S3_SECRET_ACCESS_KEY=<secret-key>
+```
+
+PII / LGPD (AES-256-GCM) e observabilidade (Axiom):
+
+```env
+# PII — obrigatórias em prod (ver auditoria #8)
+APP_PII_ENCRYPTION_KEY=<base64-32-bytes>
+APP_PII_HMAC_KEY=<base64-32-bytes>
+
+# Axiom (ver docs/axiom-observability.md)
+AXIOM_INGEST_TOKEN=<ingest-token>
+AXIOM_DATASET=baluarte-prod
+DEPLOYMENT_ENVIRONMENT=production
+TRACING_SAMPLING_PROBABILITY=1.0
+OTLP_METRICS_ENABLED=true
+OTLP_METRICS_URL=https://api.axiom.co/v1/metrics
+OTLP_TRACES_ENDPOINT=https://api.axiom.co/v1/traces
 ```
 
 Para produção SuperFrete, a troca deve ser só por variável de ambiente:
@@ -204,20 +222,19 @@ APP_SHIPPING_SUPERFRETE_TOKEN=<token-producao>
 
 ### Banco primeiro
 
-Depois de criar o PostgreSQL no Railway:
-
-1. Confirme que as variáveis `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` e `PGPASSWORD` existem no serviço de banco.
-2. Configure `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` no backend usando reference variables do Railway.
-3. Faça o primeiro deploy do backend.
+1. Garanta que o PostgreSQL na VPS está acessível e as credenciais estão corretas.
+2. Configure `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` no serviço do Dokploy.
+3. Faça o primeiro deploy do backend (o Dokploy sobe a imagem do GHCR).
 4. O Flyway roda automaticamente as migrations em `Baluarte-core/src/main/resources/db/migration`.
 5. Se o deploy falhar por migration, não apague o banco; corrija a migration/app e faça novo deploy.
+6. Há backup automático do PostgreSQL via cron diário às 03:00 na VPS.
 
-### Validação no Railway
+### Validação
 
 Após o deploy, valide o domínio público:
 
 ```bash
-curl https://baluarte-core-native-production.up.railway.app/actuator/health
+curl https://core.dombaluarte.com.br/actuator/health
 ```
 
 Resposta esperada:
@@ -228,23 +245,51 @@ Resposta esperada:
 
 ### Webhooks externos
 
-Mercado Pago e SuperFrete precisam chamar o backend por internet pública. Use o domínio público do Railway, não o `.railway.internal`.
+Mercado Pago e SuperFrete precisam chamar o backend por internet pública. Use o domínio público do Dokploy.
 
 Mercado Pago:
 
 ```text
-https://baluarte-core-native-production.up.railway.app/api/v1/payment/webhooks/mercadopago
+https://core.dombaluarte.com.br/api/v1/payment/webhooks/mercadopago
+```
+
+SuperFrete:
+
+```text
+https://core.dombaluarte.com.br/api/v1/shipping/webhooks/superfrete
 ```
 
 ### Rollback
 
-Para rollback rápido, troque a imagem do Railway para uma tag anterior com SHA:
+Para rollback rápido, troque a imagem no Dokploy para uma tag anterior com SHA:
 
 ```text
 ghcr.io/joaopires3642/baluarte-core-native:<commit-sha-estavel>
 ```
 
 Evite rollback de banco depois que migrations destrutivas rodarem. As migrations atuais devem ser tratadas como forward-only.
+
+### Alternativa: Railway
+
+Se preferir hospedagem gerenciada em vez de VPS, o Railway funciona com a mesma imagem do GHCR:
+
+1. Crie dois serviços no mesmo projeto Railway: `Postgres` (banco gerenciado) e `baluarte-core-native` (backend).
+2. No `baluarte-core-native`, use a imagem `ghcr.io/joaopires3642/baluarte-core-native:latest`.
+3. Banco usando reference variables do Railway:
+
+```env
+DB_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
+DB_USERNAME=${{Postgres.PGUSER}}
+DB_PASSWORD=${{Postgres.PGPASSWORD}}
+```
+
+O host interno `baluarte-core-native.railway.internal` só funciona dentro da rede privada do Railway — **não** pode ser usado pela Vercel nem pelo navegador. Para o frontend, use o domínio público gerado pelo Railway:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://baluarte-core-native-production.up.railway.app/api/v1
+```
+
+Se o nome do serviço de banco não for `Postgres`, ajuste o prefixo `${{Postgres...}}` para o nome real. Também é possível conectar o Railway direto ao GitHub e apontar o root para `Baluarte-core` com o `Dockerfile`, mas isso faz o build nativo dentro do Railway e tende a ser mais lento — a imagem pronta do GHCR é o caminho recomendado.
 
 ## Banco de dados
 
@@ -254,11 +299,12 @@ O PostgreSQL usado pelo backend.
 
 | Provedor | Tipo | Ideal para |
 |----------|------|------------|
-| **Railway Postgres** | Postgres gerenciado | Backend Railway com private network |
-| **Neon** | Serverless Postgres | Vercel + preview branches |
+| **PostgreSQL na VPS Contabo** | Postgres self-hosted | Backend na mesma VPS (rede local, sem latência) — **atual** |
+| Railway Postgres | Postgres gerenciado | Se usar o backend no Railway |
+| Neon | Serverless Postgres | Vercel + preview branches |
 | Supabase | Postgres gerenciado | Já usado anteriormente |
 
-> Com backend no Railway, o Railway Postgres simplifica rede e variáveis. Neon continua sendo uma boa opção se o banco precisar ficar separado do Railway.
+> Hoje o banco roda na mesma VPS do backend (Contabo), com backup automático via cron diário às 03:00. Railway Postgres/Neon continuam válidos se migrar o backend para hospedagem gerenciada.
 
 ## Build nativo (GraalVM)
 

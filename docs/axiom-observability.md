@@ -468,10 +468,14 @@ NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
 
 - [ ] 1. Criar conta e dataset no Axiom (`baluarte-prod`)
 - [ ] 2. Gerar **Ingest Token** no Axiom
-- [ ] 3. Adicionar dependências Micrometer + OTLP no `Baluarte-core/pom.xml`
+- [ ] 3. Adicionar dependências no `Baluarte-core/pom.xml`:
+    - `io.micrometer:micrometer-tracing-bridge-otel`
+    - `io.micrometer:micrometer-registry-otlp`
+    - `io.opentelemetry:opentelemetry-exporter-otlp`
+    - **`org.springframework.boot:spring-boot-starter-opentelemetry`** ← **OBRIGATÓRIO no SB 4.x!** Sem ele, `OtlpMetricsExportAutoConfiguration` não ativa (falta `OpenTelemetryProperties`).
 - [ ] 4. Configurar `application.yml` / `application-prod.yml` com OTLP
 - [ ] 5. Adicionar variáveis `AXIOM_*` e `OTLP_*` ao ambiente (Railway / docker-compose)
-- [ ] 6. Fazer deploy e validar:
+- [ ] 5. Adicionar variáveis `AXIOM_*` e `OTLP_*` ao ambiente (Dokploy no serviço do backend, ou docker-compose)
   ```bash
   curl -s https://<backend>/actuator/health
   # Validar no Axiom: dataset → "baluarte-prod" → ver métricas e spans chegando
