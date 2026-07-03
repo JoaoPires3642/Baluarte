@@ -472,9 +472,9 @@ NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
     - `io.micrometer:micrometer-tracing-bridge-otel`
     - `io.micrometer:micrometer-registry-otlp`
     - `io.opentelemetry:opentelemetry-exporter-otlp`
-    - **`org.springframework.boot:spring-boot-starter-opentelemetry`** ← **OBRIGATÓRIO no SB 4.x!** Sem ele, `OtlpMetricsExportAutoConfiguration` não ativa (falta `OpenTelemetryProperties`).
+    - **`org.springframework.boot:spring-boot-opentelemetry`** ← **OBRIGATÓRIO no SB 4.x!** Sem ele, `OtlpMetricsExportAutoConfiguration` não ativa (falta `OpenTelemetryProperties`).
+    - ⚠️ Use o módulo **core** (`spring-boot-opentelemetry`), NÃO o starter — o starter ativa `OpenTelemetryTracingAutoConfiguration` que crasha com `IllegalStateException: Requested transport GRPC doesn't match configured transport HTTP` no startup.
 - [ ] 4. Configurar `application.yml` / `application-prod.yml` com OTLP
-- [ ] 5. Adicionar variáveis `AXIOM_*` e `OTLP_*` ao ambiente (Railway / docker-compose)
 - [ ] 5. Adicionar variáveis `AXIOM_*` e `OTLP_*` ao ambiente (Dokploy no serviço do backend, ou docker-compose)
   ```bash
   curl -s https://<backend>/actuator/health

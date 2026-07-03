@@ -58,6 +58,12 @@
 					<plugin>
 						<groupId>org.graalvm.buildtools</groupId>
 						<artifactId>native-maven-plugin</artifactId>
+						<configuration>
+							<buildArgs>
+								<arg>-Ob</arg><!-- quick build: reduz 40-60% do tempo, binário ~15% maior -->
+								<arg>-J-Xmx6g</arg><!-- mais heap = menos GC durante análise -->
+							</buildArgs>
+						</configuration>
 					</plugin>
 				</plugins>
 			</build>
@@ -78,10 +84,12 @@
 			<artifactId>opentelemetry-exporter-otlp</artifactId>
 		</dependency>
 
-		<!-- spring-boot-opentelemetry: fornece OpenTelemetryProperties (requerido pelo OtlpMetricsExportAutoConfiguration no SB 4.x) -->
+		<!-- spring-boot-opentelemetry: fornece OpenTelemetryProperties (requerido pelo OtlpMetricsExportAutoConfiguration no SB 4.x).
+		     Usamos o módulo core (NÃO o starter) para evitar que o tracing auto-config (OtlpTracingConfigurations)
+		     tente criar um otlpGrpcSpanExporter que conflita com o transporte HTTP configurado. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-opentelemetry</artifactId>
+			<artifactId>spring-boot-opentelemetry</artifactId>
 		</dependency>
 
 		<dependency>
