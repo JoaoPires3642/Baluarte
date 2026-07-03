@@ -10,6 +10,12 @@ import org.junit.jupiter.api.Test;
 
 class StationDeliverySettingsValuesTest {
 
+    /** Objeto cuja serializacao sempre lanca excecao (Jackson 3.x serializa Object comum como {}). */
+    @SuppressWarnings("unused")
+    private static final Object EXPLODING = new Object() {
+        public Object getValue() { throw new IllegalStateException("boom"); }
+    };
+
     @Test
     void parseStationsReturnsEmptyForNullJson() {
         assertThat(StationDeliverySettingsValues.parseStations(null)).isEmpty();
@@ -41,7 +47,7 @@ class StationDeliverySettingsValuesTest {
     @Test
     @SuppressWarnings("unchecked")
     void toStationsJsonReturnsEmptyObjectOnError() {
-        List<String> badList = (List<String>) (List<?>) List.of(new Object());
+        @SuppressWarnings("unchecked") List<String> badList = (List<String>) (List<?>) List.of(EXPLODING);
         String json = StationDeliverySettingsValues.toStationsJson(Map.of("k", badList));
         assertThat(json).isEqualTo("{}");
     }
@@ -72,7 +78,7 @@ class StationDeliverySettingsValuesTest {
     @Test
     @SuppressWarnings("unchecked")
     void toTimeSlotsJsonReturnsEmptyArrayOnError() {
-        List<String> badList = (List<String>) (List<?>) List.of(new Object());
+        @SuppressWarnings("unchecked") List<String> badList = (List<String>) (List<?>) List.of(EXPLODING);
         String json = StationDeliverySettingsValues.toTimeSlotsJson(badList);
         assertThat(json).isEqualTo("[]");
     }
