@@ -55,7 +55,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: "25"
-          distribution: temurin
+          distribution: graalvm-community
           cache: maven
 
       - if: matrix.language == 'java-kotlin'

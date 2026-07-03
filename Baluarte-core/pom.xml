@@ -81,7 +81,7 @@
 		<!-- Jackson 2.x — compatibilidade com código existente -->
 		<!-- Spring Boot 4.x usa Jackson 3 (tools.jackson.*), mas o projeto importa com.fasterxml.jackson.* -->
 		<dependency>
-c<groupId>com.fasterxml.jackson.core</groupId>
+			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 			<version>2.18.3</version>
 		</dependency>

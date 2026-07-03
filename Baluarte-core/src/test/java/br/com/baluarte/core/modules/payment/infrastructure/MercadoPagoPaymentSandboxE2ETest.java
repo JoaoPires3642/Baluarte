@@ -36,7 +36,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatusCode;
@@ -51,7 +50,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.RestClient;
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @EnabledIf("mercadoPagoE2eEnabled")
 class MercadoPagoPaymentSandboxE2ETest {
