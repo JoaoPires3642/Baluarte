@@ -19,6 +19,16 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         this.crypto = crypto;
     }
 
+    /**
+     * Construtor usado apenas pelo Hibernate AOT (FallbackBeanInstanceProducer) durante a geracao do
+     * metamodel nativo, quando o bean factory do Spring ainda nao esta disponivel. Instancia um
+     * {@link PiiCryptoService} em modo passthrough (sem chaves) - em runtime o bean Spring com DI real
+     * (registrado via {@link PiiConfig}) e usado pelo SpringBeanContainer do Hibernate.
+     */
+    public EncryptedStringConverter() {
+        this(new PiiCryptoService(new PiiProperties()));
+    }
+
     @Override
     public String convertToDatabaseColumn(String attribute) {
         return crypto.encrypt(attribute);
