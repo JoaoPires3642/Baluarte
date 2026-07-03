@@ -1,0 +1,11 @@
+// Barrel: re-exports everything so `import { ... } from "@/lib/api"` keeps working.
+export * from "./types"
+export * from "./client"
+export * from "./catalog"
+export * from "./orders"
+export * from "./checkout"
+export * from "./site"
+export * from "./auth"
+export * from "./admin"
+export * from "./media"
+export * from "./profile"
