@@ -58,12 +58,6 @@
 					<plugin>
 						<groupId>org.graalvm.buildtools</groupId>
 						<artifactId>native-maven-plugin</artifactId>
-						<configuration>
-							<buildArgs>
-								<arg>-Ob</arg><!-- quick build: reduz 40-60% do tempo, binário ~15% maior -->
-								<arg>-J-Xmx6g</arg><!-- mais heap = menos GC durante análise -->
-							</buildArgs>
-						</configuration>
 					</plugin>
 				</plugins>
 			</build>

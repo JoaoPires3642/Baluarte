@@ -6,9 +6,7 @@ COPY .mvn .mvn
 COPY mvnw mvnw
 COPY mvnw.cmd mvnw.cmd
 COPY src src
-# --mount=type=cache preserva ~/.m2 entre builds (BuildKit); -T 1C usa todos os cores
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -Pnative -DskipTests -T 1C native:compile
+RUN mvn -B -Pnative -DskipTests native:compile
 
 FROM debian:bookworm-slim
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/*
