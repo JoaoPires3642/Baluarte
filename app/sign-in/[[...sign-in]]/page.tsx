@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { signIn, useSession } from "next-auth/react"
+import { useEffect, useRef, useState } from "react"
+import { signIn, signOut, useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -12,12 +12,26 @@ export default function SignInPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get("redirect_url") || searchParams.get("callbackUrl") || searchParams.get("callback_url") || "/"
+  const sessionExpired = searchParams.get("error") === "SessionExpired"
   const { status } = useSession()
+  const signedOutRef = useRef(false)
 
-  // Already authenticated: leave the sign-in page.
+  // If we arrived via a 401 (SessionExpired) the next-auth cookie may still be
+  // present but the backend token is dead. Clear it so we don't bounce back to
+  // the protected page (which would 401 again -> redirect loop).
+  // Otherwise, if genuinely authenticated, leave the sign-in page.
   useEffect(() => {
-    if (status === "authenticated") router.replace(redirectTo)
-  }, [status, redirectTo, router])
+    if (sessionExpired && status === "authenticated") {
+      if (!signedOutRef.current) {
+        signedOutRef.current = true
+        void signOut({ redirect: false })
+      }
+      return
+    }
+    if (!sessionExpired && status === "authenticated") {
+      router.replace(redirectTo)
+    }
+  }, [sessionExpired, status, redirectTo, router])
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
