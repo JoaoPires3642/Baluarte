@@ -35,7 +35,7 @@ class MediaFileControllerTest {
 
         ResponseEntity<byte[]> response = controller.getFile("image.png");
 
-        assertThat(response.getStatusCodeValue()).isEqualTo(200);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getHeaders().getContentType().toString()).isEqualTo("image/png");
         assertThat(response.getBody()).isEqualTo(content);
     }
