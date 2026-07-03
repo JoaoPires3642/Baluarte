@@ -3,7 +3,7 @@ package br.com.baluarte.core.shared.auth;
 import br.com.baluarte.core.shared.error.ApiErrorPayload;
 import br.com.baluarte.core.shared.error.ApiErrorResponse;
 import br.com.baluarte.core.shared.error.TraceIdFilter;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -217,8 +217,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 java.net.http.HttpResponse.BodyHandlers.ofString());
 
             if (resp.statusCode() == 200) {
-                com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(resp.body());
-                com.fasterxml.jackson.databind.JsonNode userNode = root.path("user");
+                tools.jackson.databind.JsonNode root = objectMapper.readTree(resp.body());
+                tools.jackson.databind.JsonNode userNode = root.path("user");
                 String email = userNode.path("email").asText("");
                 if (!email.isBlank()) {
                     AuthUserJpaEntity entity = AuthUserJpaEntity.createDefaultCustomer(userId, email);

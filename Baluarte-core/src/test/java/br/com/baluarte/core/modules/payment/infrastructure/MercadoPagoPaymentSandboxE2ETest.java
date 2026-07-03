@@ -16,7 +16,7 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;

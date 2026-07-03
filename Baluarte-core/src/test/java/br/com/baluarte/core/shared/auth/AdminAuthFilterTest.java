@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import br.com.baluarte.core.shared.error.ApiErrorPayload;
 import br.com.baluarte.core.shared.error.ApiErrorResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

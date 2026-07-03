@@ -1,8 +1,8 @@
 package br.com.baluarte.core.modules.checkout.infrastructure;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -367,7 +367,7 @@ public class SuperFreteShippingLabelService {
             if (text.startsWith("{")) {
                 return objectMapper.readValue(text, MAP_TYPE);
             }
-        } catch (IOException exception) {
+        } catch (RuntimeException exception) {
             throw new IllegalStateException("SuperFrete response is not valid JSON: " + responseSnippet(text));
         }
         throw new IllegalStateException("SuperFrete returned a non-JSON response: " + responseSnippet(text));
