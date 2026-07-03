@@ -1,9 +1,10 @@
 import { useCallback } from "react"
+import { apiFetch } from "@/lib/api-client"
 
 export function useAdminApi() {
   const authedFetch = useCallback(async (path: string, options?: RequestInit) => {
     const cleanPath = path.startsWith("/") ? path.slice(1) : path
-    const response = await fetch(`/api/admin/${cleanPath}`, {
+    const response = await apiFetch(`/api/admin/${cleanPath}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",

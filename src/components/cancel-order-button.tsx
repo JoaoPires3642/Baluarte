@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { apiFetch } from "@/lib/api-client"
 
 export function CancelOrderButton({ orderId }: { orderId: string }) {
   const router = useRouter()
@@ -15,7 +16,7 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch(`/api/orders/my/${orderId}/cancel`, {
+      const response = await apiFetch(`/api/orders/my/${orderId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })

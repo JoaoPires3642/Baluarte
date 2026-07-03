@@ -1,4 +1,5 @@
 import { getBrowserSafeApiBaseUrl, getBrowserSafeUploadUrl } from "@/lib/api-base"
+import { apiFetch } from "@/lib/api-client"
 
 const NO_CACHE = { cache: "no-store" as const }
 
@@ -25,7 +26,7 @@ async function fetchWithTimeout(url: string, options?: ApiRequestInit): Promise<
   const timeoutId = setTimeout(() => controller.abort(), 10000)
 
   try {
-    return await fetch(url, {
+    return await apiFetch(url, {
       ...options,
       signal: controller.signal,
     })
@@ -176,7 +177,7 @@ export async function fetchOrders() {
 }
 
 export async function fetchMyOrders() {
-  const response = await fetch("/api/orders", { cache: "no-store" })
+  const response = await apiFetch("/api/orders", { cache: "no-store" })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     const errPayload = body?.error
@@ -191,7 +192,7 @@ export async function fetchOrder(orderId: string) {
 }
 
 export async function fetchMyOrder(orderId: string) {
-  const response = await fetch(`/api/orders/${orderId}`, { cache: "no-store" })
+  const response = await apiFetch(`/api/orders/${orderId}`, { cache: "no-store" })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     const errPayload = body?.error
@@ -223,7 +224,7 @@ export interface SiteContactSettings {
 // Shipping Quotes - POST /checkout/shipping/quotes
 // Station Delivery - GET /checkout/shipping/station-settings
 export async function fetchStationDeliverySettings() {
-  const response = await fetch("/api/checkout/shipping/station-settings", {
+  const response = await apiFetch("/api/checkout/shipping/station-settings", {
     cache: "no-store",
   })
   if (!response.ok) return null
@@ -251,7 +252,7 @@ export { DAYS_OF_WEEK as deliveryDayLabels }
 export async function fetchShippingQuotes(destination: {
   cep: string; street: string; number: string; neighborhood: string; city: string; state: string
 }, itemsCount: number, hasPersonalization = false) {
-  const response = await fetch("/api/checkout/shipping/quotes", {
+  const response = await apiFetch("/api/checkout/shipping/quotes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -275,7 +276,7 @@ export async function fetchShippingQuotes(destination: {
 
 // Payment - POST /payment/requests
 export async function createPayment(payload: PaymentRequest) {
-  const response = await fetch("/api/payment/requests", {
+  const response = await apiFetch("/api/payment/requests", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -299,7 +300,7 @@ export async function fetchAuthSession() {
 }
 
 async function fetchAdminApi<T>(endpoint: string, options?: ApiRequestInit): Promise<T> {
-  const response = await fetch(`/api/admin/admin${endpoint}`, {
+  const response = await apiFetch(`/api/admin/admin${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -412,7 +413,7 @@ export async function createShippingLabel(orderId: string) {
 
 export async function fetchAdminShippingSettings() {
   const url = typeof window === "undefined" ? `${getBrowserSafeApiBaseUrl()}/admin/shipping-settings` : "/api/admin/admin/shipping-settings"
-  const response = await fetch(url, { cache: "no-store" })
+  const response = await apiFetch(url, { cache: "no-store" })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     throw new Error(body?.error?.message || "Erro ao carregar configuracoes de frete")
@@ -421,7 +422,7 @@ export async function fetchAdminShippingSettings() {
 }
 
 export async function updateAdminShippingSettings(settings: AdminShippingSettingsUpdate) {
-  const response = await fetch("/api/admin/admin/shipping-settings", {
+  const response = await apiFetch("/api/admin/admin/shipping-settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
@@ -446,7 +447,7 @@ export async function uploadImage(
     headers["X-User-Id"] = auth.userId
     if (auth.email) headers["X-User-Email"] = auth.email
   }
-  const response = await fetch(getBrowserSafeUploadUrl(), {
+  const response = await apiFetch(getBrowserSafeUploadUrl(), {
     method: "POST",
     headers,
     body: formData,
@@ -793,7 +794,7 @@ export interface CepLookupResult {
 }
 
 export async function lookupCep(cep: string): Promise<CepLookupResult> {
-  const res = await fetch(`/api/cep/lookup?cep=${cep}`)
+  const res = await apiFetch(`/api/cep/lookup?cep=${cep}`)
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     throw new Error(body?.error || "Erro ao consultar CEP")
@@ -802,7 +803,7 @@ export async function lookupCep(cep: string): Promise<CepLookupResult> {
 }
 
 export async function fetchAddresses(): Promise<Address[]> {
-  const res = await fetch("/api/profile/addresses")
+  const res = await apiFetch("/api/profile/addresses")
   if (!res.ok) {
     const body = await res.json().catch(() => null)
     const errPayload = body?.error
@@ -825,7 +826,7 @@ export async function syncAddresses(addresses: Array<{
   state: string
   isDefault: boolean
 }>, defaultAddressId?: string) {
-  const res = await fetch("/api/profile/addresses", {
+  const res = await apiFetch("/api/profile/addresses", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
