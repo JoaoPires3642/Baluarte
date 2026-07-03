@@ -30,6 +30,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 @ExtendWith(MockitoExtension.class)
 class AdminProductControllerTest {
 
@@ -77,19 +79,23 @@ class AdminProductControllerTest {
 
     @Test
     void listProductsReturnsAllProducts() {
-        when(listAdminProductsUseCase.execute()).thenReturn(List.of(aProduct()));
+        Page<AdminProduct> page = new PageImpl<>(List.of(aProduct()));
+        when(listAdminProductsUseCase.execute(0, 20, "", "", "", false, 5)).thenReturn(page);
 
-        ApiSuccessResponse<List<AdminProductResponse>> result = controller.listProducts();
+        ApiSuccessResponse<List<AdminProductResponse>> result = controller.listProducts(0, 20, "", "", "", false, 5);
 
         assertThat(result.data()).hasSize(1);
         assertThat(result.data().get(0).modelName()).isEqualTo("Camisa Modelo");
+        assertThat(result.meta()).containsEntry("total", 1L);
+        assertThat(result.meta()).containsEntry("totalPages", 1);
     }
 
     @Test
     void listProductsReturnsEmptyWhenNoneExist() {
-        when(listAdminProductsUseCase.execute()).thenReturn(List.of());
+        Page<AdminProduct> page = new PageImpl<>(List.of());
+        when(listAdminProductsUseCase.execute(0, 20, "", "", "", false, 5)).thenReturn(page);
 
-        var result = controller.listProducts();
+        var result = controller.listProducts(0, 20, "", "", "", false, 5);
 
         assertThat(result.data()).isEmpty();
     }

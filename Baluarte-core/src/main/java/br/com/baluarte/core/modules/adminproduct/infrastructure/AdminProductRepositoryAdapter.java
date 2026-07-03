@@ -101,6 +101,17 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AdminProduct> findForAdmin(String query, String categorySlug, String teamSlug, boolean lowStock, int lowStockThreshold, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        var normalizedQuery = (query == null || query.isBlank()) ? null : query.trim().toLowerCase(java.util.Locale.ROOT);
+        var normalizedCategory = (categorySlug == null || categorySlug.isBlank()) ? null : categorySlug;
+        var normalizedTeam = (teamSlug == null || teamSlug.isBlank()) ? null : teamSlug;
+        var products = productJpaRepository.searchForAdmin(normalizedQuery, normalizedCategory, normalizedTeam, lowStock, lowStockThreshold, pageable);
+        return products.map(this::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countFeaturedExcept(UUID productId) {
         return productJpaRepository.countFeaturedExcept(productId);
     }

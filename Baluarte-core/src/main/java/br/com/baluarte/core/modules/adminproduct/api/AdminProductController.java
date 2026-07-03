@@ -56,12 +56,27 @@ public class AdminProductController {
     }
 
     @GetMapping
-    public ApiSuccessResponse<List<AdminProductResponse>> listProducts() {
-        List<AdminProductResponse> data = listAdminProductsUseCase.execute().stream()
+    public ApiSuccessResponse<List<AdminProductResponse>> listProducts(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(defaultValue = "") String q,
+        @RequestParam(defaultValue = "") String category,
+        @RequestParam(defaultValue = "") String team,
+        @RequestParam(defaultValue = "false") boolean lowStock,
+        @RequestParam(defaultValue = "5") int lowStockThreshold
+    ) {
+        org.springframework.data.domain.Page<AdminProduct> products =
+            listAdminProductsUseCase.execute(page, size, q, category, team, lowStock, lowStockThreshold);
+        List<AdminProductResponse> data = products.getContent().stream()
             .map(this::toResponse)
             .toList();
 
-        return ApiSuccessResponse.of(data);
+        return new ApiSuccessResponse<>(data, java.util.Map.of(
+            "page", products.getNumber(),
+            "size", products.getSize(),
+            "total", products.getTotalElements(),
+            "totalPages", products.getTotalPages()
+        ));
     }
 
     @GetMapping("/summary")

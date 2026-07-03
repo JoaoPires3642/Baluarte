@@ -27,6 +27,28 @@ public interface SpringDataAdminProductJpaRepository extends JpaRepository<Admin
         """)
     Page<AdminProductJpaEntity> searchActiveAvailable(@Param("query") String query, Pageable pageable);
 
+    @Query("""
+        select distinct p
+          from AdminProductJpaEntity p
+         where (:query is null or lower(p.modelName) like concat('%', :query, '%') or lower(p.team.slug) like concat('%', :query, '%'))
+           and (:categorySlug is null or p.category.slug = :categorySlug)
+           and (:teamSlug is null or p.team.slug = :teamSlug)
+           and (
+             :lowStock = false
+             or p.stockQuantity <= 0
+             or exists (select 1 from p.variants v where v.stockQuantity < :lowStockThreshold)
+           )
+         order by p.createdAt desc
+        """)
+    Page<AdminProductJpaEntity> searchForAdmin(
+        @Param("query") String query,
+        @Param("categorySlug") String categorySlug,
+        @Param("teamSlug") String teamSlug,
+        @Param("lowStock") boolean lowStock,
+        @Param("lowStockThreshold") int lowStockThreshold,
+        Pageable pageable
+    );
+
     List<AdminProductJpaEntity> findByTeamIdAndActiveTrueAndAvailableTrue(UUID teamId);
 
     long countByActiveTrue();

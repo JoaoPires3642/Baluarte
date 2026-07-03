@@ -18,6 +18,8 @@ public interface AdminProductRepository {
 
     org.springframework.data.domain.Page<AdminProduct> findPublicProducts(String query, int page, int size);
 
+    org.springframework.data.domain.Page<AdminProduct> findForAdmin(String query, String categorySlug, String teamSlug, boolean lowStock, int lowStockThreshold, int page, int size);
+
     long countFeaturedExcept(java.util.UUID productId);
 
     List<AdminProduct> findActiveAvailableByTeamSlug(String teamSlug, int limit);

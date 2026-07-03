@@ -11,9 +11,24 @@ import type {
   UpdateProductRequest,
 } from "./types"
 
-// Admin Products - GET /admin/products
-export async function fetchAdminProducts() {
-  return fetchAdminApi<{ data: AdminProduct[] }>("/products")
+// Admin Products - GET /admin/products (paginated, server-side filters)
+export async function fetchAdminProducts(params?: {
+  page?: number
+  size?: number
+  q?: string
+  category?: string
+  team?: string
+  lowStock?: boolean
+}) {
+  const query = new URLSearchParams()
+  if (params?.page != null) query.set("page", String(params.page))
+  if (params?.size != null) query.set("size", String(params.size))
+  if (params?.q) query.set("q", params.q)
+  if (params?.category) query.set("category", params.category)
+  if (params?.team) query.set("team", params.team)
+  if (params?.lowStock) query.set("lowStock", "true")
+  const qs = query.toString()
+  return fetchAdminApi<{ data: AdminProduct[]; meta: { page: number; size: number; total: number; totalPages: number } }>(`/products${qs ? `?${qs}` : ""}`)
 }
 
 export async function createAdminProduct(product: CreateProductRequest) {
