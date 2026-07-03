@@ -103,9 +103,9 @@ public class AdminProductRepositoryAdapter implements AdminProductRepository {
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<AdminProduct> findForAdmin(String query, String categorySlug, String teamSlug, boolean lowStock, int lowStockThreshold, int page, int size) {
         var pageable = PageRequest.of(page, size);
-        var normalizedQuery = (query == null || query.isBlank()) ? null : query.trim().toLowerCase(java.util.Locale.ROOT);
-        var normalizedCategory = (categorySlug == null || categorySlug.isBlank()) ? null : categorySlug;
-        var normalizedTeam = (teamSlug == null || teamSlug.isBlank()) ? null : teamSlug;
+        var normalizedQuery = (query == null || query.isBlank()) ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        var normalizedCategory = (categorySlug == null || categorySlug.isBlank()) ? "" : categorySlug;
+        var normalizedTeam = (teamSlug == null || teamSlug.isBlank()) ? "" : teamSlug;
         var products = productJpaRepository.searchForAdmin(normalizedQuery, normalizedCategory, normalizedTeam, lowStock, lowStockThreshold, pageable);
         return products.map(this::toDomain);
     }

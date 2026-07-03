@@ -30,9 +30,9 @@ public interface SpringDataAdminProductJpaRepository extends JpaRepository<Admin
     @Query("""
         select distinct p
           from AdminProductJpaEntity p
-         where (:query is null or lower(p.modelName) like concat('%', :query, '%') or lower(p.team.slug) like concat('%', :query, '%'))
-           and (:categorySlug is null or p.category.slug = :categorySlug)
-           and (:teamSlug is null or p.team.slug = :teamSlug)
+         where (:query = '' or lower(p.modelName) like concat('%', :query, '%') or lower(p.team.slug) like concat('%', :query, '%'))
+           and (:categorySlug = '' or p.category.slug = :categorySlug)
+           and (:teamSlug = '' or p.team.slug = :teamSlug)
            and (
              :lowStock = false
              or p.stockQuantity <= 0
