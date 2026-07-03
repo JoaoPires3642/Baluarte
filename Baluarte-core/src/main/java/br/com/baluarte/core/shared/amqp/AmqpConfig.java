@@ -14,7 +14,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.URISyntaxException;
 import java.time.Duration;
 
 /**
@@ -77,12 +76,7 @@ public class AmqpConfig {
         @Value("${spring.rabbitmq.requested-heartbeat:30s}") Duration heartbeat
     ) {
         CachingConnectionFactory factory = new CachingConnectionFactory();
-        try {
-            factory.setUri(addresses);
-        } catch (URISyntaxException e) {
-            log.error("URL AMQP invalida: {}", addresses, e);
-            throw new IllegalArgumentException("URL AMQP mal formatada: " + addresses, e);
-        }
+        factory.setUri(addresses);
         factory.setChannelCacheSize(5);
         factory.setConnectionTimeout((int) connectionTimeout.toMillis());
         factory.setRequestedHeartBeat((int) heartbeat.getSeconds());
