@@ -21,7 +21,7 @@ export async function SitePageContent({
 
   try {
     const res = await fetch(`${API_BASE_URL}/site/pages/${slug}`, {
-      cache: "no-store",
+      next: { revalidate: 60 },
     })
     if (res.ok) {
       const payload = await res.json() as SitePagePublicResponse
