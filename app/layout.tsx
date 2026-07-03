@@ -11,6 +11,9 @@ const bodyFont = Inter({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
+  // Avoid "preloaded but not used" warnings: with display:swap the font may not
+  // consume the <link rel=preload> fast enough. It still loads via @font-face.
+  preload: false,
 });
 
 export const metadata: Metadata = {
