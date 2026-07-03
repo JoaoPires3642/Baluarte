@@ -14,7 +14,7 @@
    - 4.2 Métricas Customizadas
    - 4.3 Health Check (HTTP Ping)
 5. [Frontend (Next.js — Vercel)](#5-frontend-nextjs--vercel)
-   - 5.1 Axiom Vercel Integration
+   - 5.1 next-axiom (standalone — sem integração Vercel)
    - 5.2 Web Vitals
 6. [Dashboard Axiom](#6-dashboard-axiom)
    - 6.1 Latência por Endpoint
@@ -53,7 +53,7 @@
 | Componente | Tecnologia | Envio | Dados enviados |
 |---|---|---|---|
 | Backend | Spring Boot (Java 21) | OpenTelemetry Java Agent + Micrometer | Spans HTTP, métricas JVM, erro rate, latência |
-| Frontend | Next.js 16 (Vercel) | Axiom Vercel Integration + OpenTelemetry JS | Web Vitals, page views, erros de cliente |
+| Frontend | Next.js 16 (Vercel) | next-axiom (standalone) | Web Vitals, page views, erros de cliente |
 | Health Ping | Cron / Monitor externo | HTTP GET para `/actuator/health` | Aviso de downtime |
 
 ---
@@ -89,7 +89,7 @@
 
 ### 4.1 OpenTelemetry Java Agent
 
-A forma mais simples de instrumentar o Spring Boot é com o **OpenTelemetry Java Agent** acoplado na JVM. Ele captura automaticamente:
+O backend usa **GraalVM native image**, então o OpenTelemetry Java Agent **não funciona**. Usamos a instrumentação via **Micrometer + OTLP** (Spring Boot nativo). Isso captura:
 
 - TODOS os endpoints HTTP (método, path, status, duração)
 - Chamadas JDBC (queries SQL, duração)
@@ -97,105 +97,12 @@ A forma mais simples de instrumentar o Spring Boot é com o **OpenTelemetry Java
 - Logs (via `otel.instrumentation.log4j-appender.enabled`)
 - Métricas JVM (heap, threads, gc)
 
-#### 4.1.1 Baixar o agent
+#### 4.1.1 Dependências no `pom.xml`
 
-```bash
-cd Baluarte-core
-curl -Lo opentelemetry-javaagent.jar \
-  https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
-```
-
-Adicione ao `.gitignore`:
-
-```gitignore
-opentelemetry-javaagent.jar
-```
-
-#### 4.1.2 Configurar variáveis de ambiente na VPS
-
-```env
-# OTLP export para Axiom
-OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_ENDPOINT=https://api.axiom.co
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-OTEL_EXPORTER_OTLP_COMPRESSION=gzip
-
-# Resource identificando o serviço
-OTEL_RESOURCE_ATTRIBUTES=service.name=baluarte-core,service.version=0.0.1,deployment.environment=production
-
-# Instrumentações opcionais
-OTEL_INSTRUMENTATION_COMMON_DB_STATEMENT_SANITIZER=true
-OTEL_INSTRUMENTATION_JDBC_ENABLED=true
-OTEL_METRICS_EXPORTER=otlp
-OTEL_LOGS_EXPORTER=otlp
-
-# Batch processor (evita enviar span a span)
-OTEL_BSP_SCHEDULE_DELAY=5000
-OTEL_BSP_MAX_EXPORT_BATCH_SIZE=512
-```
-
-#### 4.1.3 Adicionar o agent ao Dockerfile
-
-No **Dockerfile** do backend (`Baluarte-core/Dockerfile`), adicione o agent ao comando de entrada:
-
-```dockerfile
-# Copiar o agent (baixado no build context)
-COPY opentelemetry-javaagent.jar /usr/local/lib/opentelemetry-javaagent.jar
-
-# Adicionar ao ENTRYPOINT
-ENTRYPOINT ["java", \
-  "-javaagent:/usr/local/lib/opentelemetry-javaagent.jar", \
-  "-jar", "/app/baluarte-core.jar"]
-```
-
-Se estiver usando GraalVM **native image**, o agent não funciona. Nesse caso use a alternativa [Micrometer + OpenTelemetry SDK manual](#422-alternativa-para-native-image-micrometer--opentelemetry-sdk).
-
-#### 4.1.4 docker-compose (desenvolvimento local)
-
-Adicione ao serviço `core` no `docker-compose.yml`:
-
-```yaml
-core:
-  environment:
-    OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-    OTEL_EXPORTER_OTLP_ENDPOINT: https://api.axiom.co
-    OTEL_EXPORTER_OTLP_HEADERS: Authorization=Bearer ${AXIOM_INGEST_TOKEN}
-    OTEL_RESOURCE_ATTRIBUTES: service.name=baluarte-core,service.version=0.0.1,deployment.environment=development
-    OTEL_METRICS_EXPORTER: otlp
-    OTEL_LOGS_EXPORTER: otlp
-    JAVA_TOOL_OPTIONS: "-javaagent:/usr/local/lib/opentelemetry-javaagent.jar -Xms256m -Xmx768m -XX:MaxRAMPercentage=75"
-```
-
-### 4.2 Alternativa para Native Image: Micrometer + OpenTelemetry SDK
-
-Se o backend for compilado como **GraalVM native image**, o OpenTelemetry Java Agent não funciona. Use a instrumentação via **Micrometer + OpenTelemetry SDK manual**.
-
-#### 4.2.1 Adicionar dependências ao `pom.xml`
+Adicione ao `Baluarte-core/pom.xml`:
 
 ```xml
-<!-- OpenTelemetry SDK + Exporter OTLP -->
-<dependency>
-    <groupId>io.opentelemetry</groupId>
-    <artifactId>opentelemetry-api</artifactId>
-    <version>1.48.0</version>
-</dependency>
-<dependency>
-    <groupId>io.opentelemetry</groupId>
-    <artifactId>opentelemetry-sdk</artifactId>
-    <version>1.48.0</version>
-</dependency>
-<dependency>
-    <groupId>io.opentelemetry</groupId>
-    <artifactId>opentelemetry-exporter-otlp</artifactId>
-    <version>1.48.0</version>
-</dependency>
-<dependency>
-    <groupId>io.opentelemetry</groupId>
-    <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-    <version>1.48.0</version>
-</dependency>
-
-<!-- Micrometer Tracing + OpenTelemetry bridge -->
+<!-- OpenTelemetry / Micrometer — Axiom Observability (native-image safe) -->
 <dependency>
     <groupId>io.micrometer</groupId>
     <artifactId>micrometer-tracing-bridge-otel</artifactId>
@@ -203,85 +110,56 @@ Se o backend for compilado como **GraalVM native image**, o OpenTelemetry Java A
 <dependency>
     <groupId>io.micrometer</groupId>
     <artifactId>micrometer-registry-otlp</artifactId>
-    <version>1.15.0</version>
+</dependency>
+<dependency>
+    <groupId>io.opentelemetry</groupId>
+    <artifactId>opentelemetry-exporter-otlp</artifactId>
 </dependency>
 ```
 
-#### 4.2.2 Configurar Micrometer no `application.yml`
+#### 4.1.2 Configurar `application.yml`
+
+Adicione ao `application.yml`:
 
 ```yaml
 management:
   tracing:
     sampling:
-      probability: 1.0   # 100% em prod, reduzir para 0.1 se volume alto
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
   metrics:
     tags:
-      application: ${spring.application.name}
-    export:
-      otlp:
-        enabled: true
-        url: https://api.axiom.co/v1/metrics
+      service.name: ${spring.application.name}
+      deployment.environment: ${DEPLOYMENT_ENVIRONMENT:production}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTLP_METRICS_ENABLED:true}
+        url: ${OTLP_METRICS_URL:https://api.axiom.co/v1/metrics}
         headers:
-          Authorization: Bearer ${AXIOM_INGEST_TOKEN}
+          Authorization: Bearer ${AXIOM_INGEST_TOKEN:}
+    tracing:
+      endpoint: ${OTLP_TRACES_ENDPOINT:https://api.axiom.co/v1/traces}
+      headers:
+        Authorization: Bearer ${AXIOM_INGEST_TOKEN:}
 ```
 
-#### 4.2.3 Bean de configuração
+#### 4.1.3 docker-compose (desenvolvimento local)
 
-```java
-package br.com.baluarte.core.config;
+Adicione ao serviço `core` no `docker-compose.yml`:
 
-import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.resources.Resource;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
-import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
-import io.opentelemetry.semconv.ServiceAttributes;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
-import static io.opentelemetry.semconv.ServiceAttributes.SERVICE_NAME;
-
-@Configuration(proxyBeanMethods = false)
-public class OpenTelemetryConfig {
-
-    @Bean
-    public OpenTelemetry openTelemetry(
-            @Value("${AXIOM_INGEST_TOKEN:}") String axiomToken,
-            @Value("${spring.application.name}") String serviceName) {
-
-        if (axiomToken.isEmpty()) {
-            return OpenTelemetry.noop();
-        }
-
-        var resource = Resource.getDefault()
-                .toBuilder()
-                .put(SERVICE_NAME, serviceName)
-                .build();
-
-        var spanExporter = OtlpGrpcSpanExporter.builder()
-                .setEndpoint("https://api.axiom.co")
-                .addHeader("Authorization", "Bearer " + axiomToken)
-                .build();
-
-        var tracerProvider = SdkTracerProvider.builder()
-                .setResource(resource)
-                .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
-                .build();
-
-        return OpenTelemetrySdk.builder()
-                .setTracerProvider(tracerProvider)
-                .build();
-    }
-
-    @Bean
-    public Tracer tracer(OpenTelemetry openTelemetry) {
-        return openTelemetry.getTracer("baluarte-core");
-    }
-}
+```yaml
+core:
+  environment:
+    AXIOM_INGEST_TOKEN: ${AXIOM_INGEST_TOKEN:-}
+    AXIOM_DATASET: ${AXIOM_DATASET:-baluarte-prod}
+    DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-development}
+    TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-1.0}
+    OTLP_METRICS_ENABLED: ${OTLP_METRICS_ENABLED:-true}
+    OTLP_METRICS_URL: ${OTLP_METRICS_URL:-https://api.axiom.co/v1/metrics}
+    OTLP_TRACES_ENDPOINT: ${OTLP_TRACES_ENDPOINT:-https://api.axiom.co/v1/traces}
 ```
+
+
 
 ### 4.3 Health Check (HTTP Ping)
 
@@ -341,143 +219,86 @@ curl -X POST https://api.axiom.co/v1/datasets/baluarte-prod/ingest \
 
 ## 5. Frontend (Next.js — Vercel)
 
-### 5.1 Axiom Vercel Integration
+### 5.1 Integração com `next-axiom` (standalone)
 
-A Vercel tem integração nativa com Axiom. Ela envia **todos os logs de serverless functions** (console.log, erros, etc.) automaticamente para o dataset.
-
-#### Instalação via Dashboard
-
-1. Acesse [Vercel Dashboard](https://vercel.com) → **Integrations** → **Marketplace**
-2. Busque **Axiom** e clique **Add Integration**
-3. Escolha o projeto `baluarte-next`
-4. Autorize o Axiom a acessar os logs da Vercel
-
-> Alternativa: instalar via [Manual](https://vercel.com/integrations/axiom)
-
-#### Enviar Web Vitals (CLS, LCP, FID/INP)
-
-Instale o `@axiomhq/vercel` para enviar métricas de performance real (RUM):
+Não usamos a **Axiom Vercel Integration** (requer plano Pro). Em vez disso, usamos o pacote **`next-axiom`** que envia Web Vitals e logs **diretamente** para a API da Axiom via proxy rewrites internos — funciona em qualquer plano.
 
 ```bash
-npm install @axiomhq/vercel
+npm install next-axiom
 ```
 
-Crie um arquivo `src/lib/axiom.ts`:
+#### Configurar `next.config.ts`
 
 ```typescript
-import { Axiom } from "@axiomhq/vercel"
+import type { NextConfig } from "next";
+import { withAxiomNextConfig } from "next-axiom";
 
-export const axiom = new Axiom({
-  token: process.env.AXIOM_INGEST_TOKEN!,
-  dataset: "baluarte-prod",
-})
+const nextConfig: NextConfig = {
+  // ... sua configuração existente
+};
+
+export default withAxiomNextConfig(nextConfig);
 ```
 
-Envie web vitals no `app/layout.tsx`:
+> O `withAxiomNextConfig` cria rewrites automáticos que proxyam `/web-vitals` e `/logs` para os endpoints da Axiom. Não precisa de integração Vercel.
+
+#### Web Vitals no layout
 
 ```typescript
 // app/layout.tsx
-import { WebVitals } from "@axiomhq/vercel/next"
+import { AxiomWebVitals } from "next-axiom";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
       <body>
         {children}
-        <WebVitals
-          dataset="baluarte-prod"
-          token={process.env.AXIOM_INGEST_TOKEN!}
-        />
+        <AxiomWebVitals />
       </body>
     </html>
-  )
+  );
 }
 ```
 
-#### Envio manual de eventos (page views, erros de cliente)
+> **Nota:** no App Router, importe via wrapper `"use client"` ou use o componente diretamente se o seu layout já for client component.
+
+#### Envio manual de eventos (page views, erros)
 
 ```typescript
 // src/lib/analytics-events.ts
-import { axiom } from "./axiom"
+import { log } from "next-axiom";
 
 export function sendPageView(path: string, method: string, duration: number) {
-  axiom.ingest("baluarte-prod", {
-    type: "page-view",
+  log.info("page-view", {
     service: "baluarte-next",
     path,
     method,
     duration,
-    userAgent: navigator.userAgent,
-  })
+  });
 }
 
 export function sendClientError(error: Error, info?: Record<string, unknown>) {
-  axiom.ingest("baluarte-prod", {
-    type: "client-error",
+  log.error("client-error", {
     service: "baluarte-next",
     error: error.message,
     stack: error.stack,
     ...info,
-  })
+  });
 }
 ```
 
-### 5.2 OpenTelemetry JS (Alternativa)
+### 5.2 Alternativa: OpenTelemetry JS (mais complexo)
 
-Se preferir OpenTelemetry no frontend (mais padronizado):
+Se precisar de tracing detalhado no frontend (spans de document-load, fetch, etc.):
 
 ```bash
 npm install @opentelemetry/api @opentelemetry/sdk-trace-web \
   @opentelemetry/exporter-trace-otlp-http \
   @opentelemetry/instrumentation-document-load \
-  @opentelemetry/instrumentation-fetch \
-  @opentelemetry/instrumentation-xml-http-request
+  @opentelemetry/instrumentation-fetch
 ```
 
-Crie `src/lib/opentelemetry.ts`:
-
-```typescript
-import { WebTracerProvider } from "@opentelemetry/sdk-trace-web"
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
-import { DocumentLoadInstrumentation } from "@opentelemetry/instrumentation-document-load"
-import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch"
-import { registerInstrumentations } from "@opentelemetry/instrumentation"
-import { Resource } from "@opentelemetry/resources"
-import { SEMRESATTRS_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
-
-export function initOpenTelemetry() {
-  const exporter = new OTLPTraceExporter({
-    url: "https://api.axiom.co/v1/traces",
-    headers: {
-      Authorization: `Bearer ${process.env.NEXT_PUBLIC_AXIOM_INGEST_TOKEN}`,
-    },
-  })
-
-  const provider = new WebTracerProvider({
-    resource: new Resource({
-      [SEMRESATTRS_SERVICE_NAME]: "baluarte-next",
-    }),
-  })
-
-  provider.addSpanProcessor(new BatchSpanProcessor(exporter))
-  provider.register()
-
-  registerInstrumentations({
-    instrumentations: [
-      new DocumentLoadInstrumentation(),
-      new FetchInstrumentation({
-        propagateTraceHeaderCorsUrls: [
-          /^https:\/\/api\.axiom\.co/,
-          /^https:\/\/.*railway\.app/,
-          /^http:\/\/localhost/,
-        ],
-      }),
-    ],
-  })
-}
-```
-
-Chame `initOpenTelemetry()` no `app/layout.tsx` (apenas client-side).
+Crie `src/lib/opentelemetry.ts` e inicialize no `layout.tsx` (client-side). Veja a [doc oficial](https://github.com/open-telemetry/opentelemetry-js) para exemplo completo.
 
 ---
 
@@ -597,55 +418,44 @@ http.status_code  → [200, 2xx, 4xx, 5xx]
 
 ## 7. Variáveis de Ambiente
 
-### Backend (VPS / Railway)
+### Backend (VPS / Railway / Docker)
 
 ```env
-# Obrigatórias (OpenTelemetry Agent)
-OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_ENDPOINT=https://api.axiom.co
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <AXIOM_INGEST_TOKEN>
-OTEL_RESOURCE_ATTRIBUTES=service.name=baluarte-core,service.version=0.0.1,deployment.environment=production
-OTEL_METRICS_EXPORTER=otlp
-OTEL_LOGS_EXPORTER=otlp
-OTEL_TRACES_EXPORTER=otlp
-
-# Opcionais (tuning)
-OTEL_BSP_SCHEDULE_DELAY=5000
-OTEL_BSP_MAX_EXPORT_BATCH_SIZE=512
-OTEL_INSTRUMENTATION_JDBC_ENABLED=true
+# Obrigatórias (Micrometer + OTLP — native-image safe)
+AXIOM_INGEST_TOKEN=<AXIOM_INGEST_TOKEN>
+AXIOM_DATASET=baluarte-prod
+DEPLOYMENT_ENVIRONMENT=production
+TRACING_SAMPLING_PROBABILITY=1.0
+OTLP_METRICS_ENABLED=true
+OTLP_METRICS_URL=https://api.axiom.co/v1/metrics
+OTLP_TRACES_ENDPOINT=https://api.axiom.co/v1/traces
 ```
 
-### Frontend (Vercel)
+### Frontend (Next.js / Vercel — qualquer plano)
 
 ```env
-# Axiom Vercel Integration cria automaticamente:
-# AXIOM_TOKEN, AXIOM_DATASET
-
-# Se usar OpenTelemetry JS manual:
+# next-axiom envia web-vitals e logs direto para Axiom (SEM integração Vercel)
 NEXT_PUBLIC_AXIOM_INGEST_TOKEN=<AXIOM_INGEST_TOKEN>
 NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
 ```
 
 ### docker-compose (dev local)
 
-Adicione ao `docker-compose.yml`:
-
 ```yaml
 core:
   environment:
-    AXIOM_INGEST_TOKEN: ${AXIOM_INGEST_TOKEN}
-    OTEL_EXPORTER_OTLP_PROTOCOL: grpc
-    OTEL_EXPORTER_OTLP_ENDPOINT: https://api.axiom.co
-    OTEL_EXPORTER_OTLP_HEADERS: Authorization=Bearer ${AXIOM_INGEST_TOKEN}
-    OTEL_RESOURCE_ATTRIBUTES: service.name=baluarte-core,service.version=0.0.1,deployment.environment=development
-    OTEL_METRICS_EXPORTER: otlp
-    OTEL_LOGS_EXPORTER: otlp
+    AXIOM_INGEST_TOKEN: ${AXIOM_INGEST_TOKEN:-}
+    AXIOM_DATASET: ${AXIOM_DATASET:-baluarte-prod}
+    DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-development}
+    TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-1.0}
+    OTLP_METRICS_ENABLED: ${OTLP_METRICS_ENABLED:-true}
+    OTLP_METRICS_URL: ${OTLP_METRICS_URL:-https://api.axiom.co/v1/metrics}
+    OTLP_TRACES_ENDPOINT: ${OTLP_TRACES_ENDPOINT:-https://api.axiom.co/v1/traces}
 ```
 
 ### .env.local (dev frontend)
 
 ```env
-AXIOM_INGEST_TOKEN=xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NEXT_PUBLIC_AXIOM_INGEST_TOKEN=xaat-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
 ```
@@ -658,40 +468,45 @@ NEXT_PUBLIC_AXIOM_DATASET=baluarte-prod
 
 - [ ] 1. Criar conta e dataset no Axiom (`baluarte-prod`)
 - [ ] 2. Gerar **Ingest Token** no Axiom
-- [ ] 3. Baixar `opentelemetry-javaagent.jar` para `Baluarte-core/`
-- [ ] 4. Adicionar ao `.gitignore`: `opentelemetry-javaagent.jar`
-- [ ] 5. Se GraalVM native: adicionar dependências Micrometer + OTLP no `pom.xml`
-- [ ] 6. Adicionar variáveis `OTEL_*` ao ambiente da VPS (Railway / docker-compose)
-- [ ] 7. Fazer deploy e validar:
+- [ ] 3. Adicionar dependências Micrometer + OTLP no `Baluarte-core/pom.xml`
+- [ ] 4. Configurar `application.yml` / `application-prod.yml` com OTLP
+- [ ] 5. Adicionar variáveis `AXIOM_*` e `OTLP_*` ao ambiente (Railway / docker-compose)
+- [ ] 6. Fazer deploy e validar:
   ```bash
   curl -s https://<backend>/actuator/health
-  # Validar no Axiom: dataset → "baluarte-prod" → ver spans chegando
+  # Validar no Axiom: dataset → "baluarte-prod" → ver métricas e spans chegando
   ```
 
-### Fase 2 — Frontend (Vercel)
+### Fase 2 — Frontend (Vercel — qualquer plano)
 
-- [ ] 1. Instalar integração **Axiom Vercel** no dashboard da Vercel
-- [ ] 2. Instalar `@axiomhq/vercel` no projeto
-- [ ] 3. Adicionar `WebVitals` no `app/layout.tsx`
-- [ ] 4. (Opcional) Adicionar `@opentelemetry/instrumentation-fetch` para spans de fetch
-- [ ] 5. Configurar variáveis `AXIOM_TOKEN`, `AXIOM_DATASET` na Vercel
+- [ ] 1. Instalar `next-axiom` no projeto: `npm install next-axiom`
+- [ ] 2. Configurar `next.config.ts` com `withAxiomNextConfig`
+- [ ] 3. Adicionar `AxiomWebVitals` no `app/layout.tsx`
+- [ ] 4. (Opcional) Adicionar `log.info/error` para eventos customizados
+- [ ] 5. Configurar variáveis `NEXT_PUBLIC_AXIOM_INGEST_TOKEN`, `NEXT_PUBLIC_AXIOM_DATASET` na Vercel
 - [ ] 6. Fazer deploy e validar page views + web vitals no Axiom
 
-### Fase 3 — Health Ping
+> **NÃO precisa** da Axiom Vercel Integration (plano Pro). O `next-axiom` envia direto via API.
 
-- [ ] 1. Escolher método: monitor externo / GH Actions / script
-- [ ] 2. Configurar ping para `https://<backend>/actuator/health`
-- [ ] 3. (Opcional) Configurar alerta no próprio Axiom:
-  > Axiom → Alerts → New Alert: `| where type == "heartbeat" and status != "UP" | alert()`
+### Fase 3 — Health Ping (Script local, zero custo)
 
-### Fase 4 — Dashboard
+- [ ] 1. Copiar `scripts/axiom-healthcheck.sh` para a VPS
+- [ ] 2. Tornar executÃ¡vel: `chmod +x scripts/axiom-healthcheck.sh`
+- [ ] 3. Configurar cron a cada 1 minuto:
+  ```bash
+  crontab -e
+  # Adicionar:
+  */1 * * * * AXIOM_INGEST_TOKEN=<token> /path/to/scripts/axiom-healthcheck.sh
+  ```
+- [ ] 4. Validar eventos `type=heartbeat` chegando no Axiom
 
-- [ ] 1. Criar dashboard no Axiom com os 6 painéis da [seção 6](#6-dashboard-axiom)
-- [ ] 2. Adicionar filtros globais
-- [ ] 3. Configurar alertas:
-  - **Erro rate > 5%** nos últimos 5 min
-  - **P95 > 2000ms** em qualquer endpoint
-  - **Nenhum heartbeat** nos últimos 10 min
+### Fase 4 — Dashboard (importar JSON)
+
+- [ ] 1. Acesse Axiom → Dashboards → **Import Dashboard**
+- [ ] 2. FaÃ§a upload de `docs/axiom-dashboard.json`
+- [ ] 3. Os 10 painÃ©is e 3 alertas vÃªm prÃ©-configurados:
+  - RPM, LatÃªncia P95/P99, Erro Rate, MÃ©todos HTTP, Heartbeat, Web Vitals, SQL lentas
+- [ ] 4. Ajuste os filtros globais conforme necessÃ¡rio
 
 ---
 
@@ -796,10 +611,10 @@ curl -X POST https://api.axiom.co/v1/datasets/baluarte-prod/ingest \
 | O que | Onde | Como |
 |---|---|---|
 | Health check | `/actuator/health` | Já existe (Spring Actuator) |
-| Envio de spans backend | VPS / Railway | OpenTelemetry Java Agent |
-| Envio de spans frontend | Vercel | Axiom Vercel Integration |
-| Métricas JVM | Automático via OTEL Agent | `jvm.*` métricas no Axiom |
-| Web Vitals | `@axiomhq/vercel` | `<WebVitals>` no layout |
+| Envio de spans backend | VPS / Railway | Micrometer + OTLP (native-image safe) |
+| Envio de spans frontend | Vercel (qualquer plano) | `next-axiom` (standalone) |
+| Métricas JVM | Automático via Micrometer | `jvm.*` métricas no Axiom |
+| Web Vitals | `next-axiom` | `<AxiomWebVitals>` no layout |
 | Dataset único | `baluarte-prod` | Criado no Axiom |
 | Latência por endpoint | Dashboard | Query APL com `http.route` |
 | Taxa de erro | Dashboard | `count(http.status_code >= 400)` |

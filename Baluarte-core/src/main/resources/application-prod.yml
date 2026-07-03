@@ -6,3 +6,18 @@ spring:
 logging:
   level:
     root: WARN
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTLP_METRICS_ENABLED:true}
+        url: ${OTLP_METRICS_URL:https://api.axiom.co/v1/metrics}
+        headers:
+          Authorization: Bearer ${AXIOM_INGEST_TOKEN:}
+    tracing:
+      endpoint: ${OTLP_TRACES_ENDPOINT:https://api.axiom.co/v1/traces}
+      headers:
+        Authorization: Bearer ${AXIOM_INGEST_TOKEN:}

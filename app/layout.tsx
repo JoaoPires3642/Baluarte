@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { AdminLayoutGuard } from "@/components/admin-layout-guard";
 import { Providers } from "@/components/providers";
+import { AxiomWebVitals } from "@/components/axiom-web-vitals";
 
 const bodyFont = Inter({
   subsets: ["latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <AdminLayoutGuard><Footer /></AdminLayoutGuard>
         </Providers>
+        <AxiomWebVitals />
       </body>
     </html>
   );

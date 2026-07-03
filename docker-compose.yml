@@ -75,6 +75,14 @@ services:
       SERVER_KEEP_ALIVE_TIMEOUT: ${SERVER_KEEP_ALIVE_TIMEOUT:-30s}
       # Nota: native-image ignora -Xmx, mas mantemos para eventual fallback com JVM
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms256m -Xmx768m -XX:MaxRAMPercentage=75}
+      # Axiom Observability (OTLP — native-image via Micrometer)
+      AXIOM_INGEST_TOKEN: ${AXIOM_INGEST_TOKEN:-}
+      AXIOM_DATASET: ${AXIOM_DATASET:-baluarte-prod}
+      DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-development}
+      TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-1.0}
+      OTLP_METRICS_ENABLED: ${OTLP_METRICS_ENABLED:-true}
+      OTLP_METRICS_URL: ${OTLP_METRICS_URL:-https://api.axiom.co/v1/metrics}
+      OTLP_TRACES_ENDPOINT: ${OTLP_TRACES_ENDPOINT:-https://api.axiom.co/v1/traces}
     deploy:
       resources:
         limits:

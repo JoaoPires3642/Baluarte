@@ -1,0 +1,263 @@
+{
+  "title": "Baluarte — Observabilidade",
+  "description": "Dashboard centralizado com tráfego, latência, erros, banco de dados e frontend. Dataset: baluarte-prod.",
+  "refreshInterval": "30s",
+  "timeRange": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "filters": [
+    {
+      "field": "service.name",
+      "label": "Serviço",
+      "type": "select",
+      "options": ["baluarte-core", "baluarte-next", "baluarte-worker", "*"]
+    },
+    {
+      "field": "deployment.environment",
+      "label": "Ambiente",
+      "type": "select",
+      "options": ["production", "development", "test", "*"]
+    },
+    {
+      "field": "http.method",
+      "label": "Método HTTP",
+      "type": "select",
+      "options": ["GET", "POST", "PUT", "DELETE", "PATCH", "*"]
+    },
+    {
+      "field": "http.status_code",
+      "label": "Status HTTP",
+      "type": "select",
+      "options": ["2xx", "3xx", "4xx", "5xx", "*"]
+    }
+  ],
+  "rows": [
+    {
+      "title": "📊 Visão Geral",
+      "description": "Indicadores principais de saúde do sistema",
+      "height": "compact",
+      "charts": [
+        {
+          "title": "🔢 RPM (Requisições/min)",
+          "type": "stat",
+          "description": "Volume de requisições por minuto. Alerta se abaixo de 10 ou acima de 1000.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | summarize rpm = count() by bin(_time, 1m) | summarize media = avg(rpm), pico = max(rpm) | project media, pico",
+          "colorThresholds": [
+            { "value": 0, "color": "red" },
+            { "value": 10, "color": "yellow" },
+            { "value": 100, "color": "green" }
+          ]
+        },
+        {
+          "title": "⏱️ Latência P95 Global",
+          "type": "stat",
+          "description": "Latência P95 em milissegundos de todas as requisições. Alerta se acima de 2000ms.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.duration_ms > 0 | summarize p95 = percentile(http.duration_ms, 95), p50 = percentile(http.duration_ms, 50)",
+          "colorThresholds": [
+            { "value": 0, "color": "green" },
+            { "value": 500, "color": "yellow" },
+            { "value": 2000, "color": "red" }
+          ]
+        },
+        {
+          "title": "❌ Taxa de Erro Global",
+          "type": "stat",
+          "description": "Percentual de respostas 4xx e 5xx sobre o total. Alerta se acima de 5%.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | summarize total = count(), erros = count(http.status_code >= 400) | extend erro_pct = (erros * 100.0 / total) | project erro_pct",
+          "colorThresholds": [
+            { "value": 0, "color": "green" },
+            { "value": 2, "color": "yellow" },
+            { "value": 5, "color": "red" }
+          ]
+        },
+        {
+          "title": "💚 Heartbeat",
+          "type": "stat",
+          "description": "Status do último heartbeat. Verde = UP, Vermelho = sem heartbeat recente.",
+          "query": "['baluarte-prod'] | where type == \"heartbeat\" | where _time > now() - 2m | summarize status = make_set(status) | extend up = iff(status contains \"UP\", 1, 0) | project up",
+          "colorThresholds": [
+            { "value": 0, "color": "red" },
+            { "value": 1, "color": "green" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "🚦 Tráfego",
+      "description": "Volume e distribuição de requisições",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "📈 Requisições por Minuto",
+          "type": "time_series",
+          "description": "Volume de requisições por minuto ao longo do tempo. Permite identificar picos e vales de tráfego.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | summarize rpm = count() by bin(_time, 1m) | sort by _time asc"
+        },
+        {
+          "title": "🔀 Distribuição por Método HTTP",
+          "type": "pie_chart",
+          "description": "Proporção de GET, POST, PUT e DELETE. Útil para entender o perfil de uso da API.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | where isnotnull(http.method) | summarize count() by http.method"
+        },
+        {
+          "title": "🏗️ Requisições por Serviço",
+          "type": "stacked_bar",
+          "description": "Requisições do frontend (baluarte-next) vs backend (baluarte-core) ao longo do tempo.",
+          "query": "['baluarte-prod'] | where service.name in (\"baluarte-core\", \"baluarte-next\") | summarize count() by bin(_time, 5m), service.name | sort by _time asc"
+        }
+      ]
+    },
+    {
+      "title": "⏱️ Latência",
+      "description": "Métricas de tempo de resposta do backend",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "🐌 Endpoints Mais Lentos (P95)",
+          "type": "bar_chart",
+          "description": "Top 20 endpoints ordenados pela latência P95. Identifique gargalos de performance.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | where isnotnull(http.route) | summarize p50 = percentile(http.duration_ms, 50), p95 = percentile(http.duration_ms, 95), p99 = percentile(http.duration_ms, 99) by http.route | where isnotnull(p95) | sort by p95 desc | limit 20",
+          "colorThresholds": [
+            { "value": 0, "color": "green" },
+            { "value": 200, "color": "yellow" },
+            { "value": 1000, "color": "orange" },
+            { "value": 2000, "color": "red" }
+          ]
+        },
+        {
+          "title": "📋 Tabela de Latência por Endpoint",
+          "type": "table",
+          "description": "Visão detalhada: P50, P95, P99, média e total de requisições por rota. Ordenado pela P99 (pior caso).",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | where isnotnull(http.route) | summarize p50 = percentile(http.duration_ms, 50), p95 = percentile(http.duration_ms, 95), p99 = percentile(http.duration_ms, 99), media = avg(http.duration_ms), total = count() by http.route | where isnotnull(p99) | sort by p99 desc | limit 30"
+        }
+      ]
+    },
+    {
+      "title": "❌ Erros",
+      "description": "Monitoramento de falhas e respostas de erro",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "📊 Taxa de Erro por Endpoint",
+          "type": "bar_chart",
+          "description": "Percentual de respostas 4xx e 5xx por rota. Destaque para endpoints com taxa acima de 5%.",
+          "query": "['baluarte-prod'] | where service.name == \"baluarte-core\" | where http.status_code > 0 | where isnotnull(http.route) | summarize total = count(), erros = count(http.status_code >= 400) | extend erro_pct = (erros * 100.0 / total) | where total > 10 | where isnotnull(erro_pct) | sort by erro_pct desc | limit 10",
+          "colorThresholds": [
+            { "value": 0, "color": "green" },
+            { "value": 2, "color": "yellow" },
+            { "value": 5, "color": "red" }
+          ]
+        },
+        {
+          "title": "🔥 Erros 5xx Recentes",
+          "type": "table",
+          "description": "Últimos erros de servidor (500+) nos últimos 15 minutos. Inclui rota, método e status.",
+          "query": "['baluarte-prod'] | where _time > now() - 15m | where service.name == \"baluarte-core\" | where http.status_code >= 500 | where isnotnull(http.route) | summarize count() by http.route, http.method, http.status_code | sort by count_ desc | limit 20"
+        },
+        {
+          "title": "💥 Erros por Tipo (Geral)",
+          "type": "time_series",
+          "description": "Eventos de tipo 'error' ao longo do tempo. Inclui stack traces e mensagens do backend.",
+          "query": "['baluarte-prod'] | where type == \"error\" | summarize count() by bin(_time, 1m) | sort by _time asc"
+        }
+      ]
+    },
+    {
+      "title": "🗄️ Banco de Dados",
+      "description": "Performance e falhas de acesso ao PostgreSQL",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "🐢 Queries SQL Mais Lentas",
+          "type": "table",
+          "description": "Top 10 queries JDBC/PostgreSQL ordenadas pela latência P95 na última hora.",
+          "query": "['baluarte-prod'] | where _time > now() - 1h | where isnotnull(db.statement) and db.system == \"postgresql\" | where isnotnull(db.duration_ms) | summarize media = avg(db.duration_ms), p95 = percentile(db.duration_ms, 95), total = count() by db.statement | where isnotnull(p95) | sort by p95 desc | limit 10"
+        },
+        {
+          "title": "📈 Latência Média do BD",
+          "type": "time_series",
+          "description": "Latência média de queries ao banco ao longo do tempo. Picos indicam gargalos ou locks.",
+          "query": "['baluarte-prod'] | where isnotnull(db.duration_ms) and db.system == \"postgresql\" | summarize media = avg(db.duration_ms) by bin(_time, 1m) | sort by _time asc"
+        }
+      ]
+    },
+    {
+      "title": "🖥️ Frontend & Web Vitals",
+      "description": "Métricas de experiência do usuário (Core Web Vitals)",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "⚡ Core Web Vitals (P75)",
+          "type": "bar_chart",
+          "description": "P75 de CLS, LCP e INP no frontend. Inclui distribuição de ratings (bom, precisa melhorar, ruim).",
+          "query": "['baluarte-prod'] | where isnotnull(web_vital.name) | where isnotnull(web_vital.value) | summarize p75 = percentile(web_vital.value, 75), bom = count(web_vital.rating == \"good\"), ruim = count(web_vital.rating == \"poor\"), melhorar = count(web_vital.rating == \"needs-improvement\") by web_vital.name"
+        },
+        {
+          "title": "📉 Web Vitals ao Longo do Tempo",
+          "type": "time_series",
+          "description": "Evolução temporal do P75 de cada métrica de Web Vital. Detecte regressões após deploys.",
+          "query": "['baluarte-prod'] | where isnotnull(web_vital.name) | where isnotnull(web_vital.value) | summarize p75 = percentile(web_vital.value, 75) by bin(_time, 5m), web_vital.name | sort by _time asc"
+        }
+      ]
+    },
+    {
+      "title": "⚙️ Jobs & Infraestrutura",
+      "description": "Tarefas assíncronas, deploys e disponibilidade",
+      "height": "medium",
+      "charts": [
+        {
+          "title": "🏭 Jobs por Status",
+          "type": "stacked_bar",
+          "description": "Distribuição de jobs (order-processor, etc.) por status: concluído, falhou, pendente.",
+          "query": "['baluarte-prod'] | where type == \"job\" | where isnotnull(job.name) | where isnotnull(job.status) | summarize count() by bin(_time, 5m), job.status | sort by _time asc"
+        },
+        {
+          "title": "⏳ Latência de Jobs (P95)",
+          "type": "bar_chart",
+          "description": "P95 de duração de jobs por nome. Identifique workers sobrecarregados.",
+          "query": "['baluarte-prod'] | where type == \"job\" | where isnotnull(job.name) | where isnotnull(job.duration_ms) | summarize p95 = percentile(job.duration_ms, 95), media = avg(job.duration_ms), total = count() by job.name | sort by p95 desc | limit 10"
+        },
+        {
+          "title": "🚀 Atividade de Deploy",
+          "type": "table",
+          "description": "Histórico recente de deploys: branch, commit, autor e ambiente.",
+          "query": "['baluarte-prod'] | where type == \"deployment\" | where _time > now() - 24h | project _time, deploy_event.branch, deploy_event.commit, deploy_event.user, deployment.environment, service.name | sort by _time desc | limit 20"
+        },
+        {
+          "title": "💚 Heartbeat — Disponibilidade",
+          "type": "time_series",
+          "description": "Status do health check do backend. 1 = UP, 0 = DOWN. Esperado heartbeat a cada ~30s.",
+          "query": "['baluarte-prod'] | where type == \"heartbeat\" | extend status_num = iff(status == \"UP\", 1, 0) | summarize uptime = avg(status_num) by bin(_time, 1m) | sort by _time asc"
+        }
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "name": "🚨 Taxa de erro acima de 5%",
+      "description": "Dispara quando a taxa de erro global ultrapassa 5% nos últimos 5 minutos.",
+      "query": "['baluarte-prod'] | where _time > now() - 5m | where service.name == \"baluarte-core\" | where http.status_code > 0 | summarize erro_pct = (count(http.status_code >= 400) * 100.0 / count()) | where erro_pct > 5"
+    },
+    {
+      "name": "🐌 Latência P95 acima de 2s",
+      "description": "Dispara quando algum endpoint atinge P95 acima de 2000ms nos últimos 5 minutos.",
+      "query": "['baluarte-prod'] | where _time > now() - 5m | where service.name == \"baluarte-core\" | where http.status_code > 0 | where isnotnull(http.route) | summarize p95 = percentile(http.duration_ms, 95) by http.route | where p95 > 2000"
+    },
+    {
+      "name": "💀 Sem heartbeat nos últimos 10 min",
+      "description": "Dispara quando o backend para de responder ao health check por 10 minutos consecutivos.",
+      "query": "['baluarte-prod'] | where type == \"heartbeat\" | where _time > now() - 10m | summarize count() | where count_ == 0"
+    },
+    {
+      "name": "⚠️ Queda brusca de RPM",
+      "description": "Dispara quando o RPM cai abaixo de 10 requisições/min nos últimos 5 minutos (possível outage).",
+      "query": "['baluarte-prod'] | where _time > now() - 5m | where service.name == \"baluarte-core\" | where http.status_code > 0 | summarize rpm = count() by bin(_time, 1m) | where rpm < 10"
+    },
+    {
+      "name": "🗄️ Erro de conexão com banco",
+      "description": "Dispara quando há erros de conexão com o PostgreSQL nos últimos 5 minutos.",
+      "query": "['baluarte-prod'] | where _time > now() - 5m | where type == \"error\" | where error.message contains \"database\" or error.message contains \"Connection refused\" | summarize count() | where count_ > 0"
+    }
+  ]
+}
