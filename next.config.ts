@@ -7,7 +7,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' https://sdk.mercadopago.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://t3.storageapi.dev https://images.unsplash.com https://assets.football-logos.cc https://acdn-us.mitiendanube.com https://*.mitiendanube.com https://imgnike-a.akamaihd.net https://*.akamaihd.net https://m.media-amazon.com https://*.media-amazon.com https://photo.yupoo.com https://*.yupoo.com https://static.netshoes.com.br https://*.netshoes.com.br https://http2.mlstatic.com https://*.mlstatic.com",
+  "img-src * data: blob:",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://api.mercadopago.com https://viacep.com.br https://api.axiom.co",
   "frame-ancestors 'none'",
@@ -19,18 +19,10 @@ const csp = [
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "t3.storageapi.dev" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "assets.football-logos.cc" },
-      { protocol: "https", hostname: "**.mitiendanube.com" },
-      { protocol: "https", hostname: "**.akamaihd.net" },
-      { protocol: "https", hostname: "**.media-amazon.com" },
-      { protocol: "https", hostname: "m.media-amazon.com" },
-      { protocol: "https", hostname: "**.yupoo.com" },
-      { protocol: "https", hostname: "**.netshoes.com.br" },
-      { protocol: "https", hostname: "**.mlstatic.com" },
-    ],
+    // Desabilita otimização para aceitar imagens de QUALQUER domínio externo.
+    // Necessário porque o site agrega produtos de múltiplos fornecedores
+    // (Nike, Amazon, Netshoes, Mercado Livre, Nuvemshop, Yupoo, etc.)
+    unoptimized: true,
   },
   output: "standalone",
   async headers() {
