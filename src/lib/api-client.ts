@@ -7,11 +7,14 @@ let isRedirecting = false
 export function redirectToSignIn(): void {
   if (typeof window === "undefined") return
   if (isRedirecting) return
+  // Never redirect to /sign-in from auth flows or the sign-in/up pages themselves (avoids loops).
+  const path = window.location.pathname
+  if (path === "/sign-in" || path.startsWith("/sign-in/") || path === "/sign-up" || path.startsWith("/sign-up/") || path.startsWith("/api/auth")) {
+    return
+  }
   isRedirecting = true
-  const callbackUrl = encodeURIComponent(
-    window.location.pathname + window.location.search,
-  )
-  window.location.href = `/sign-in?callbackUrl=${callbackUrl}&error=SessionExpired`
+  const returnUrl = encodeURIComponent(path + window.location.search)
+  window.location.href = `/sign-in?redirect_url=${returnUrl}&error=SessionExpired`
 }
 
 export async function apiFetch(

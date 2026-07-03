@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { useEffect, useState } from "react"
+import { signIn, useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,8 +11,13 @@ import { Label } from "@/components/ui/label"
 export default function SignInPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callback_url") || "/"
-  const redirectUrl = searchParams.get("redirect_url") || "/"
+  const redirectTo = searchParams.get("redirect_url") || searchParams.get("callbackUrl") || searchParams.get("callback_url") || "/"
+  const { status } = useSession()
+
+  // Already authenticated: leave the sign-in page.
+  useEffect(() => {
+    if (status === "authenticated") router.replace(redirectTo)
+  }, [status, redirectTo, router])
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -33,11 +38,11 @@ export default function SignInPage() {
     setLoading(false)
 
     if (result?.error) {
-      setError("Email ou senha incorretos")
+      setError(result.error === "CredentialsSignin" ? "Email ou senha incorretos" : "Erro ao entrar. Tente novamente.")
       return
     }
 
-    router.push(callbackUrl !== "/" ? callbackUrl : redirectUrl)
+    router.push(redirectTo)
     router.refresh()
   }
 
