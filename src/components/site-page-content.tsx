@@ -20,17 +20,16 @@ export async function SitePageContent({
   let content = fallbackContent
 
   try {
-    // Short timeout so static generation (SSG) at build time can't hang for >60s
-    // and fail the build when the backend is unreachable from the build environment.
-    // On failure we fall back to the hardcoded content; ISR (revalidate: 60) will
-    // refresh with real content at runtime when the backend is reachable.
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
-    const res = await fetch(`${API_BASE_URL}/site/pages/${slug}`, {
-      next: { revalidate: 60 },
-      signal: controller.signal,
+    // Promise.race timeout is reliable regardless of how the runtime patches
+    // fetch (AbortSignal was being ignored during SSG, causing >60s hangs).
+    // On timeout/failure we fall back to the hardcoded content.
+    const fetchPromise = fetch(`${API_BASE_URL}/site/pages/${slug}`, {
+      cache: "no-store",
     })
-    clearTimeout(timeoutId)
+    const timeoutPromise = new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error("site-page fetch timeout")), 5000)
+    )
+    const res = await Promise.race([fetchPromise, timeoutPromise])
     if (res.ok) {
       const payload = await res.json() as SitePagePublicResponse
       title = payload.data.title
