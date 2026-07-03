@@ -44,7 +44,7 @@ public class AmqpConfig {
         factory.setPrefetchCount(prefetch);
         factory.setDefaultRequeueRejected(false);
         factory.setAdviceChain(RetryInterceptorBuilder.stateless()
-            .maxAttempts(3)
+            .maxRetries(3)
             .backOffOptions(1000, 2.0, 10000)
             .build());
         return factory;
