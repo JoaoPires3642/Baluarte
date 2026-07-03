@@ -1,5 +1,7 @@
 package br.com.baluarte.core.shared.amqp;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
@@ -8,22 +10,25 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.URISyntaxException;
 import java.time.Duration;
 
 /**
  * Configuracao AMQP para CloudAMQP / LavinMQ.
- *
+ * <p>
  * So e ativa quando APP_AMQP_URL esta preenchida. Em ambientes sem AMQP
  * (desenvolvimento local sem fila), nenhum bean e criado e o app sobe
  * normalmente sem tentar conectar.
  */
 @Configuration
-@ConditionalOnProperty(name = "spring.rabbitmq.addresses")
+@ConditionalOnExpression("'${spring.rabbitmq.addresses:}' != ''")
 public class AmqpConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(AmqpConfig.class);
 
     @Bean
     public MessageConverter amqpJsonMessageConverter() {
@@ -72,7 +77,12 @@ public class AmqpConfig {
         @Value("${spring.rabbitmq.requested-heartbeat:30s}") Duration heartbeat
     ) {
         CachingConnectionFactory factory = new CachingConnectionFactory();
-        factory.setAddresses(addresses);
+        try {
+            factory.setUri(addresses);
+        } catch (URISyntaxException e) {
+            log.error("URL AMQP invalida: {}", addresses, e);
+            throw new IllegalArgumentException("URL AMQP mal formatada: " + addresses, e);
+        }
         factory.setChannelCacheSize(5);
         factory.setConnectionTimeout((int) connectionTimeout.toMillis());
         factory.setRequestedHeartBeat((int) heartbeat.getSeconds());
