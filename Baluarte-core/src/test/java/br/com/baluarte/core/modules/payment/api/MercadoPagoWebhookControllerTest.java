@@ -54,9 +54,9 @@ class MercadoPagoWebhookControllerTest {
     @Mock
     private RestClient restClient;
     @Mock
-    private RestClient.RequestHeadersUriSpec<?> requestGet;
+    private RestClient.RequestHeadersUriSpec requestGet;
     @Mock
-    private RestClient.RequestHeadersSpec<?> requestHeaders;
+    private RestClient.RequestHeadersSpec requestHeaders;
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
