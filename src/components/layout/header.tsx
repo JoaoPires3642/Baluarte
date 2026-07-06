@@ -29,6 +29,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
+    let ticking = false
     const updateHeaderState = () => {
       const width = window.innerWidth
       const isMobile = width < 640
@@ -39,22 +40,31 @@ export function Header() {
       setCompactTabletHeader(isTablet && shouldCompact)
     }
 
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        updateHeaderState()
+        ticking = false
+      })
+    }
+
     updateHeaderState()
-    window.addEventListener("scroll", updateHeaderState, { passive: true })
-    window.addEventListener("resize", updateHeaderState)
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll, { passive: true })
 
     return () => {
-      window.removeEventListener("scroll", updateHeaderState)
-      window.removeEventListener("resize", updateHeaderState)
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
     }
   }, [])
 
   return (
     <header className="sticky top-0 z-[90] w-full border-b border-[#d9e2ef]/80 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-      <div className={`container mx-auto px-4 transition-all duration-200 ${compactMobileHeader ? "py-2" : compactTabletHeader ? "py-2.5" : "py-3"}`}>
+      <div className={`container mx-auto px-4 transition-[padding] duration-300 ease-out ${compactMobileHeader ? "py-2" : compactTabletHeader ? "py-2.5" : "py-3"}`}>
         <div className="mb-3 flex items-center gap-1 sm:hidden">
           <Link href="/" className="flex shrink-0 items-center">
-            <div className={`relative shrink-0 overflow-hidden transition-all duration-300 ${compactMobileHeader ? "h-8 w-20" : "h-9 w-22"}`}>
+            <div className={`relative shrink-0 overflow-hidden transition-[height,width] duration-300 ease-out ${compactMobileHeader ? "h-8 w-20" : "h-9 w-22"}`}>
               <Image src="/logoN.png" alt="Baluarte" fill priority sizes="88px" className="object-contain object-left" />
             </div>
           </Link>
@@ -69,7 +79,7 @@ export function Header() {
         <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
           <div className="hidden min-w-0 items-center justify-between gap-3 sm:flex lg:justify-start">
             <Link href="/" className="flex min-w-0 items-center gap-3">
-              <div className={`relative shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-900/10 transition-all duration-200 ${compactMobileHeader ? "h-9 w-9" : compactTabletHeader ? "h-10 w-10" : "h-11 w-11"} md:h-12 md:w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12`}>
+              <div className={`relative shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg shadow-slate-900/10 transition-[height,width] duration-300 ease-out ${compactMobileHeader ? "h-9 w-9" : compactTabletHeader ? "h-10 w-10" : "h-11 w-11"} md:h-12 md:w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12`}>
                 <Image src="/logoN.png" alt="Baluarte" fill priority sizes="48px" className="object-contain p-1" />
               </div>
               <div className={`min-w-0 leading-none transition-all duration-200 ${compactMobileHeader ? "hidden" : "block"}`}>
@@ -129,7 +139,9 @@ export function Header() {
           </div>
         </div>
 
-        <div className={`mt-3 border-t border-[#d9e2ef] pt-3 transition-all duration-200 ${compactMobileHeader ? "hidden" : compactTabletHeader ? "hidden lg:block" : "block"}`}>
+        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${compactMobileHeader ? "grid-rows-[0fr]" : compactTabletHeader ? "grid-rows-[0fr] lg:grid-rows-[1fr]" : "grid-rows-[1fr]"}`}>
+          <div className="overflow-hidden">
+            <div className={`mt-3 border-t border-[#d9e2ef] pt-3 transition-opacity duration-300 ease-out ${compactMobileHeader ? "opacity-0" : compactTabletHeader ? "opacity-0 lg:opacity-100" : "opacity-100"}`}>
           <nav className="flex flex-wrap items-center gap-2 rounded-[1.25rem] border border-[#d9e2ef] bg-[#f4f7fb] p-2 sm:gap-3">
             <span className="hidden items-center gap-2 rounded-full bg-white px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#c3222a] lg:inline-flex">
               <ShieldCheck className="h-4 w-4" /> Curadoria premium
@@ -144,9 +156,10 @@ export function Header() {
               Seleções
             </Link>
           </nav>
+            </div>
+          </div>
         </div>
       </div>
-
       {isClient ? createPortal(
         <div className={`fixed inset-0 z-[200] transition-all duration-300 sm:hidden ${mobileMenuOpen ? "pointer-events-auto bg-slate-950/55 backdrop-blur-sm" : "pointer-events-none bg-transparent"}`}>
           <button type="button" aria-label="Fechar menu" onClick={() => { setMobileMenuOpen(false); }} className="absolute inset-0" />
