@@ -327,20 +327,30 @@ TXT  mail._domainkey   v=DKIM1; k=rsa; p=<chave-gerada-pelo-stalwart>
 MX   @                 mail.stackway.xyz (priority 10)
 ```
 
-### 9.3 Testar a conexão
+### 9.3 Configuração final verificada
 
-Após configurar o Stalwart e DNS:
+✅ Testado e funcionando em 06/07/2026:
+
+```env
+SPRING_MAIL_HOST=mail.stackway.xyz
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=contato@baluarte.com
+SPRING_MAIL_PASSWORD=<senha-definida-no-stalwart>
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=mail.stackway.xyz
+```
+
+> ⚠️ `SSL_TRUST` é necessário porque o Stalwart usa certificado auto-assinado.
+> Quando migrar para certificado LetsEncrypt, remover essa linha.
+
+### 9.4 Testar a conexão
 
 ```bash
-# 1. Testar porta SMTP
-nc -zv mail.stackway.xyz 587
-
-# 2. Testar envio via endpoint admin (exige autenticação)
+# Via endpoint admin
 curl -X POST https://api.baluarte.com/api/v1/admin/email/test \
   -H "X-User-Id: <admin-id>" -H "X-User-Email: <admin-email>"
-
-# 3. Testar fluxo completo: fazer um pedido de teste e verificar
-#    se o email chega no inbox após confirmação de pagamento
 ```
 
 ### 9.4 Fallback de segurança

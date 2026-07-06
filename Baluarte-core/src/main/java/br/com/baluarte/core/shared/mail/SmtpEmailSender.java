@@ -23,7 +23,7 @@ public class SmtpEmailSender implements EmailSender {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.email.from:Baluarte <contato@baluarte.com>}")
+    @Value("${app.email.from:Baluarte <contato@dombaluarte.com.br>}")
     private String from;
 
     public SmtpEmailSender(JavaMailSender mailSender) {
@@ -90,7 +90,7 @@ public class SmtpEmailSender implements EmailSender {
               <hr style="border:none;border-top:1px solid #d9e2ef;margin:16px 0">
               <p style="color:#999;font-size:11px;text-align:center">
                  Baluarte — Artigos Esportivos<br>
-                 contato@baluarte.com
+                 contato@dombaluarte.com.br
               </p>
             </div>
             </body>

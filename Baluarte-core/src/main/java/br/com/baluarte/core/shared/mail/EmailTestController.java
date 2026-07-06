@@ -32,7 +32,7 @@ public class EmailTestController {
 
     private final JavaMailSender mailSender;
 
-    @Value("${app.email.from:Baluarte <contato@baluarte.com>}")
+    @Value("${app.email.from:Baluarte <contato@dombaluarte.com.br>}")
     private String from;
 
     public EmailTestController(JavaMailSender mailSender) {
