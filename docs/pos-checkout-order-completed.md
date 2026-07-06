@@ -296,15 +296,60 @@ APP_RESEND_API_KEY=re_xxxxxxxxxxxx
 APP_EMAIL_FROM=Baluarte <contato@baluarte.com>
 ```
 
-## 8. Próximos passos concretos
+## 8. Status da implementação
 
-1. **Adicionar dependência** `com.resend:resend-java` ao `pom.xml`
-2. **Criar interface** `EmailSender` em `shared/mail/EmailSender.java`
-3. **Implementar** `ResendEmailSender` em `shared/mail/ResendEmailSender.java`
-4. **Criar** `OrderCompletedConsumer` em `order/amqp/OrderCompletedConsumer.java`
-5. **Adicionar** `app.email.*` ao `.env.example`
-6. **Testar** fluxo completo: pagamento → webhook → `order.completed` → consumer → email no inbox
-7. **(Futuro)** Subir Stalwart Mail na VPS e trocar a config
+✅ **Dependência** `spring-boot-starter-mail` adicionada ao `pom.xml`
+✅ **Interface** `EmailSender` em `shared/mail/EmailSender.java`
+✅ **Implementação** `SmtpEmailSender` com template HTML de confirmação
+✅ **Consumer** `OrderCompletedConsumer` escutando fila `order.completed`
+✅ **Config** no `.env.example` (`SPRING_MAIL_*`)
+✅ **Endpoint de teste** `POST /api/v1/admin/email/test` (admin, envia email de teste)
+
+## 9. Configurar o Stalwart Mail — passos pendentes
+
+O Stalwart está rodando em `mail.stackway.xyz` (HTTPS responde) mas as portas
+SMTP (25, 465, 587) não estão acessíveis. É preciso configurar:
+
+### 9.1 No painel do Stalwart (`https://mail.stackway.xyz/account`)
+
+1. **Adicionar domínio** `baluarte.com` em Settings → Domains
+2. **Configurar DKIM** — gerar chave e adicionar registro TXT no DNS
+3. **Criar usuário SMTP** `contato@baluarte.com` com senha ou API token
+4. **Habilitar SMTP** na porta 587 com STARTTLS obrigatório
+5. **Liberar portas** no firewall da VPS: `ufw allow 587/tcp`
+
+### 9.2 No DNS do domínio `baluarte.com`
+
+```
+TXT  @                 v=spf1 mx ~all
+TXT  _dmarc            v=DMARC1; p=quarantine; rua=mailto:postmaster@baluarte.com
+TXT  mail._domainkey   v=DKIM1; k=rsa; p=<chave-gerada-pelo-stalwart>
+MX   @                 mail.stackway.xyz (priority 10)
+```
+
+### 9.3 Testar a conexão
+
+Após configurar o Stalwart e DNS:
+
+```bash
+# 1. Testar porta SMTP
+nc -zv mail.stackway.xyz 587
+
+# 2. Testar envio via endpoint admin (exige autenticação)
+curl -X POST https://api.baluarte.com/api/v1/admin/email/test \
+  -H "X-User-Id: <admin-id>" -H "X-User-Email: <admin-email>"
+
+# 3. Testar fluxo completo: fazer um pedido de teste e verificar
+#    se o email chega no inbox após confirmação de pagamento
+```
+
+### 9.4 Fallback de segurança
+
+Enquanto o SMTP não estiver configurado:
+- `SmtpEmailSender` não carrega (`@ConditionalOnProperty("spring.mail.host")`)
+- `OrderCompletedConsumer` processa sem enviar email (`@Autowired(required = false)`)
+- Nenhum erro, nenhuma fila parada — só o email não sai
+- Para ativar, basta configurar `SPRING_MAIL_HOST` no `.env` e reiniciar
 
 ## 9. Referências
 
