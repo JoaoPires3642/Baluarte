@@ -3,15 +3,12 @@ package br.com.baluarte.core.modules.checkout.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import br.com.baluarte.core.modules.checkout.application.SuperFreteWebhookService;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
-import br.com.baluarte.core.shared.api.ApiSuccessResponse;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -24,6 +21,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 class SuperFreteWebhookControllerTest {
@@ -40,7 +39,8 @@ class SuperFreteWebhookControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        controller = new SuperFreteWebhookController(orderRepository, objectMapper);
+        SuperFreteWebhookService service = new SuperFreteWebhookService(orderRepository, objectMapper);
+        controller = new SuperFreteWebhookController(service);
         setWebhookSecret(TEST_SECRET);
     }
 
@@ -128,9 +128,9 @@ class SuperFreteWebhookControllerTest {
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook(body, validSig(body));
+        controller.handleWebhook(body, validSig(body));
 
-        assertThat(result.data()).containsEntry("newStatus", "processing");
+        assertThat(order.getStatus()).isEqualTo("processing");
         assertThat(order.getTrackingCode()).isEqualTo("TRK123");
     }
 
@@ -146,9 +146,9 @@ class SuperFreteWebhookControllerTest {
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook(body, validSig(body));
+        controller.handleWebhook(body, validSig(body));
 
-        assertThat(result.data()).containsEntry("newStatus", "delivered");
+        assertThat(order.getStatus()).isEqualTo("delivered");
         assertThat(order.getTrackingCode()).isEqualTo("TRK456");
         assertThat(order.getTrackingUrl()).isEqualTo("http://track.me/456");
     }
@@ -164,23 +164,23 @@ class SuperFreteWebhookControllerTest {
             .thenReturn(Optional.of(order));
         when(orderRepository.save(order)).thenReturn(order);
 
-        var result = controller.handleWebhook(body, validSig(body));
+        controller.handleWebhook(body, validSig(body));
 
-        assertThat(result.data()).containsEntry("newStatus", "cancelled");
+        assertThat(order.getStatus()).isEqualTo("cancelled");
     }
 
     @Test
     void handleWebhook_ignoresUnknownEvent() throws Exception {
         String body = "{\"event\":\"unknown.event\",\"data\":{\"id\":\"sf-123\"}}";
+        CheckoutOrder order = createOrder("pending");
         when(objectMapper.readValue(eq(body), any(TypeReference.class)))
             .thenReturn(Map.of("event", "unknown.event", "data", Map.of("id", "sf-123")));
         when(orderRepository.findByShippingLabelId("sf-123"))
-            .thenReturn(Optional.of(createOrder("pending")));
+            .thenReturn(Optional.of(order));
 
-        var result = controller.handleWebhook(body, validSig(body));
+        controller.handleWebhook(body, validSig(body));
 
-        assertThat(result.data()).containsEntry("status", "ignored");
-        assertThat(result.data()).containsEntry("event", "unknown.event");
+        assertThat(order.getStatus()).isEqualTo("pending");
     }
 
     @Test

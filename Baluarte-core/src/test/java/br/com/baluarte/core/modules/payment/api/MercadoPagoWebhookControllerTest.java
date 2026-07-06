@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
+import br.com.baluarte.core.modules.payment.application.MercadoPagoWebhookService;
 import br.com.baluarte.core.modules.payment.application.PaymentGateway;
 import br.com.baluarte.core.modules.payment.application.PaymentRefundResult;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
@@ -53,24 +54,26 @@ class MercadoPagoWebhookControllerTest {
     @Mock
     private RestClient restClient;
     @Mock
-    private RestClient.RequestHeadersUriSpec requestGet;
+    private RestClient.RequestHeadersUriSpec<?> requestGet;
     @Mock
-    private RestClient.RequestHeadersSpec requestHeaders;
+    private RestClient.RequestHeadersSpec<?> requestHeaders;
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
+    private MercadoPagoWebhookService webhookService;
     private MercadoPagoWebhookController controller;
     private static final String WEBHOOK_SECRET = "test-webhook-secret";
 
     @BeforeEach
     void setUp() throws Exception {
         lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
-        controller = new MercadoPagoWebhookController(
+        webhookService = new MercadoPagoWebhookService(
             orderRepository, transactionRepository, variantRepository,
             paymentGateway, "https://api.mercadopago.com", transactionManager);
-        setField("mercadoPagoRestClient", restClient);
-        setField("accessToken", "test-access-token");
-        setField("webhookSecret", WEBHOOK_SECRET);
+        controller = new MercadoPagoWebhookController(webhookService);
+        setServiceField("mercadoPagoRestClient", restClient);
+        setServiceField("accessToken", "test-access-token");
+        setControllerField("webhookSecret", WEBHOOK_SECRET);
     }
 
     @Test
@@ -82,7 +85,7 @@ class MercadoPagoWebhookControllerTest {
 
     @Test
     void rejectsMissingWebhookSecret() throws Exception {
-        setField("webhookSecret", null);
+        setControllerField("webhookSecret", null);
 
         assertThatThrownBy(() -> controller.handleNotification(
             "mp-1", "ts=123,v1=abc", "req-1", Map.of()))
@@ -100,7 +103,7 @@ class MercadoPagoWebhookControllerTest {
 
     @Test
     void rejectsMissingAccessToken() throws Exception {
-        setField("accessToken", null);
+        setServiceField("accessToken", null);
         String signature = computeSignature("mp-1", "req-1", 12345);
 
         assertThatThrownBy(() -> controller.handleNotification(
@@ -144,9 +147,9 @@ class MercadoPagoWebhookControllerTest {
         when(orderRepository.findByCheckoutSessionId("session-1")).thenReturn(Optional.of(order));
         when(transactionRepository.findByOrderId(order.getOrderId())).thenReturn(Optional.empty());
 
-        var result = controller.handleNotification("mp-1", signature, "req-1", Map.of());
+        controller.handleNotification("mp-1", signature, "req-1", Map.of());
 
-        assertThat(result.data()).containsEntry("orderStatus", "paid");
+        assertThat(order.getStatus()).isEqualTo("paid");
         verify(orderRepository).save(order);
     }
 
@@ -160,9 +163,9 @@ class MercadoPagoWebhookControllerTest {
         when(orderRepository.findByCheckoutSessionId("session-1")).thenReturn(Optional.of(order));
         when(transactionRepository.findByOrderId(order.getOrderId())).thenReturn(Optional.empty());
 
-        var result = controller.handleNotification("mp-1", signature, "req-1", Map.of());
+        controller.handleNotification("mp-1", signature, "req-1", Map.of());
 
-        assertThat(result.data()).containsEntry("orderStatus", "cancelled");
+        assertThat(order.getStatus()).isEqualTo("cancelled");
         verify(orderRepository).save(order);
     }
 
@@ -184,9 +187,9 @@ class MercadoPagoWebhookControllerTest {
         String hash = computeSignatureRaw("mp-2", "req-2", ts);
         String sig = "ts=" + ts + ",v1=" + hash;
 
-        var result = controller.handleNotification("mp-2", sig, "req-2", Map.of());
+        controller.handleNotification("mp-2", sig, "req-2", Map.of());
 
-        assertThat(result.data()).containsEntry("orderStatus", "cancelled");
+        assertThat(order.getStatus()).isEqualTo("cancelled");
         verify(transactionRepository).save(any());
     }
 
@@ -199,9 +202,9 @@ class MercadoPagoWebhookControllerTest {
         when(orderRepository.findByCheckoutSessionId("session-1")).thenReturn(Optional.of(order));
         when(transactionRepository.findByOrderId(order.getOrderId())).thenReturn(Optional.empty());
 
-        var result = controller.handleNotification("mp-1", signature, "req-1", Map.of());
+        controller.handleNotification("mp-1", signature, "req-1", Map.of());
 
-        assertThat(result.data()).containsEntry("orderStatus", "pending_payment");
+        assertThat(order.getStatus()).isEqualTo("pending_payment");
         verify(orderRepository, never()).save(order);
     }
 
@@ -215,11 +218,12 @@ class MercadoPagoWebhookControllerTest {
         when(transactionRepository.findByOrderId(order.getOrderId())).thenReturn(Optional.empty());
 
         Map<String, Object> body = Map.of("data", Map.of("id", "mp-from-data"));
-        var result = controller.handleNotification(null, signature, "req-1", body);
+        controller.handleNotification(null, signature, "req-1", body);
 
-        assertThat(result.data()).containsEntry("orderStatus", "paid");
+        assertThat(order.getStatus()).isEqualTo("paid");
     }
 
+    @SuppressWarnings("unchecked")
     private void withMpResponse(Map<String, Object> mpOrder) {
         when(restClient.get()).thenReturn(requestGet);
         when(requestGet.uri(anyString(), any(Object.class))).thenReturn(requestHeaders);
@@ -258,10 +262,16 @@ class MercadoPagoWebhookControllerTest {
         return order;
     }
 
-    private void setField(String name, Object value) throws Exception {
+    private void setControllerField(String name, Object value) throws Exception {
         Field field = MercadoPagoWebhookController.class.getDeclaredField(name);
         field.setAccessible(true);
         field.set(controller, value);
+    }
+
+    private void setServiceField(String name, Object value) throws Exception {
+        Field field = MercadoPagoWebhookService.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(webhookService, value);
     }
 
     private CheckoutOrder order(String status) {

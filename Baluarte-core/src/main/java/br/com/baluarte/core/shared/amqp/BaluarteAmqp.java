@@ -29,6 +29,7 @@ public final class BaluarteAmqp {
     public static final String PAYMENT_QUEUE = "baluarte.payment.events";
     public static final String PAYMENT_DLQ = "baluarte.payment.dlq";
     public static final String PAYMENT_ROUTING_KEY = "payment.#";
+    public static final String PAYMENT_RECEIVED = "payment.received";
 
     public static final String SHIPPING_QUEUE = "baluarte.shipping.events";
     public static final String SHIPPING_DLQ = "baluarte.shipping.dlq";
@@ -37,4 +38,5 @@ public final class BaluarteAmqp {
     public static final String ORDER_QUEUE = "baluarte.order.lifecycle";
     public static final String ORDER_DLQ = "baluarte.order.dlq";
     public static final String ORDER_ROUTING_KEY = "order.#";
+    public static final String ORDER_COMPLETED = "order.completed";
 }
