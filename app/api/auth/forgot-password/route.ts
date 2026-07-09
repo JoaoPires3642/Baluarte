@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
+const API_BASE = process.env.BACKEND_INTERNAL_URL || "http://localhost:8080/api/v1"
 
 export async function POST(request: NextRequest) {
   let email: string
