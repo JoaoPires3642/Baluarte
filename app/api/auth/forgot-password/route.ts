@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import fs from "fs"
+import path from "path"
 
 export const runtime = "nodejs"
 
@@ -6,6 +8,11 @@ const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
 const RESEND_API_KEY = process.env.RESEND_API_KEY!
+
+const passwordResetTemplate = fs.readFileSync(
+  path.join(process.cwd(), "src/templates/password-reset.html"),
+  "utf-8"
+)
 
 export async function POST(request: NextRequest) {
   let email: string
@@ -67,6 +74,8 @@ export async function POST(request: NextRequest) {
 
     const resetLink = `https://dombaluarte.com.br/redefinir-senha?token=${changePasswordId}`
 
+    const html = passwordResetTemplate.replace("{{resetUrl}}", resetLink)
+
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -77,26 +86,8 @@ export async function POST(request: NextRequest) {
         from: "Baluarte <contato@dombaluarte.com.br>",
         to: [email.trim().toLowerCase()],
         subject: "Redefina sua senha - Baluarte",
-        html: `<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden;">
-    <div style="background: #0f274d; padding: 20px; text-align: center;">
-      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Baluarte</h1>
-    </div>
-    <div style="padding: 30px;">
-      <h2 style="color: #0f274d;">Redefinir senha</h2>
-      <p style="color: #475569;">Recebemos uma solicita\u00e7\u00e3o para redefinir sua senha. Clique no bot\u00e3o abaixo para criar uma nova senha:</p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetLink}" style="background: #0f274d; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;">Redefinir senha</a>
-      </div>
-      <p style="color: #475569; font-size: 14px;">Se voc\u00ea n\u00e3o solicitou esta altera\u00e7\u00e3o, ignore este email.</p>
-      <p style="color: #94a3b8; font-size: 12px;">Este link expira em 10 minutos.</p>
-    </div>
-  </div>
-</body>
-</html>`,
-        text: `Redefina sua senha - Baluarte\n\nRecebemos uma solicita\u00e7\u00e3o para redefinir sua senha. Copie e cole o link abaixo no seu navegador:\n\n${resetLink}\n\nSe voc\u00ea n\u00e3o solicitou esta altera\u00e7\u00e3o, ignore este email.\n\nEste link expira em 10 minutos.`,
+        html,
+        text: `Redefina sua senha - Baluarte\n\nCopie e cole o link abaixo no seu navegador:\n\n${resetLink}\n\nSe você não solicitou esta alteração, ignore este email.\n\nEste link expira em 10 minutos.`,
       }),
     })
 
