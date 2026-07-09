@@ -6,6 +6,7 @@ const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
 const API_BASE = process.env.BACKEND_INTERNAL_URL || "http://localhost:8080/api/v1"
+const PROXY_SECRET = process.env.PROXY_SECRET || ""
 
 export async function POST(request: NextRequest) {
   let email: string
@@ -69,7 +70,10 @@ export async function POST(request: NextRequest) {
       `${API_BASE}/auth/send-password-reset`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Proxy-Secret": PROXY_SECRET,
+        },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           changePasswordId,
