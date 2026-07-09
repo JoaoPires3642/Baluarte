@@ -18,7 +18,7 @@ as opções de infraestrutura para envio de email.
 order.completed (AMQP)
     │
     ├── Consumer: Email de confirmação
-    │       envia email transacional pro cliente
+    │       tenta SMTP (Mailu), fallback Resend
     │
     ├── Consumer: Baixa de estoque (já feito no checkout, pode ser redundante)
     │
@@ -46,146 +46,80 @@ consumer chama `ShippingLabelGenerationService` e solicita a etiqueta no SuperFr
 O job de polling vira **fallback**: reenvia pedidos cuja etiqueta não foi gerada em X minutos
 (recuperação de falhas transitórias).
 
-## 3. Estratégia de Email — Resend (curto prazo) vs Stalwart Mail (longo prazo)
+## 3. Templates com MJML
 
-### 3.1 Resend (HTTP API)
+Os templates de email são escritos em **MJML** e compilados para HTML estático.
 
-**Prós:**
-- Zero infraestrutura: API HTTP, biblioteca Java oficial (`com.resend:resend-java`)
-- Não precisa gerenciar servidor SMTP, DKIM, SPF, reputação de IP
-- Dashboard com analytics de entrega, bounce, spam
-- Free tier: 100 emails/dia (suficiente pra começar)
+### 3.1 Fluxo de templates
 
-**Contras:**
-- Custo por email após o free tier ($0.03-0.05/email no plano pago)
-- Dependência externa (se a API cair, emails não saem)
-- Dados de clientes passam por infra de terceiros
-
-**Implementação:**
-
-```java
-// pom.xml
-<dependency>
-    <groupId>com.resend</groupId>
-    <artifactId>resend-java</artifactId>
-    <version>3.1.0</version>
-</dependency>
+```
+Baluarte-core/mjml/*.mjml  →  npm run mjml  →  src/main/resources/templates/email/*.html
 ```
 
-```java
-// application.yml
-app:
-  email:
-    provider: resend
-    resend:
-      api-key: ${APP_RESEND_API_KEY:}
-      from: "Baluarte <contato@baluarte.com>"
-```
+O HTML compilado fica no classpath do Spring Boot. O Java carrega na inicialização
+(`@PostConstruct`) e faz apenas substituição de placeholders `{{var}}`.
 
-```java
-// ResendEmailSender.java
-@Service
-@ConditionalOnProperty(name = "app.email.provider", havingValue = "resend")
-public class ResendEmailSender implements EmailSender {
-    private final Resend resend;
+### 3.2 Vantagens
 
-    public void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order) {
-        resend.emails().send(Email.builder()
-            .from(appEmailFrom)
-            .to(order.getCustomerEmail())
-            .subject("Pedido BAL" + order.getOrderNumber() + " confirmado!")
-            .html(buildConfirmationHtml(order))
-            .build());
-    }
-}
-```
+- Design responsivo pronto (MJML cuida dos clients de email)
+- Template separado do código Java
+- Edita o MJML, roda `npm run mjml`, reinicia o backend
+- Zero dependência nova no Java
 
-### 3.2 Stalwart Mail (SMTP self-hosted na VPS)
-
-**Stalwart Mail** é um servidor de email completo, open source (AGPL-3.0), escrito em Rust.
-Roda como um único binário, consome ~50-100MB RAM, suporta SMTP, IMAP, JMAP, Sieve.
-
-**Prós:**
-- **Custo zero por email** — sem limite de volume, sem taxa por mensagem
-- Dados ficam na VPS (LGPD-friendly, sem terceiros)
-- Suporte nativo a DKIM, SPF, DMARC, TLS — entregabilidade equivalente ao Resend
-- API REST e SMTP — compatível com qualquer linguagem
-- Pode ser o servidor de email completo do domínio `baluarte.com`
-
-**Contras:**
-- Precisa configurar e manter (binário, systemd, DNS: DKIM/SPF/DMARC)
-- Reputação de IP: VPS novas podem ter IP em blacklists. Leva semanas pra aquecer.
-- Responsabilidade operacional (backup, atualização, monitoramento)
-
-**Setup na VPS (Contabo):**
+### 3.3 Como criar/editar
 
 ```bash
-# Download e instalação
-curl -L https://github.com/stalwartlabs/mail-server/releases/download/v0.8.0/stalwart-mail-ubuntu-22.04-amd64.tar.gz | tar xz
-./stalwart-mail --config=/etc/stalwart/config.toml
+# Editar o MJML
+vim Baluarte-core/mjml/order-confirmation.mjml
 
-# DNS (no provedor do domínio baluarte.com)
-# Tipo TXT  @       v=spf1 mx ~all
-# Tipo TXT  _dmarc   v=DMARC1; p=quarantine; rua=mailto:postmaster@baluarte.com
-# Tipo TXT  mail._domainkey  v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA...
-# Tipo MX   @       mail.baluarte.com (priority 10)
-# Tipo A    mail     <IP da VPS Contabo>
+# Compilar
+cd Baluarte && npm run mjml
+
+# Reiniciar o core
+# O novo HTML é carregado no @PostConstruct
 ```
 
-**Implementação (Spring Boot + JavaMailSender):**
+Placeholders disponíveis: `{{orderNumber}}`, `{{itemsHtml}}`, `{{shipping}}`, `{{total}}`
 
-O Spring Boot já tem suporte nativo a SMTP via `spring-boot-starter-mail`.
-Basta trocar a config sem mudar uma linha de código do consumer.
+## 4. Estratégia de Email — Mailu (SMTP) com fallback Resend
 
-```java
-// application.yml — Stalwart na VPS
-app:
-  email:
-    provider: smtp
+### 4.1 Mailu SMTP (primário)
 
-spring:
-  mail:
-    host: ${APP_SMTP_HOST:mail.baluarte.com}
-    port: ${APP_SMTP_PORT:587}
-    username: ${APP_SMTP_USERNAME:contato@baluarte.com}
-    password: ${APP_SMTP_PASSWORD:}
-    properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
-      mail.smtp.starttls.required: true
+**Mailu** é o servidor SMTP rodando em `mail.stackway.xyz:587`.
+Envio via `spring-boot-starter-mail` (`JavaMailSender`).
+
+**Prós:**
+- Custo zero por email
+- Dados na VPS (LGPD-friendly)
+- Controle total da infra
+
+**Contras:**
+- Precisa manter o servidor
+- IP precisa de reputação
+
+### 4.2 Resend (fallback)
+
+Usado **apenas** quando o SMTP falha. Chamada HTTP direta para `api.resend.com/emails`
+sem dependência Java adicional (usa `java.net.http.HttpClient`).
+
+Ativado configurando `APP_RESEND_API_KEY` no `.env`.
+
+### 4.3 Arquitetura
+
+```
+FallbackEmailSender (implements EmailSender)
+    │
+    ├── SmtpEmailSender (primário, tenta primeiro)
+    │       └── @ConditionalOnProperty("spring.mail.host")
+    │
+    └── ResendEmailSender (fallback, se SMTP lançar exceção)
+            └── @ConditionalOnProperty("app.email.resend.api-key")
 ```
 
-```java
-// SmtpEmailSender.java
-@Service
-@ConditionalOnProperty(name = "app.email.provider", havingValue = "smtp")
-public class SmtpEmailSender implements EmailSender {
-    private final JavaMailSender mailSender;
+O `OrderCompletedConsumer` injeta `EmailSender` (que é o `FallbackEmailSender`).
+Se SMTP falhar → tenta Resend. Se ambos falharem → loga erro, não quebra a fila.
 
-    public void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order) {
-        MimeMessage msg = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-        helper.setTo(order.getCustomerEmail());
-        helper.setSubject("Pedido BAL" + order.getOrderNumber() + " confirmado!");
-        helper.setText(buildConfirmationHtml(order), true);
-        mailSender.send(msg);
-    }
-}
-```
-
-### 3.3 Interface comum — troca de provider sem mexer no consumer
-
-```java
-// EmailSender.java — interface única
-public interface EmailSender {
-    void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order);
-}
-```
-
-O consumer injeta `EmailSender` e não sabe se é Resend ou SMTP. A troca é feita
-por config (`app.email.provider=resend` → `app.email.provider=smtp`), sem deploy de código.
-
-## 4. Consumer `OrderCompletedConsumer` — estrutura prevista
+## 5. Consumer `OrderCompletedConsumer` — estrutura atual
 
 ```java
 @Component
@@ -230,7 +164,7 @@ public class OrderCompletedConsumer {
 }
 ```
 
-## 5. Comparativo de custo — Resend vs Stalwart
+## 6. Comparativo de custo — Mailu vs Resend
 
 | Cenário | Resend | Stalwart Mail |
 |---------|--------|---------------|
@@ -257,95 +191,37 @@ public class OrderCompletedConsumer {
 - Deixar Resend como fallback: se SMTP falhar, tenta Resend
 - Aquecer IP da VPS gradualmente (enviar emails transacionais primeiro, marketing depois)
 
-### Estratégia de fallback duplo
-
-```java
-@Service
-public class FallbackEmailSender implements EmailSender {
-
-    private final SmtpEmailSender primary;     // Stalwart
-    private final ResendEmailSender fallback;  // Resend
-
-    @Override
-    public void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order) {
-        try {
-            primary.sendOrderConfirmation(event, order);
-        } catch (Exception e) {
-            log.warn("Primary email failed, falling back to Resend. orderId={}", order.getOrderId());
-            fallback.sendOrderConfirmation(event, order);
-        }
-    }
-}
-```
-
-## 7. Variáveis de ambiente previstas
+## 7. Variáveis de ambiente
 
 ```env
-# --- Email provider (curto prazo: Resend) ---
-APP_EMAIL_PROVIDER=resend
-APP_RESEND_API_KEY=re_xxxxxxxxxxxx
+# --- Email (Mailu SMTP) ---
+APP_EMAIL_FROM=Baluarte <contato@dombaluarte.com.br>
+SPRING_MAIL_HOST=mail.stackway.xyz
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=contato@dombaluarte.com.br
+SPRING_MAIL_PASSWORD=xxxxxxxx
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
+SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=mail.stackway.xyz
 
-# --- Email provider (longo prazo: Stalwart SMTP) ---
-# APP_EMAIL_PROVIDER=smtp
-# APP_SMTP_HOST=mail.baluarte.com
-# APP_SMTP_PORT=587
-# APP_SMTP_USERNAME=contato@baluarte.com
-# APP_SMTP_PASSWORD=xxxxxxxx
-
-# --- Remetente padrão ---
-APP_EMAIL_FROM=Baluarte <contato@baluarte.com>
+# --- Resend (fallback opcional) ---
+# APP_RESEND_API_KEY=re_xxxxxxxxxxxx
 ```
 
 ## 8. Status da implementação
 
 ✅ **Dependência** `spring-boot-starter-mail` adicionada ao `pom.xml`
 ✅ **Interface** `EmailSender` em `shared/mail/EmailSender.java`
-✅ **Implementação** `SmtpEmailSender` com template HTML de confirmação
+✅ **Template MJML** em `mjml/order-confirmation.mjml` compilado via `npm run mjml`
+✅ **Implementação SMTP** `SmtpEmailSender` lê HTML compilado do classpath
+✅ **Implementação Resend** `ResendEmailSender` (fallback via HTTP API)
+✅ **Fallback** `FallbackEmailSender` tenta SMTP → fallback Resend
 ✅ **Consumer** `OrderCompletedConsumer` escutando fila `order.completed`
-✅ **Config** no `.env.example` (`SPRING_MAIL_*`)
+✅ **Config** no `.env` / `.env.example` (`SPRING_MAIL_*`, `APP_RESEND_API_KEY`)
 ✅ **Endpoint de teste** `POST /api/v1/admin/email/test` (admin, envia email de teste)
 
-## 9. Configurar o Stalwart Mail — passos pendentes
-
-O Stalwart está rodando em `mail.stackway.xyz` (HTTPS responde) mas as portas
-SMTP (25, 465, 587) não estão acessíveis. É preciso configurar:
-
-### 9.1 No painel do Stalwart (`https://mail.stackway.xyz/account`)
-
-1. **Adicionar domínio** `baluarte.com` em Settings → Domains
-2. **Configurar DKIM** — gerar chave e adicionar registro TXT no DNS
-3. **Criar usuário SMTP** `contato@baluarte.com` com senha ou API token
-4. **Habilitar SMTP** na porta 587 com STARTTLS obrigatório
-5. **Liberar portas** no firewall da VPS: `ufw allow 587/tcp`
-
-### 9.2 No DNS do domínio `baluarte.com`
-
-```
-TXT  @                 v=spf1 mx ~all
-TXT  _dmarc            v=DMARC1; p=quarantine; rua=mailto:postmaster@baluarte.com
-TXT  mail._domainkey   v=DKIM1; k=rsa; p=<chave-gerada-pelo-stalwart>
-MX   @                 mail.stackway.xyz (priority 10)
-```
-
-### 9.3 Configuração final verificada
-
-✅ Testado e funcionando em 06/07/2026:
-
-```env
-SPRING_MAIL_HOST=mail.stackway.xyz
-SPRING_MAIL_PORT=587
-SPRING_MAIL_USERNAME=contato@baluarte.com
-SPRING_MAIL_PASSWORD=<senha-definida-no-stalwart>
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=mail.stackway.xyz
-```
-
-> ⚠️ `SSL_TRUST` é necessário porque o Stalwart usa certificado auto-assinado.
-> Quando migrar para certificado LetsEncrypt, remover essa linha.
-
-### 9.4 Testar a conexão
+## 9. Testar a conexão
 
 ```bash
 # Via endpoint admin
@@ -353,15 +229,14 @@ curl -X POST https://api.baluarte.com/api/v1/admin/email/test \
   -H "X-User-Id: <admin-id>" -H "X-User-Email: <admin-email>"
 ```
 
-### 9.4 Fallback de segurança
+### Fallback de segurança
 
-Enquanto o SMTP não estiver configurado:
-- `SmtpEmailSender` não carrega (`@ConditionalOnProperty("spring.mail.host")`)
+- Se SMTP não configurado: `SmtpEmailSender` não carrega, logo `FallbackEmailSender` também não
 - `OrderCompletedConsumer` processa sem enviar email (`@Autowired(required = false)`)
 - Nenhum erro, nenhuma fila parada — só o email não sai
-- Para ativar, basta configurar `SPRING_MAIL_HOST` no `.env` e reiniciar
+- Se Resend não configurado + SMTP falha: loga erro, não quebra fluxo
 
-## 9. Referências
+## 10. Referências
 
 - Stalwart Mail: https://github.com/stalwartlabs/mail-server
 - Resend Java SDK: https://github.com/resend/resend-java

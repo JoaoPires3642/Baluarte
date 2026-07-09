@@ -5,40 +5,44 @@ import br.com.baluarte.core.modules.order.amqp.OrderCompletedEvent;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProduct;
 import br.com.baluarte.core.modules.adminproduct.domain.AdminProductRepository;
 import jakarta.annotation.PostConstruct;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@ConditionalOnProperty("spring.mail.host")
-public class SmtpEmailSender {
+@ConditionalOnProperty("app.email.resend.api-key")
+public class ResendEmailSender {
 
-    private static final Logger log = LoggerFactory.getLogger(SmtpEmailSender.class);
+    private static final Logger log = LoggerFactory.getLogger(ResendEmailSender.class);
 
-    private final JavaMailSender mailSender;
+    private static final String RESEND_API = "https://api.resend.com/emails";
+
+    private final HttpClient http = HttpClient.newHttpClient();
     private final AdminProductRepository productRepository;
+
+    @Value("${app.email.resend.api-key}")
+    private String apiKey;
 
     @Value("${app.email.from:Baluarte <contato@dombaluarte.com.br>}")
     private String from;
 
     private String confirmationTemplate;
 
-    public SmtpEmailSender(JavaMailSender mailSender, AdminProductRepository productRepository) {
-        this.mailSender = mailSender;
+    public ResendEmailSender(AdminProductRepository productRepository) {
         this.productRepository = productRepository;
     }
 
@@ -47,41 +51,21 @@ public class SmtpEmailSender {
         try {
             ClassPathResource resource = new ClassPathResource("templates/email/order-confirmation.html");
             confirmationTemplate = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
-            log.info("email.template loaded template=order-confirmation size={}",
+            log.info("email.resend.template loaded template=order-confirmation size={}",
                 confirmationTemplate.length());
         } catch (IOException e) {
-            log.error("email.template load=failed template=order-confirmation reason={}",
+            log.error("email.resend.template load=failed template=order-confirmation reason={}",
                 e.getMessage());
         }
     }
 
     public void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order) {
         if (confirmationTemplate == null) {
-            log.warn("email.order_confirmation event=skipped reason=template_not_loaded orderId={}",
+            log.warn("email.resend.order_confirmation event=skipped reason=template_not_loaded orderId={}",
                 order.getOrderId());
             return;
         }
 
-        try {
-            MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-            helper.setFrom(from);
-            helper.setTo(order.getPayerEmail());
-            helper.setSubject("Pedido BAL" + order.getOrderNumber() + " confirmado!");
-            helper.setText(buildConfirmationHtml(order), true);
-
-            mailSender.send(msg);
-
-            log.info("email.order_confirmation event=sent orderId={} to={}",
-                order.getOrderId(), order.getPayerEmail());
-        } catch (MessagingException e) {
-            log.error("email.order_confirmation event=failed orderId={} to={} reason={}",
-                order.getOrderId(), order.getPayerEmail(), e.getMessage());
-            throw new RuntimeException("Falha ao enviar email de confirmacao", e);
-        }
-    }
-
-    private String buildConfirmationHtml(CheckoutOrder order) {
         String orderNumber = order.getOrderNumber() != null
             ? order.getOrderNumber().toString() : String.valueOf(order.getOrderId());
 
@@ -109,11 +93,51 @@ public class SmtpEmailSender {
         BigDecimal total = order.getTotalAmount() != null
             ? order.getTotalAmount() : BigDecimal.ZERO;
 
-        return confirmationTemplate
+        String html = confirmationTemplate
             .replace("{{orderNumber}}", orderNumber)
             .replace("{{itemsHtml}}", itemsHtml)
             .replace("{{shipping}}", shipping.toPlainString())
             .replace("{{total}}", total.toPlainString());
+
+        try {
+            String body = """
+                {"from":"%s","to":["%s"],"subject":"Pedido BAL%s confirmado!","html":"%s"}
+                """.formatted(
+                    escape(from),
+                    escape(order.getPayerEmail()),
+                    escape(orderNumber),
+                    escape(html));
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(RESEND_API))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("email.resend.order_confirmation event=sent orderId={} to={}",
+                    order.getOrderId(), order.getPayerEmail());
+            } else {
+                log.error("email.resend.order_confirmation event=failed orderId={} status={} body={}",
+                    order.getOrderId(), response.statusCode(), response.body());
+                throw new RuntimeException("Resend API error: " + response.statusCode());
+            }
+        } catch (IOException | InterruptedException e) {
+            log.error("email.resend.order_confirmation event=failed orderId={} to={} reason={}",
+                order.getOrderId(), order.getPayerEmail(), e.getMessage());
+            throw new RuntimeException("Falha ao enviar email via Resend", e);
+        }
+    }
+
+    private static String escape(String s) {
+        return s.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t");
     }
 
     private String resolveProductImage(String productId) {
@@ -132,7 +156,7 @@ public class SmtpEmailSender {
                    "style=\"border-radius:8px;display:block;object-fit:cover;\" />" +
                    "</td>";
         } catch (Exception e) {
-            log.warn("email.product_image not_found productId={} reason={}", productId, e.getMessage());
+            log.warn("email.resend.product_image not_found productId={} reason={}", productId, e.getMessage());
             return "";
         }
     }

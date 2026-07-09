@@ -5,7 +5,7 @@ import br.com.baluarte.core.modules.order.amqp.OrderCompletedEvent;
 
 /**
  * Contrato para envio de emails transacionais do Baluarte.
- * Implementacoes: SmtpEmailSender (Stalwart/qualquer SMTP), futuramente Resend.
+ * Implementacao unica: FallbackEmailSender (tenta SMTP, fallback Resend).
  */
 public interface EmailSender {
 
