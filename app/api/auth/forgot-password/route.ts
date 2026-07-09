@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
-const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || "http://localhost:8080"
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/v1"
 
 export async function POST(request: NextRequest) {
   let email: string
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const backendRes = await fetch(
-      `${BACKEND_URL}/api/v1/auth/send-password-reset`,
+      `${API_BASE}/auth/send-password-reset`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
