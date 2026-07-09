@@ -43,4 +43,26 @@ public class FallbackEmailSender implements EmailSender {
             }
         }
     }
+
+    @Override
+    public void sendPasswordReset(String toEmail, String resetLink) {
+        try {
+            primary.sendPasswordReset(toEmail, resetLink);
+        } catch (Exception e) {
+            log.warn("email.fallback.password_reset switching_to_resend to={} reason={}",
+                toEmail, e.getMessage());
+
+            if (fallback == null) {
+                log.error("email.fallback.password_reset no_fallback_available to={}", toEmail);
+                return;
+            }
+
+            try {
+                fallback.sendPasswordReset(toEmail, resetLink);
+            } catch (Exception f) {
+                log.error("email.fallback.password_reset both_failed to={} smtp_reason={} resend_reason={}",
+                    toEmail, e.getMessage(), f.getMessage());
+            }
+        }
+    }
 }

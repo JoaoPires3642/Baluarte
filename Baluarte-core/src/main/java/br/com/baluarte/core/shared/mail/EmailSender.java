@@ -9,8 +9,7 @@ import br.com.baluarte.core.modules.order.amqp.OrderCompletedEvent;
  */
 public interface EmailSender {
 
-    /**
-     * Envia o email de confirmacao de pedido para o cliente.
-     */
     void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order);
+
+    void sendPasswordReset(String toEmail, String resetLink);
 }

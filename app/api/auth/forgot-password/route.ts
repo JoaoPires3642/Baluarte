@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import fs from "fs"
-import path from "path"
 
 export const runtime = "nodejs"
 
 const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
-const RESEND_API_KEY = process.env.RESEND_API_KEY!
-
-const passwordResetTemplate = fs.readFileSync(
-  path.join(process.cwd(), "src/templates/password-reset.html"),
-  "utf-8"
-)
+const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || "http://localhost:8080"
 
 export async function POST(request: NextRequest) {
   let email: string
@@ -72,26 +65,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const resetLink = `https://dombaluarte.com.br/redefinir-senha?token=${changePasswordId}`
+    const backendRes = await fetch(
+      `${BACKEND_URL}/api/v1/auth/send-password-reset`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          changePasswordId,
+        }),
+      }
+    )
 
-    const html = passwordResetTemplate.replace("{{resetUrl}}", resetLink)
-
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Baluarte <contato@dombaluarte.com.br>",
-        to: [email.trim().toLowerCase()],
-        subject: "Redefina sua senha - Baluarte",
-        html,
-        text: `Redefina sua senha - Baluarte\n\nCopie e cole o link abaixo no seu navegador:\n\n${resetLink}\n\nSe você não solicitou esta alteração, ignore este email.\n\nEste link expira em 10 minutos.`,
-      }),
-    })
-
-    if (!resendRes.ok) {
+    if (!backendRes.ok) {
       return NextResponse.json(
         { error: "Erro ao enviar email" },
         { status: 502 }

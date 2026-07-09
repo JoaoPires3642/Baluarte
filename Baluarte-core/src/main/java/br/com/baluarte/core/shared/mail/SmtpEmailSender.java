@@ -36,6 +36,7 @@ public class SmtpEmailSender {
     private String from;
 
     private String confirmationTemplate;
+    private String passwordResetTemplate;
 
     public SmtpEmailSender(JavaMailSender mailSender, AdminProductRepository productRepository) {
         this.mailSender = mailSender;
@@ -44,14 +45,19 @@ public class SmtpEmailSender {
 
     @PostConstruct
     void loadTemplates() {
+        confirmationTemplate = loadTemplate("templates/email/order-confirmation.html");
+        passwordResetTemplate = loadTemplate("templates/email/password-reset.html");
+    }
+
+    private String loadTemplate(String path) {
         try {
-            ClassPathResource resource = new ClassPathResource("templates/email/order-confirmation.html");
-            confirmationTemplate = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
-            log.info("email.template loaded template=order-confirmation size={}",
-                confirmationTemplate.length());
+            ClassPathResource resource = new ClassPathResource(path);
+            String html = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
+            log.info("email.template loaded path={} size={}", path, html.length());
+            return html;
         } catch (IOException e) {
-            log.error("email.template load=failed template=order-confirmation reason={}",
-                e.getMessage());
+            log.error("email.template load=failed path={} reason={}", path, e.getMessage());
+            return null;
         }
     }
 
@@ -78,6 +84,29 @@ public class SmtpEmailSender {
             log.error("email.order_confirmation event=failed orderId={} to={} reason={}",
                 order.getOrderId(), order.getPayerEmail(), e.getMessage());
             throw new RuntimeException("Falha ao enviar email de confirmacao", e);
+        }
+    }
+
+    public void sendPasswordReset(String toEmail, String resetLink) {
+        if (passwordResetTemplate == null) {
+            log.warn("email.password_reset event=skipped reason=template_not_loaded to={}", toEmail);
+            return;
+        }
+
+        try {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(toEmail);
+            helper.setSubject("Redefina sua senha - Baluarte");
+            helper.setText(passwordResetTemplate.replace("{{resetUrl}}", resetLink), true);
+
+            mailSender.send(msg);
+
+            log.info("email.password_reset event=sent to={}", toEmail);
+        } catch (MessagingException e) {
+            log.error("email.password_reset event=failed to={} reason={}", toEmail, e.getMessage());
+            throw new RuntimeException("Falha ao enviar email de reset", e);
         }
     }
 

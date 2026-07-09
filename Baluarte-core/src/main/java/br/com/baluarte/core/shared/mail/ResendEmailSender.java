@@ -41,6 +41,7 @@ public class ResendEmailSender {
     private String from;
 
     private String confirmationTemplate;
+    private String passwordResetTemplate;
 
     public ResendEmailSender(AdminProductRepository productRepository) {
         this.productRepository = productRepository;
@@ -48,14 +49,19 @@ public class ResendEmailSender {
 
     @PostConstruct
     void loadTemplates() {
+        confirmationTemplate = loadTemplate("templates/email/order-confirmation.html");
+        passwordResetTemplate = loadTemplate("templates/email/password-reset.html");
+    }
+
+    private String loadTemplate(String path) {
         try {
-            ClassPathResource resource = new ClassPathResource("templates/email/order-confirmation.html");
-            confirmationTemplate = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
-            log.info("email.resend.template loaded template=order-confirmation size={}",
-                confirmationTemplate.length());
+            ClassPathResource resource = new ClassPathResource(path);
+            String html = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
+            log.info("email.resend.template loaded path={} size={}", path, html.length());
+            return html;
         } catch (IOException e) {
-            log.error("email.resend.template load=failed template=order-confirmation reason={}",
-                e.getMessage());
+            log.error("email.resend.template load=failed path={} reason={}", path, e.getMessage());
+            return null;
         }
     }
 
@@ -129,6 +135,42 @@ public class ResendEmailSender {
             log.error("email.resend.order_confirmation event=failed orderId={} to={} reason={}",
                 order.getOrderId(), order.getPayerEmail(), e.getMessage());
             throw new RuntimeException("Falha ao enviar email via Resend", e);
+        }
+    }
+
+    public void sendPasswordReset(String toEmail, String resetLink) {
+        if (passwordResetTemplate == null) {
+            log.warn("email.resend.password_reset event=skipped reason=template_not_loaded to={}", toEmail);
+            return;
+        }
+
+        String html = passwordResetTemplate.replace("{{resetUrl}}", resetLink);
+
+        try {
+            String body = """
+                {"from":"%s","to":["%s"],"subject":"Redefina sua senha - Baluarte","html":"%s"}
+                """.formatted(escape(from), escape(toEmail), escape(html));
+
+            sendToResend(body, toEmail);
+            log.info("email.resend.password_reset event=sent to={}", toEmail);
+        } catch (IOException | InterruptedException e) {
+            log.error("email.resend.password_reset event=failed to={} reason={}", toEmail, e.getMessage());
+            throw new RuntimeException("Falha ao enviar email de reset via Resend", e);
+        }
+    }
+
+    private void sendToResend(String body, String toEmail) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(RESEND_API))
+            .header("Authorization", "Bearer " + apiKey)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new RuntimeException("Resend API error: " + response.statusCode() + " " + response.body());
         }
     }
 
