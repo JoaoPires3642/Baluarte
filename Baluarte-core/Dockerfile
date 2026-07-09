@@ -6,6 +6,7 @@ COPY .mvn .mvn
 COPY mvnw mvnw
 COPY mvnw.cmd mvnw.cmd
 COPY src src
+ENV SPRING_MAIL_HOST=build-placeholder
 RUN mvn -B -Pnative -DskipTests native:compile
 
 FROM debian:bookworm-slim
