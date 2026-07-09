@@ -19,7 +19,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -56,7 +55,7 @@ public class ResendEmailSender {
     private String loadTemplate(String path) {
         try {
             ClassPathResource resource = new ClassPathResource(path);
-            String html = Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8);
+            String html = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             log.info("email.resend.template loaded path={} size={}", path, html.length());
             return html;
         } catch (IOException e) {
