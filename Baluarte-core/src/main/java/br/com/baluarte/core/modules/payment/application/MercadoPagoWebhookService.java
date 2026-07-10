@@ -28,6 +28,8 @@ import java.util.UUID;
 import br.com.baluarte.core.modules.order.amqp.OrderCompletedEvent;
 import br.com.baluarte.core.modules.order.amqp.OrderEventPublisher;
 import br.com.baluarte.core.shared.amqp.BaluarteAmqp;
+import br.com.baluarte.core.shared.mail.PaymentRejectionMessages;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 
 /**
  * Processa webhooks do Mercado Pago: busca a order via API do MP e aplica
@@ -52,6 +54,9 @@ public class MercadoPagoWebhookService {
 
     @Autowired(required = false)
     private OrderEventPublisher orderEventPublisher;
+
+    @Autowired(required = false)
+    private TransactionalEmailService emailService;
 
     @Value("${app.payment.mercadopago.access-token:}")
     private String accessToken;
@@ -165,6 +170,7 @@ public class MercadoPagoWebhookService {
 
         if (STATUS_CANCELLED.equals(nextStatus) && "pending_payment".equals(previousStatus)) {
             releaseOrderStock(order);
+            sendPaymentRejectedEmail(order, paymentStatusDetail);
         }
 
         if ("paid".equals(nextStatus) && !"paid".equals(previousStatus) && orderEventPublisher != null) {
@@ -282,6 +288,16 @@ public class MercadoPagoWebhookService {
             } catch (IllegalArgumentException ignored) {
                 // Invalid historic item ids should not break webhook acknowledgement.
             }
+        }
+    }
+
+    private void sendPaymentRejectedEmail(CheckoutOrder order, String statusDetail) {
+        if (emailService == null) return;
+        try {
+            emailService.sendPaymentRejected(order, PaymentRejectionMessages.translate(statusDetail));
+        } catch (Exception e) {
+            log.warn("email.payment_rejected send_failed orderId={} reason={}",
+                order.getOrderId(), e.getMessage());
         }
     }
 

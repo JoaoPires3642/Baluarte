@@ -1,0 +1,64 @@
+<mjml>
+  <mj-head>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, Arial, sans-serif" />
+    </mj-attributes>
+    <mj-title>Pedido entregue - Baluarte</mj-title>
+    <mj-preview>Seu pedido foi entregue. Aproveite seus artigos esportivos!</mj-preview>
+  </mj-head>
+
+  <mj-body background-color="#f4f7fb">
+    <mj-wrapper background-color="#ffffff" border="1px solid #d9e2ef" border-radius="8px" padding="0">
+
+      <mj-section padding="56px 40px 0 40px">
+        <mj-column>
+          <mj-image src="https://dombaluarte.com.br/logo-email.png" alt="Baluarte" width="120px" padding="0" align="center" />
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="48px 40px 0 40px">
+        <mj-column>
+          <mj-text align="center" font-size="40px" font-weight="600" color="#10233f" line-height="1.1" padding="0 0 20px 0">
+            Pedido entregue!
+          </mj-text>
+          <mj-text align="center" font-size="15px" color="#475569" line-height="1.5" padding="0 0 6px 0">
+            Seu pedido <strong>BAL{{orderNumber}}</strong> foi entregue. Esperamos que
+            voc&ecirc; aproveite seus novos artigos esportivos!
+          </mj-text>
+          <mj-text align="center" font-size="15px" color="#475569" line-height="1.5" padding="0">
+            Se tiver qualquer d&uacute;vida ou problema com seu pedido, estamos aqui para ajudar.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="40px 40px 0 40px">
+        <mj-column>
+          <mj-button background-color="#10233f" color="#ffffff" font-size="15px" font-weight="500" border-radius="8px" padding="14px 32px" href="https://dombaluarte.com.br/produtos" inner-padding="14px 32px">
+            Comprar novamente
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="48px 40px 56px 40px">
+        <mj-column>
+          <mj-text align="center" font-size="12px" color="#94a3b8" line-height="1.5" padding="0">
+            Obrigado por escolher a Baluarte. Estamos aqui se precisar de qualquer suporte.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section border-top="1px solid #d9e2ef" padding="56px 40px">
+        <mj-column>
+          <mj-text align="center" font-size="13px" color="#94a3b8" line-height="1.5" padding="0 0 32px 0">
+            Baluarte &mdash; Artigos esportivos com a qualidade que voc&ecirc; conhece.
+          </mj-text>
+          <mj-text align="center" font-size="12px" color="#94a3b8" line-height="1.5" padding="0">
+            contato@dombaluarte.com.br
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+    </mj-wrapper>
+  </mj-body>
+</mjml>

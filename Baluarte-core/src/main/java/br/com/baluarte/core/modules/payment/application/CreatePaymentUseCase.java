@@ -11,6 +11,7 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
@@ -30,19 +31,22 @@ public class CreatePaymentUseCase {
     private final PaymentTransactionRepository transactionRepository;
     private final SpringDataAdminProductJpaRepository productRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
+    private final TransactionalEmailService emailService;
 
     public CreatePaymentUseCase(
         PaymentGateway paymentGateway,
         CheckoutOrderRepository orderRepository,
         PaymentTransactionRepository transactionRepository,
         SpringDataAdminProductJpaRepository productRepository,
-        SpringDataAdminProductVariantJpaRepository variantRepository
+        SpringDataAdminProductVariantJpaRepository variantRepository,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
     ) {
         this.paymentGateway = paymentGateway;
         this.orderRepository = orderRepository;
         this.transactionRepository = transactionRepository;
         this.productRepository = productRepository;
         this.variantRepository = variantRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -171,6 +175,16 @@ public class CreatePaymentUseCase {
         order.setPaymentReference(paymentId);
         order.setStatus(resolveOrderStatus(result.status()));
         order = orderRepository.save(order);
+
+        if (result.pixQrCode() != null && "pending_payment".equals(order.getStatus()) && emailService != null) {
+            try {
+                emailService.sendPaymentPending(order, result.pixQrCode());
+            } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(CreatePaymentUseCase.class)
+                    .warn("email.payment_pending send_failed orderId={} reason={}",
+                        order.getOrderId(), e.getMessage());
+            }
+        }
 
         return mapToResponse(transaction, provider, request.method(), order.getOrderNumber());
     }

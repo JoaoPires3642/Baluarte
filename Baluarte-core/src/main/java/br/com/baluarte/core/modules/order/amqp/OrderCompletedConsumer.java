@@ -3,7 +3,7 @@ package br.com.baluarte.core.modules.order.amqp;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.shared.amqp.BaluarteAmqp;
-import br.com.baluarte.core.shared.mail.EmailSender;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -18,14 +18,14 @@ public class OrderCompletedConsumer {
     private static final Logger log = LoggerFactory.getLogger(OrderCompletedConsumer.class);
 
     private final CheckoutOrderRepository orderRepository;
-    private final EmailSender emailSender;
+    private final TransactionalEmailService emailService;
 
     public OrderCompletedConsumer(
         CheckoutOrderRepository orderRepository,
-        @Autowired(required = false) EmailSender emailSender
+        @Autowired(required = false) TransactionalEmailService emailService
     ) {
         this.orderRepository = orderRepository;
-        this.emailSender = emailSender;
+        this.emailService = emailService;
     }
 
     @RabbitListener(
@@ -43,10 +43,9 @@ public class OrderCompletedConsumer {
             return;
         }
 
-        if (emailSender != null) {
+        if (emailService != null) {
             try {
-                emailSender.sendOrderConfirmation(event, order);
-                log.info("order.completed email=sent orderId={}", event.orderId());
+                emailService.sendOrderConfirmation(order);
             } catch (Exception e) {
                 log.warn("order.completed email=failed orderId={} reason={}",
                     event.orderId(), e.getMessage());

@@ -1,7 +1,5 @@
 package br.com.baluarte.core.shared.mail;
 
-import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
-import br.com.baluarte.core.modules.order.amqp.OrderCompletedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,46 +21,18 @@ public class FallbackEmailSender implements EmailSender {
     }
 
     @Override
-    public void sendOrderConfirmation(OrderCompletedEvent event, CheckoutOrder order) {
+    public void sendHtml(String to, String subject, String htmlBody) {
         try {
-            primary.sendOrderConfirmation(event, order);
+            primary.sendHtml(to, subject, htmlBody);
         } catch (Exception e) {
-            log.warn("email.fallback switching_to_resend orderId={} reason={}",
-                order.getOrderId(), e.getMessage());
+            log.warn("email.fallback switching_to_resend to={} reason={}", to, e.getMessage());
 
             if (fallback == null) {
-                log.error("email.fallback no_fallback_available orderId={}", order.getOrderId());
-                return;
+                log.error("email.fallback no_fallback_available to={}", to);
+                throw e;
             }
 
-            try {
-                fallback.sendOrderConfirmation(event, order);
-            } catch (Exception f) {
-                log.error("email.fallback both_failed orderId={} smtp_reason={} resend_reason={}",
-                    order.getOrderId(), e.getMessage(), f.getMessage());
-            }
-        }
-    }
-
-    @Override
-    public void sendPasswordReset(String toEmail, String resetLink) {
-        try {
-            primary.sendPasswordReset(toEmail, resetLink);
-        } catch (Exception e) {
-            log.warn("email.fallback.password_reset switching_to_resend to={} reason={}",
-                toEmail, e.getMessage());
-
-            if (fallback == null) {
-                log.error("email.fallback.password_reset no_fallback_available to={}", toEmail);
-                return;
-            }
-
-            try {
-                fallback.sendPasswordReset(toEmail, resetLink);
-            } catch (Exception f) {
-                log.error("email.fallback.password_reset both_failed to={} smtp_reason={} resend_reason={}",
-                    toEmail, e.getMessage(), f.getMessage());
-            }
+            fallback.sendHtml(to, subject, htmlBody);
         }
     }
 }

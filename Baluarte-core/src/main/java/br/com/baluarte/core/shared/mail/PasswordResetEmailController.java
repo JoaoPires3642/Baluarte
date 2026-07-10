@@ -15,17 +15,17 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@ConditionalOnBean(EmailSender.class)
+@ConditionalOnBean(TransactionalEmailService.class)
 public class PasswordResetEmailController {
 
     private static final Logger log = LoggerFactory.getLogger(PasswordResetEmailController.class);
 
     private static final String RESET_URL_BASE = "https://dombaluarte.com.br/redefinir-senha?token=";
 
-    private final EmailSender emailSender;
+    private final TransactionalEmailService emailService;
 
-    public PasswordResetEmailController(@Autowired EmailSender emailSender) {
-        this.emailSender = emailSender;
+    public PasswordResetEmailController(TransactionalEmailService emailService) {
+        this.emailService = emailService;
     }
 
     @PostMapping("/send-password-reset")
@@ -40,11 +40,29 @@ public class PasswordResetEmailController {
         String resetLink = RESET_URL_BASE + changePasswordId;
 
         try {
-            emailSender.sendPasswordReset(email.trim().toLowerCase(), resetLink);
+            emailService.sendPasswordReset(email.trim().toLowerCase(), resetLink);
             log.info("password_reset_email event=sent to={}", email);
             return Map.of("status", "sent");
         } catch (Exception e) {
             log.error("password_reset_email event=failed to={} reason={}", email, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Falha ao enviar email");
+        }
+    }
+
+    @PostMapping("/send-welcome")
+    public Map<String, String> sendWelcome(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String firstName = body.get("firstName");
+
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email e obrigatorio");
+        }
+
+        try {
+            emailService.sendWelcome(email.trim().toLowerCase(), firstName);
+            return Map.of("status", "sent");
+        } catch (Exception e) {
+            log.error("welcome_email event=failed to={} reason={}", email, e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Falha ao enviar email");
         }
     }

@@ -5,6 +5,8 @@ export const runtime = "nodejs"
 const FUSIONAUTH_ISSUER = process.env.FUSIONAUTH_ISSUER!
 const FUSIONAUTH_API_KEY = process.env.FUSIONAUTH_API_KEY!
 const FUSIONAUTH_APP_ID = process.env.FUSIONAUTH_CLIENT_ID!
+const API_BASE = process.env.BACKEND_INTERNAL_URL || "http://localhost:8080/api/v1"
+const PROXY_SECRET = process.env.PROXY_SECRET || ""
 
 type RegisterBody = {
   firstName?: string
@@ -118,9 +120,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: message }, { status: res.status })
     }
 
+    sendWelcomeEmail(email, body.firstName)
+
     return NextResponse.json({ ok: true, userId: data?.user?.id })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro ao conectar com o serviço de autenticação"
     return NextResponse.json({ error: message }, { status: 502 })
   }
+}
+
+function sendWelcomeEmail(email: string, firstName?: string) {
+  fetch(`${API_BASE}/auth/send-welcome`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Proxy-Secret": PROXY_SECRET,
+    },
+    body: JSON.stringify({ email, firstName: firstName || "" }),
+  }).catch(() => {})
 }

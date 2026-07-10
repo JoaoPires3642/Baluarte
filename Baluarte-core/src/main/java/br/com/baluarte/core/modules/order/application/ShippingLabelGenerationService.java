@@ -3,6 +3,7 @@ package br.com.baluarte.core.modules.order.application;
 import br.com.baluarte.core.modules.checkout.infrastructure.SuperFreteShippingLabelService;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,21 +17,28 @@ public class ShippingLabelGenerationService {
 
     private final CheckoutOrderRepository orderRepository;
     private final SuperFreteShippingLabelService shippingLabelService;
+    private final TransactionalEmailService emailService;
 
     public ShippingLabelGenerationService(
         CheckoutOrderRepository orderRepository,
-        SuperFreteShippingLabelService shippingLabelService
+        SuperFreteShippingLabelService shippingLabelService,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
     ) {
         this.orderRepository = orderRepository;
         this.shippingLabelService = shippingLabelService;
+        this.emailService = emailService;
     }
 
     @Transactional
     public CheckoutOrder generateForOrder(CheckoutOrder order) {
+        String previousStatus = order.getStatus();
+
         if ("station".equals(order.getShippingType())) {
             order.setStatus(STATUS_PROCESSING);
             order.setUpdatedAt(Instant.now());
-            return orderRepository.save(order);
+            order = orderRepository.save(order);
+            sendProcessingEmailIfChanged(order, previousStatus);
+            return order;
         }
 
         if (order.getShippingLabelId() == null || order.getShippingLabelId().isBlank()) {
@@ -58,7 +66,21 @@ public class ShippingLabelGenerationService {
 
         order.setStatus(STATUS_PROCESSING);
         order.setUpdatedAt(Instant.now());
-        return orderRepository.save(order);
+        order = orderRepository.save(order);
+        sendProcessingEmailIfChanged(order, previousStatus);
+        return order;
+    }
+
+    private void sendProcessingEmailIfChanged(CheckoutOrder order, String previousStatus) {
+        if (emailService == null) return;
+        if (STATUS_PROCESSING.equals(previousStatus)) return;
+        try {
+            emailService.sendOrderProcessing(order);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(ShippingLabelGenerationService.class)
+                .warn("email.order_processing send_failed orderId={} reason={}",
+                    order.getOrderId(), e.getMessage());
+        }
     }
 
     @Transactional

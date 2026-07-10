@@ -9,6 +9,7 @@ import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransaction;
 import br.com.baluarte.core.modules.payment.domain.PaymentTransactionRepository;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -30,19 +31,22 @@ public class OrderCancellationService {
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
     private final PaymentGateway paymentGateway;
     private final SuperFreteShippingLabelService shippingLabelService;
+    private final TransactionalEmailService emailService;
 
     public OrderCancellationService(
         CheckoutOrderRepository orderRepository,
         PaymentTransactionRepository paymentTransactionRepository,
         SpringDataAdminProductVariantJpaRepository variantRepository,
         PaymentGateway paymentGateway,
-        SuperFreteShippingLabelService shippingLabelService
+        SuperFreteShippingLabelService shippingLabelService,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
     ) {
         this.orderRepository = orderRepository;
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.variantRepository = variantRepository;
         this.paymentGateway = paymentGateway;
         this.shippingLabelService = shippingLabelService;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -71,6 +75,7 @@ public class OrderCancellationService {
         order.setUpdatedAt(Instant.now());
         CheckoutOrder savedOrder = orderRepository.save(order);
         releaseOrderStock(order);
+        sendCancelledEmail(savedOrder);
         return savedOrder;
     }
 
@@ -125,5 +130,15 @@ public class OrderCancellationService {
 
     private String value(String value) {
         return value == null ? "" : value;
+    }
+
+    private void sendCancelledEmail(CheckoutOrder order) {
+        if (emailService == null) return;
+        try {
+            emailService.sendOrderCancelled(order, null);
+        } catch (Exception e) {
+            log.warn("email.order_cancelled send_failed orderId={} reason={}",
+                order.getOrderId(), e.getMessage());
+        }
     }
 }

@@ -1,0 +1,53 @@
+<mjml>
+  <mj-head>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, Arial, sans-serif" />
+    </mj-attributes>
+    <mj-title>Pedido cancelado - Baluarte</mj-title>
+    <mj-preview>Seu pedido BAL{{orderNumber}} foi cancelado.</mj-preview>
+  </mj-head>
+
+  <mj-body background-color="#f4f7fb">
+    <mj-wrapper background-color="#ffffff" border="1px solid #d9e2ef" border-radius="8px" padding="0">
+
+      <mj-section padding="56px 40px 0 40px">
+        <mj-column>
+          <mj-image src="https://dombaluarte.com.br/logo-email.png" alt="Baluarte" width="120px" padding="0" align="center" />
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="48px 40px 0 40px">
+        <mj-column>
+          <mj-text align="center" font-size="40px" font-weight="600" color="#10233f" line-height="1.1" padding="0 0 20px 0">
+            Pedido cancelado
+          </mj-text>
+          <mj-text align="center" font-size="15px" color="#475569" line-height="1.5" padding="0">
+            Seu pedido BAL{{orderNumber}} foi cancelado{{reason}}.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="48px 40px 56px 40px">
+        <mj-column>
+          <mj-text align="center" font-size="12px" color="#94a3b8" line-height="1.5" padding="0 0 8px 0">
+            Se houve algum pagamento, o reembolso ser&aacute; processado em at&eacute; 2 dias &uacute;teis.<br />
+            Qualquer d&uacute;vida, entre em contato pelo nosso WhatsApp ou email.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section border-top="1px solid #d9e2ef" padding="56px 40px">
+        <mj-column>
+          <mj-text align="center" font-size="13px" color="#94a3b8" line-height="1.5" padding="0 0 32px 0">
+            Baluarte &mdash; Artigos esportivos com a qualidade que voc&ecirc; conhece.
+          </mj-text>
+          <mj-text align="center" font-size="12px" color="#94a3b8" line-height="1.5" padding="0">
+            contato@dombaluarte.com.br
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+    </mj-wrapper>
+  </mj-body>
+</mjml>

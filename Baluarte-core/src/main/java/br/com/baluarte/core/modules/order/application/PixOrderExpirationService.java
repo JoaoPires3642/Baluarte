@@ -3,6 +3,7 @@ package br.com.baluarte.core.modules.order.application;
 import br.com.baluarte.core.modules.adminproduct.infrastructure.SpringDataAdminProductVariantJpaRepository;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -18,13 +19,16 @@ public class PixOrderExpirationService {
 
     private final CheckoutOrderRepository orderRepository;
     private final SpringDataAdminProductVariantJpaRepository variantRepository;
+    private final TransactionalEmailService emailService;
 
     public PixOrderExpirationService(
         CheckoutOrderRepository orderRepository,
-        SpringDataAdminProductVariantJpaRepository variantRepository
+        SpringDataAdminProductVariantJpaRepository variantRepository,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
     ) {
         this.orderRepository = orderRepository;
         this.variantRepository = variantRepository;
+        this.emailService = emailService;
     }
 
     @Scheduled(fixedDelayString = "${app.payment.pix-expiration-check-delay-ms:60000}")
@@ -55,7 +59,19 @@ public class PixOrderExpirationService {
         order.setUpdatedAt(now);
         orderRepository.save(order);
         releaseOrderStock(order);
+        sendCancelledEmail(order);
         return order;
+    }
+
+    private void sendCancelledEmail(CheckoutOrder order) {
+        if (emailService == null) return;
+        try {
+            emailService.sendOrderCancelled(order, "Pedido expirado por falta de pagamento");
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(PixOrderExpirationService.class)
+                .warn("email.order_cancelled send_failed orderId={} reason={}",
+                    order.getOrderId(), e.getMessage());
+        }
     }
 
     private void releaseOrderStock(CheckoutOrder order) {

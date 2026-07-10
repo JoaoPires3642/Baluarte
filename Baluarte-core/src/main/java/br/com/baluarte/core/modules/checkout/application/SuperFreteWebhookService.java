@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.checkout.application;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -28,10 +29,16 @@ public class SuperFreteWebhookService {
 
     private final CheckoutOrderRepository orderRepository;
     private final ObjectMapper objectMapper;
+    private final TransactionalEmailService emailService;
 
-    public SuperFreteWebhookService(CheckoutOrderRepository orderRepository, ObjectMapper objectMapper) {
+    public SuperFreteWebhookService(
+        CheckoutOrderRepository orderRepository,
+        ObjectMapper objectMapper,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
+    ) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
+        this.emailService = emailService;
     }
 
     /**
@@ -59,6 +66,8 @@ public class SuperFreteWebhookService {
         CheckoutOrder order = orderRepository.findByShippingLabelId(shippingLabelId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                 "Pedido nao encontrado para a etiqueta: " + shippingLabelId));
+
+        String previousStatus = order.getStatus();
 
         switch (event) {
             case "order.created", "order.released", "order.generated" -> {
@@ -88,6 +97,25 @@ public class SuperFreteWebhookService {
         orderRepository.save(order);
         log.info("shipping.webhook event=processed type={} labelId={} newStatus={}",
             event, shippingLabelId, order.getStatus());
+
+        sendStatusEmail(order, previousStatus);
+    }
+
+    private void sendStatusEmail(CheckoutOrder order, String previousStatus) {
+        if (emailService == null) return;
+        String currentStatus = order.getStatus();
+        if (currentStatus == null || currentStatus.equals(previousStatus)) return;
+        try {
+            switch (currentStatus) {
+                case "processing" -> emailService.sendOrderProcessing(order);
+                case "shipped" -> emailService.sendOrderShipped(order);
+                case "delivered" -> emailService.sendOrderDelivered(order);
+                case "cancelled" -> emailService.sendOrderCancelled(order, null);
+            }
+        } catch (Exception e) {
+            log.warn("email.status send_failed orderId={} status={} reason={}",
+                order.getOrderId(), currentStatus, e.getMessage());
+        }
     }
 
     private void updateTracking(CheckoutOrder order, Map<String, Object> data) {
