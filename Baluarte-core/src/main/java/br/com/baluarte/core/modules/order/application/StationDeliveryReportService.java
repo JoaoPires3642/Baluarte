@@ -3,17 +3,18 @@ package br.com.baluarte.core.modules.order.application;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderItem;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Font;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.pdf.PdfWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,45 +44,42 @@ public class StationDeliveryReportService {
     }
 
     private byte[] buildPdf(List<CheckoutOrder> orders, LocalDate deliveryDate) {
-        try (PDDocument document = new PDDocument(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
 
-            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                PdfCursor cursor = new PdfCursor(50, 790);
-                writeLine(content, cursor, "Entregas em Estacoes", 18, true);
-                writeLine(content, cursor, "Data: " + deliveryDate.format(DISPLAY_DATE_FORMAT), 11, false);
-                writeLine(content, cursor, "Pedidos: " + orders.size(), 11, false);
-                cursor.move(12);
+        try {
+            PdfWriter.getInstance(document, output);
+            document.open();
 
-                if (orders.isEmpty()) {
-                    writeLine(content, cursor, "Nenhuma entrega em estacao para esta data.", 12, false);
-                } else {
-                    for (CheckoutOrder order : orders) {
-                        writeLine(content, cursor, "Pedido " + orderReference(order), 13, true);
-                        writeLine(content, cursor, "Cliente: " + value(order.getRecipientName()), 10, false);
-                        writeLine(content, cursor, "Estacao: " + value(order.getDeliveryStation()), 10, false);
-                        writeLine(content, cursor, "Horario: " + value(order.getDeliveryTimeSlot()), 10, false);
-                        writeLine(content, cursor, "Itens: " + itemsSummary(order.getItems()), 10, false);
-                        cursor.move(10);
-                    }
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18);
+            Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA, 11);
+            Font boldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13);
+            Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 10);
+
+            document.add(new Paragraph("Entregas em Estacoes", titleFont));
+            document.add(new Paragraph("Data: " + deliveryDate.format(DISPLAY_DATE_FORMAT), subtitleFont));
+            document.add(new Paragraph("Pedidos: " + orders.size(), subtitleFont));
+            document.add(new Paragraph(" "));
+
+            if (orders.isEmpty()) {
+                document.add(new Paragraph("Nenhuma entrega em estacao para esta data.", subtitleFont));
+            } else {
+                for (CheckoutOrder order : orders) {
+                    document.add(new Paragraph("Pedido " + orderReference(order), boldFont));
+                    document.add(new Paragraph("Cliente: " + value(order.getRecipientName()), normalFont));
+                    document.add(new Paragraph("Estacao: " + value(order.getDeliveryStation()), normalFont));
+                    document.add(new Paragraph("Horario: " + value(order.getDeliveryTimeSlot()), normalFont));
+                    document.add(new Paragraph("Itens: " + itemsSummary(order.getItems()), normalFont));
+                    document.add(new Paragraph(" "));
                 }
             }
 
-            document.save(output);
-            return output.toByteArray();
-        } catch (IOException exception) {
-            throw new IllegalStateException("Erro ao gerar PDF de entregas em estacoes", exception);
+            document.close();
+        } catch (DocumentException e) {
+            throw new IllegalStateException("Erro ao gerar PDF de entregas em estacoes", e);
         }
-    }
 
-    private void writeLine(PDPageContentStream content, PdfCursor cursor, String text, int fontSize, boolean bold) throws IOException {
-        content.beginText();
-        content.setFont(new PDType1Font(bold ? Standard14Fonts.FontName.HELVETICA_BOLD : Standard14Fonts.FontName.HELVETICA), fontSize);
-        content.newLineAtOffset(cursor.x(), cursor.y());
-        content.showText(safeText(text));
-        content.endText();
-        cursor.move(fontSize + 7);
+        return output.toByteArray();
     }
 
     private String orderReference(CheckoutOrder order) {
@@ -98,23 +96,5 @@ public class StationDeliveryReportService {
 
     private String value(String value) {
         return value == null || value.isBlank() ? "-" : value;
-    }
-
-    private String safeText(String text) {
-        return text.replace("\n", " ").replace("\r", " ");
-    }
-
-    private static class PdfCursor {
-        private final float x;
-        private float y;
-
-        PdfCursor(float x, float y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        float x() { return x; }
-        float y() { return y; }
-        void move(float amount) { y -= amount; }
     }
 }
