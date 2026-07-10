@@ -6,7 +6,7 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,7 +18,7 @@ import java.util.Map;
  * iguais (caso contrario o broker rejeita e o app falha ao subir).
  */
 @Configuration
-@ConditionalOnProperty(name = "spring.rabbitmq.addresses")
+@ConditionalOnExpression("'${spring.rabbitmq.addresses:}' != ''")
 public class AmqpTopology {
 
     @Bean

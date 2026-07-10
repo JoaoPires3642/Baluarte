@@ -5,7 +5,7 @@ import org.springframework.amqp.rabbit.connection.Connection;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Visivel em /actuator/health com a chave "amqp".
  */
 @Component
-@ConditionalOnProperty(name = "spring.rabbitmq.addresses")
+@ConditionalOnExpression("'${spring.rabbitmq.addresses:}' != ''")
 public class AmqpHealthIndicator implements HealthIndicator {
 
     private final ConnectionFactory connectionFactory;
