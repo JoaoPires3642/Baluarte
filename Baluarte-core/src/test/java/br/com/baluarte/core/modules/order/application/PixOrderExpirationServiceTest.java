@@ -71,7 +71,7 @@ class PixOrderExpirationServiceTest {
 
     @Test
     void expiresOldPendingPaymentOrderAndReleasesStock() {
-        CheckoutOrder order = order("pending_payment", Instant.now().minus(Duration.ofMinutes(15)));
+        CheckoutOrder order = order("pending_payment", Instant.now().minus(Duration.ofMinutes(35)));
         UUID productId = UUID.randomUUID();
         order.setItems(List.of(
             new CheckoutOrderItem("item-1", order.getOrderId(), productId.toString(), "Camisa", "M", 2, BigDecimal.TEN)
@@ -87,7 +87,7 @@ class PixOrderExpirationServiceTest {
 
     @Test
     void handlesInvalidProductIdWhenReleasingStock() {
-        CheckoutOrder order = order("pending_payment", Instant.now().minus(Duration.ofMinutes(15)));
+        CheckoutOrder order = order("pending_payment", Instant.now().minus(Duration.ofMinutes(35)));
         order.setItems(List.of(
             new CheckoutOrderItem("item-1", order.getOrderId(), "not-a-uuid", "Camisa", "M", 2, BigDecimal.TEN)
         ));
@@ -102,7 +102,7 @@ class PixOrderExpirationServiceTest {
 
     @Test
     void expirePendingPixOrdersFetchesAndProcessesBatch() {
-        CheckoutOrder stale = order("pending_payment", Instant.now().minus(Duration.ofMinutes(15)));
+        CheckoutOrder stale = order("pending_payment", Instant.now().minus(Duration.ofMinutes(35)));
         CheckoutOrder recent = order("pending_payment", Instant.now());
         when(orderRepository.findPendingPaymentCreatedBefore(any(Instant.class), anyInt()))
             .thenReturn(List.of(stale, recent));
