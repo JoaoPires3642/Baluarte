@@ -3,6 +3,9 @@
     "includes": [
       {
         "pattern": "db/migration/.*"
+      },
+      {
+        "pattern": "com/lowagie/text/.*"
       }
     ]
   }
