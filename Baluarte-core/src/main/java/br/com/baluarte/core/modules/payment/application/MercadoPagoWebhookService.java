@@ -159,6 +159,12 @@ public class MercadoPagoWebhookService {
             return;
         }
 
+        if (isTerminalStatus(previousStatus) && !STATUS_CANCELLED.equals(nextStatus)) {
+            log.info("webhook.event ignored reason=terminal_status orderId={} current={} incoming={}",
+                order.getOrderId(), previousStatus, nextStatus);
+            return;
+        }
+
         if (!previousStatus.equals(nextStatus)) {
             order.setStatus(nextStatus);
             order.setUpdatedAt(Instant.now());
@@ -277,6 +283,11 @@ public class MercadoPagoWebhookService {
             return STATUS_CANCELLED;
         }
         return "pending_payment";
+    }
+
+    private static boolean isTerminalStatus(String status) {
+        return "shipped".equals(status) || "delivered".equals(status)
+            || STATUS_CANCELLED.equals(status) || STATUS_REFUNDED.equals(status);
     }
 
     private void releaseOrderStock(CheckoutOrder order) {

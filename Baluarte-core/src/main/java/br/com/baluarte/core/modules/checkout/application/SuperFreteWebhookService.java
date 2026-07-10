@@ -2,6 +2,7 @@ package br.com.baluarte.core.modules.checkout.application;
 
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrderRepository;
+import br.com.baluarte.core.modules.order.application.OrderCancellationService;
 import br.com.baluarte.core.shared.mail.TransactionalEmailService;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -30,15 +31,18 @@ public class SuperFreteWebhookService {
     private final CheckoutOrderRepository orderRepository;
     private final ObjectMapper objectMapper;
     private final TransactionalEmailService emailService;
+    private final OrderCancellationService orderCancellationService;
 
     public SuperFreteWebhookService(
         CheckoutOrderRepository orderRepository,
         ObjectMapper objectMapper,
-        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService
+        @org.springframework.beans.factory.annotation.Autowired(required = false) TransactionalEmailService emailService,
+        @org.springframework.beans.factory.annotation.Autowired(required = false) OrderCancellationService orderCancellationService
     ) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
         this.emailService = emailService;
+        this.orderCancellationService = orderCancellationService;
     }
 
     /**
@@ -85,7 +89,16 @@ public class SuperFreteWebhookService {
                 order.setStatus("delivered");
             }
             case "order.cancelled" -> {
-                order.setStatus("cancelled");
+                if (orderCancellationService != null) {
+                    try {
+                        order = orderCancellationService.cancelByAdmin(order);
+                    } catch (Exception e) {
+                        log.warn("shipping.webhook cancel_failed labelId={} reason={}", shippingLabelId, e.getMessage());
+                        return;
+                    }
+                } else {
+                    order.setStatus("cancelled");
+                }
             }
             default -> {
                 log.info("shipping.webhook event=ignored type={}", event);

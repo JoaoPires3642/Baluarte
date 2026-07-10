@@ -4,7 +4,6 @@ import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationFailure;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationResult;
 import br.com.baluarte.core.modules.order.application.OrderCancellationService;
-import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
 import br.com.baluarte.core.modules.order.application.ShippingLabelGenerationService;
 import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
@@ -44,7 +43,6 @@ public class OrderController {
     private final CheckoutOrderRepository orderRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final InternalRoleResolver internalRoleResolver;
-    private final PixOrderExpirationService pixOrderExpirationService;
     private final ShippingLabelGenerationService shippingLabelGenerationService;
     private final OrderCancellationService orderCancellationService;
 
@@ -60,7 +58,7 @@ public class OrderController {
         int safeSize = Math.min(Math.max(size, 1), 100);
         long total = orderRepository.countAll();
         List<OrderResponse> data = orderRepository.findAll(safePage, safeSize).stream()
-            .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
+            .map(this::toResponse)
             .toList();
         long totalPages = total == 0 ? 0 : (long) Math.ceil((double) total / safeSize);
         return new ApiSuccessResponse<>(data, Map.of(
@@ -76,7 +74,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") String userId
     ) {
         return ApiSuccessResponse.of(orderRepository.findByUserId(userId).stream()
-            .map(order -> toResponse(pixOrderExpirationService.expireIfNeeded(order)))
+            .map(this::toResponse)
             .toList());
     }
 
@@ -92,7 +90,7 @@ public class OrderController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE);
         }
 
-        return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
+        return ApiSuccessResponse.of(toResponse(order));
     }
 
     @GetMapping("/station-deliveries")
@@ -127,7 +125,7 @@ public class OrderController {
         CheckoutOrder order = orderRepository.findByIdAndUserId(orderId, userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, ORDER_NOT_FOUND_MESSAGE));
 
-        return ApiSuccessResponse.of(toResponse(pixOrderExpirationService.expireIfNeeded(order)));
+        return ApiSuccessResponse.of(toResponse(order));
     }
 
     @PatchMapping("/{orderId}/status")

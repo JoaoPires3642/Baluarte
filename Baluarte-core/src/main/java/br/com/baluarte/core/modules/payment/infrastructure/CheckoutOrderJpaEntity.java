@@ -131,6 +131,10 @@ public class CheckoutOrderJpaEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CheckoutOrderItemJpaEntity> items = new ArrayList<>();
 

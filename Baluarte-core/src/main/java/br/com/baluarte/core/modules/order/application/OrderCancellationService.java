@@ -101,9 +101,12 @@ public class OrderCancellationService {
             transaction.setStatus(value(refund.status()).isBlank() ? "refunded" : refund.status());
             transaction.setStatusDetail(value(refund.statusDetail()).isBlank() ? "refunded_by_cancellation" : refund.statusDetail());
         } catch (PaymentValidationException exception) {
-            log.warn("Refund failed for order {}: {}", order.getOrderId(), exception.getMessage());
+            log.error("Refund failed for order {}: {}", order.getOrderId(), exception.getMessage());
             transaction.setStatus("refund_failed");
             transaction.setStatusDetail("refund_failed: " + exception.getMessage());
+            transaction.setUpdatedAt(Instant.now());
+            paymentTransactionRepository.save(transaction);
+            throw new IllegalStateException("Falha ao estornar pagamento: " + exception.getMessage());
         }
         transaction.setUpdatedAt(Instant.now());
         paymentTransactionRepository.save(transaction);

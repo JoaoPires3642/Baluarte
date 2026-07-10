@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PixOrderExpirationService {
 
-    private static final long PIX_EXPIRATION_MINUTES = 10;
+    private static final long PIX_EXPIRATION_MINUTES = 30;
     private static final int EXPIRATION_BATCH_SIZE = 100;
 
     private final CheckoutOrderRepository orderRepository;
