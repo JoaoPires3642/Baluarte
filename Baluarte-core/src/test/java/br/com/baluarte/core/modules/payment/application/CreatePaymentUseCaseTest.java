@@ -53,7 +53,7 @@ class CreatePaymentUseCaseTest {
     @BeforeEach
     void setUp() {
         useCase = new CreatePaymentUseCase(paymentGateway, orderRepository,
-            transactionRepository, productRepository, variantRepository);
+            transactionRepository, productRepository, variantRepository, null);
     }
 
     @Test

@@ -33,7 +33,7 @@ class ShippingLabelGenerationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ShippingLabelGenerationService(orderRepository, shippingLabelService);
+        service = new ShippingLabelGenerationService(orderRepository, shippingLabelService, null);
     }
 
     @Test

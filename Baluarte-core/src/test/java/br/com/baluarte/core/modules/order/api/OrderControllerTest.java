@@ -13,7 +13,6 @@ import br.com.baluarte.core.modules.adminproduct.api.UpdateOrderStatusRequest;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationFailure;
 import br.com.baluarte.core.modules.order.application.BulkShippingLabelGenerationResult;
 import br.com.baluarte.core.modules.order.application.OrderCancellationService;
-import br.com.baluarte.core.modules.order.application.PixOrderExpirationService;
 import br.com.baluarte.core.modules.order.application.ShippingLabelGenerationService;
 import br.com.baluarte.core.modules.payment.application.PaymentValidationException;
 import br.com.baluarte.core.modules.payment.domain.CheckoutOrder;
@@ -39,7 +38,6 @@ class OrderControllerTest {
     @Mock private CheckoutOrderRepository orderRepository;
     @Mock private PaymentTransactionRepository paymentTransactionRepository;
     @Mock private InternalRoleResolver internalRoleResolver;
-    @Mock private PixOrderExpirationService pixOrderExpirationService;
     @Mock private ShippingLabelGenerationService shippingLabelGenerationService;
     @Mock private OrderCancellationService orderCancellationService;
 
@@ -48,12 +46,10 @@ class OrderControllerTest {
     @BeforeEach
     void setUp() {
         controller = new OrderController(orderRepository, paymentTransactionRepository,
-            internalRoleResolver, pixOrderExpirationService,
+            internalRoleResolver,
             shippingLabelGenerationService, orderCancellationService);
         lenient().when(internalRoleResolver.resolveFromIdentity(any(), any()))
             .thenReturn(InternalRole.ADMIN);
-        lenient().when(pixOrderExpirationService.expireIfNeeded(any()))
-            .thenAnswer(i -> i.getArgument(0));
     }
 
     // ---- listOrders ----

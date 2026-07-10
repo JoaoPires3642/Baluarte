@@ -39,7 +39,7 @@ class SuperFreteWebhookControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        SuperFreteWebhookService service = new SuperFreteWebhookService(orderRepository, objectMapper);
+        SuperFreteWebhookService service = new SuperFreteWebhookService(orderRepository, objectMapper, null, null);
         controller = new SuperFreteWebhookController(service);
         setWebhookSecret(TEST_SECRET);
     }

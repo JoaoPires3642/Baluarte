@@ -53,7 +53,8 @@ class OrderCancellationServiceTest {
             paymentTransactionRepository,
             variantRepository,
             paymentGateway,
-            shippingLabelService
+            shippingLabelService,
+            null
         );
     }
 

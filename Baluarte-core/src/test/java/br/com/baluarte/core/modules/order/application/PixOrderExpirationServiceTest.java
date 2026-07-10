@@ -36,7 +36,7 @@ class PixOrderExpirationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PixOrderExpirationService(orderRepository, variantRepository);
+        service = new PixOrderExpirationService(orderRepository, variantRepository, null);
     }
 
     @Test
